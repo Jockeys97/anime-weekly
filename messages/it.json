@@ -70,7 +70,9 @@
     "animeScore": "Voto anime",
     "streaming": "Dove guardarlo",
     "watch": "Opzioni di visione",
-    "votes": "Voti IMDb"
+    "votes": "Voti IMDb",
+    "streamingCountry": "Paese per lo streaming",
+    "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato."
   },
   "regions": {
     "IT": "Italia",

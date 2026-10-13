@@ -3,11 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { RatingSummary } from '@/components/RatingSummary';
-import { providerWatchLink } from '@/lib/watch-links';
-import { ProviderLink } from '@/components/ProviderLink';
+import { StreamingAvailability } from '@/components/StreamingAvailability';
+import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
-import { STREAMING_REGIONS } from '@/lib/config';
 import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import { getAnimeAvailability } from '@/lib/tmdb';
@@ -37,7 +36,6 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
   const date = anime.startDate;
   const startDate = date?.year ? [date.day && String(date.day).padStart(2, '0'), date.month && String(date.month).padStart(2, '0'), date.year].filter(Boolean).join('/') : c.unknown;
-  const hasProviders = STREAMING_REGIONS.some(region => availability.providers[region]);
   return <main className="catalog-page" lang="it">
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
     {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
@@ -64,17 +62,11 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
     </article>
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
-      {!hasProviders && <p role="status">{availability.providersUnavailable ? d.state.providersError : c.noPlatforms}</p>}
-      <div className="region-list">{STREAMING_REGIONS.map(region => {
-        const entry = availability.providers[region];
-        return <div className="region" key={region}><span>{d.regions[region]}</span><div>
-          {entry && availability.match ? entry.providers.map(provider => <ProviderLink key={provider.provider_id} href={providerWatchLink(availability.match!.kind, availability.match!.id, region, provider.provider_id)} label={`${name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
-            {provider.logo_path && <Image src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`} alt="" width={24} height={24} />}
-            <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
-          </ProviderLink>) : <p>{availability.providersUnavailable ? d.state.providersError : c.noPlatforms}</p>}
-        </div></div>;
-      })}</div>
-      <p className="streaming-note">{d.title.streamingLinksNote}</p>
+      <StreamingCountrySelector locale="it" />
+      <StreamingAvailability locale="it" collapsible={false} anime={{
+        id: availability.match?.id ?? 0, kind: availability.match?.kind ?? 'tv', name,
+        providers: availability.match ? availability.providers : {}, providersUnavailable: availability.providersUnavailable,
+      }} />
       <p className="catalog-intro">{c.availabilityNote}</p>
     </section>
   </main>;
