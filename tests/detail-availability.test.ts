@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), animeName: (anime: { title: { english: string } }) => anime.title.english }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime, type AniListAnime } from '../lib/anilist';
@@ -48,6 +49,17 @@ describe('season IMDb series fallback', () => {
     expect(result.ratings).toEqual({ imdbId: 'tt123' });
     expect(result.providers).toEqual(providers);
     expect(result.seriesWatch).toEqual({ id: 1429, kind: 'tv', name: 'Attack on Titan', providers, providersUnavailable: false });
+  });
+  it('starts following the season chain before the direct TMDB request completes', async () => {
+    const current = anime(3, 'Example Season 2', 2026);
+    const first = anime(1, 'Example', 2023); prequel(current, first);
+    let finish!: (value: AnimeAvailability) => void;
+    vi.mocked(getAnimeAvailability).mockReturnValueOnce(new Promise(resolve => { finish = resolve; })).mockResolvedValueOnce(empty);
+    vi.mocked(getAnime).mockResolvedValue(first);
+    const result = getDetailAvailability(current);
+    expect(getAnime).toHaveBeenCalledWith(1);
+    finish(empty);
+    expect(await result).toEqual(empty);
   });
   it('does not attach a different named series through a franchise prequel', async () => {
     const current = anime(3, 'Boruto', 2026); prequel(current, anime(1, 'Naruto', 2002));

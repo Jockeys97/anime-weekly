@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { AnimeTrailer } from '@/components/AnimeTrailer';
-import { RatingSummary } from '@/components/RatingSummary';
+import { AnimeRatingTile, ImdbRatingTile } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { animeDescription, animeName, getAnime } from '@/lib/anilist';
@@ -14,7 +14,7 @@ import { getAnimeRatingsById } from '@/lib/anime-ratings';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
-import { getDetailAvailability } from '@/lib/detail-availability';
+import { getCachedDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 
 export const revalidate = 86400;
@@ -33,7 +33,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
-  const availability = getDetailAvailability(anime);
+  const availability = getCachedDetailAvailability(anime);
   const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
@@ -52,9 +52,14 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
         {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
         <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
-        <Suspense fallback={<p className="detail-loading detail-loading-ratings" role="status">{c.loadingRatings}</p>}>
-          <DetailRatings animeRatings={animeRatings} availability={availability} id={anime.id} name={name} locale={locale} />
-        </Suspense>
+        <dl className="ratings">
+          <Suspense fallback={<ImdbRatingTile ratings={{}} title={name} locale={locale} pending />}>
+            <DetailImdbRating availability={availability} name={name} locale={locale} />
+          </Suspense>
+          <Suspense fallback={<AnimeRatingTile ratings={{ anilistId: anime.id, anilistScore: anime.averageScore }} title={name} locale={locale} />}>
+            <DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />
+          </Suspense>
+        </dl>
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
           <div><dt>{c.status}</dt><dd>{status}</dd></div>
@@ -79,11 +84,18 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   </main>;
 }
 
-async function DetailRatings({ animeRatings, availability, id, name, locale }: {
-  animeRatings: Promise<Ratings>; availability: Promise<AnimeAvailability>; id: number; name: string; locale: Locale;
+async function DetailImdbRating({ availability, name, locale }: {
+  availability: Promise<AnimeAvailability>; name: string; locale: Locale;
 }) {
-  const [scores, watch] = await Promise.all([animeRatings, availability]);
-  return <RatingSummary ratings={{ ...watch.ratings, ...scores, anilistId: id }} title={name} locale={locale} />;
+  const watch = await availability;
+  return <ImdbRatingTile ratings={watch.ratings} title={name} locale={locale} />;
+}
+
+async function DetailAnimeRating({ animeRatings, id, name, locale }: {
+  animeRatings: Promise<Ratings>; id: number; name: string; locale: Locale;
+}) {
+  const scores = await animeRatings;
+  return <AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} />;
 }
 
 async function DetailAvailability({ availability, name, locale }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale }) {
