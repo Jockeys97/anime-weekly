@@ -1,4 +1,6 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
+import { CACHE_TAG } from '@/lib/config';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
 import type { AnimeTrailer } from '@/lib/trailer';
 import { isSeason, type Season } from '@/lib/season';
@@ -69,12 +71,18 @@ export async function searchAnime(query: string): Promise<AniListAnime[]> {
   return Array.isArray(data?.Page?.media) ? data.Page.media : [];
 }
 
-export async function getAnime(id: number): Promise<AniListAnime | null> {
-  if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
+const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${fields} trailer { id site } }
   }`, { id });
-  return data?.Media?.id === id ? data.Media : null;
+  // Reject transient upstream failures so they never become cached empty details.
+  if (!data) throw new Error('Anime details unavailable');
+  return data.Media?.id === id ? data.Media : null;
+}, ['anime-detail-v2-trailer'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+
+export async function getAnime(id: number): Promise<AniListAnime | null> {
+  if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
+  try { return await getCachedAnime(id); } catch { return null; }
 }
 
 export function animeName(anime: AniListAnime): string {

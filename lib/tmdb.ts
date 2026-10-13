@@ -92,14 +92,15 @@ export async function getAnimeAvailability(titles: string[], year?: number): Pro
   const revalidate = 86400;
   for (const kind of ['tv', 'movie'] as const) {
     const candidates: TMDBCandidate[] = [];
-    for (const title of aliases) {
+    const results = await Promise.all(aliases.map(async title => {
       try {
         const query: Record<string, string> = { query: title, include_adult: 'false' };
         if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
         const data = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, revalidate);
-        if (Array.isArray(data.results)) candidates.push(...data.results);
-      } catch { /* Continue with the other alias or media type. */ }
-    }
+        return Array.isArray(data.results) ? data.results : [];
+      } catch { return []; }
+    }));
+    for (const result of results) candidates.push(...result);
     const match = chooseTMDBMatch(candidates, aliases, year);
     if (!match) continue;
     const [ratings, watch] = await Promise.all([
