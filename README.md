@@ -131,3 +131,5 @@ Inherited IMDb ratings and links are labelled as the original series rating. MAL
 Request-specific language selection keeps the home route dynamic, so the localized weekly data cache can be cold. The weekly shell now renders without waiting for enrichment. A fast TMDB-only catalog provides real titles, synopses and posters while a separate Suspense boundary finishes ratings, providers and the day calendar. Quick cards explicitly show enrichment in progress instead of displaying unavailable ratings or providers as if their lookups had completed. The full localized-week cache remains in use.
 
 If an upstream 429 asks for a cooldown longer than ten seconds, the lookup returns the unavailable response without retrying early or holding the optional section for minutes.
+
+Concurrent requests for the same week/language share one in-flight cache fill per server process. Weekly AniList/Jikan enrichment has a ten-second budget per title, including queue time; expired optional requests are skipped when their queue slot arrives rather than consuming upstream quota later. The separate catalog detail requests keep their existing queue behavior.

@@ -20,16 +20,17 @@ const query = `query ($search: String!, $formats: [MediaFormat]) {
 }`;
 
 export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
+  const deadline = Date.now() + 10000;
   try {
     const titles = [...new Set([search.originalTitle, search.title].filter((title): title is string => Boolean(title?.trim())).map(title => title.trim()))];
     let match: AnimeCandidate | null = null;
     for (const title of titles) {
-      if (overBudget()) return {};
+      if (overBudget() || Date.now() >= deadline) return {};
       try {
         const response = await anilist('https://graphql.anilist.co', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query, variables: { search: title, formats: search.kind === 'movie' ? ['MOVIE'] : ['TV', 'TV_SHORT', 'ONA'] } }),
-        });
+        }, Math.max(0, deadline - Date.now()));
         if (!response.ok) continue;
         const data = await response.json() as { data?: { Page?: { media?: AnimeCandidate[] } }; errors?: unknown[] };
         if (data.errors?.length || !Array.isArray(data.data?.Page?.media)) continue;
@@ -40,18 +41,18 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
     if (!match) return {};
     const fallback: Ratings = { anilistId: match.id, anilistScore: match.averageScore };
     if (Number.isSafeInteger(match.idMal) && match.idMal! > 0) fallback.malId = match.idMal!;
-    if (overBudget()) return fallback;
-    return { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore) };
+    if (overBudget() || Date.now() >= deadline) return fallback;
+    return { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore, JIKAN_REVALIDATE, Math.max(0, deadline - Date.now())) };
   } catch { return {}; }
 }
 
 // Details already have an exact MAL ID, so reuse Jikan without another title lookup.
-export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE): Promise<Ratings> {
+export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE, maxWaitMs?: number): Promise<Ratings> {
   const fallback: Ratings = { anilistScore: averageScore };
   if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
   fallback.malId = idMal!;
   try {
-    const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, { next: { revalidate, tags: [CACHE_TAG] } });
+    const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, { next: { revalidate, tags: [CACHE_TAG] } }, maxWaitMs);
     if (!response.ok) return fallback;
     const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
     return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };

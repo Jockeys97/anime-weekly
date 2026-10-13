@@ -148,7 +148,16 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
 
 // Cache the entire enrichment per week and language, avoiding repeated throttled
 // rating lookups when request-specific locale selection makes pages dynamic.
-export const getCachedWeekData = unstable_cache(getWeekData, ['localized-week-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const pendingWeeks = new Map<string, Promise<WeekData>>();
+export function getCachedWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  const key = `${week.year}-${week.week}:${locale}`;
+  const existing = pendingWeeks.get(key);
+  if (existing) return existing;
+  const pending = cachedWeekData(week, locale).finally(() => { pendingWeeks.delete(key); });
+  pendingWeeks.set(key, pending);
+  return pending;
+}
 
 export async function getLocalizedSynopsis(titles: string[], year: number | undefined, locale: Locale, kind: Kind): Promise<string | null> {
   if (locale === 'en' || !isTMDBConfigured()) return null;
