@@ -139,6 +139,7 @@
     "error": "Die Sprache konnte nicht geändert werden. Versuche es erneut.",
     "originalSynopsis": "Keine Übersetzung verfügbar; die englische Inhaltsangabe wird angezeigt.",
     "loadingSynopsis": "Übersetzte Inhaltsangabe wird geladen…",
+    "sourceSynopsis": "Inhaltsangabe in der Originalsprache",
     "machineTranslation": "Automatische Übersetzung"
   },
   "loading": "Wochenguide wird geladen…",

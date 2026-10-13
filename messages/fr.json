@@ -139,6 +139,7 @@
     "error": "Impossible de changer la langue. Réessayez.",
     "originalSynopsis": "Traduction indisponible ; le synopsis anglais est affiché.",
     "loadingSynopsis": "Chargement du synopsis traduit…",
+    "sourceSynopsis": "Synopsis dans la langue originale",
     "machineTranslation": "Traduction automatique"
   },
   "loading": "Chargement du guide hebdomadaire…",

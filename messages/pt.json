@@ -139,6 +139,7 @@
     "error": "Não foi possível alterar o idioma. Tenta novamente.",
     "originalSynopsis": "Tradução indisponível; é apresentada a sinopse em inglês.",
     "loadingSynopsis": "A carregar a sinopse traduzida…",
+    "sourceSynopsis": "Sinopse no idioma original",
     "machineTranslation": "Tradução automática"
   },
   "loading": "A carregar o guia semanal…",
