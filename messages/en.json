@@ -186,7 +186,17 @@
     "availabilityNote": "Streaming availability is current and may vary by country.",
     "notFoundTitle": "Anime or season not found",
     "notFoundBody": "Check the address or explore the seasonal catalog.",
-    "back": "Back to seasons"
+    "back": "Back to seasons",
+    "loadingAnime": "Loading anime details…",
+    "loadingRatings": "Loading ratings…",
+    "loadingAvailability": "Loading streaming availability…"
+  },
+  "trailer": {
+    "heading": "Trailer",
+    "play": "Play trailer",
+    "external": "Watch on video platform",
+    "unavailable": "No trailer is available for this specific season or cour.",
+    "note": "The video player loads only when you press play."
   },
   "calendar": {
     "timezoneNote": "Days and times are in UTC. Episode times are AniList broadcast schedules; streaming releases can differ by service and country. Movies use their TMDB primary release date.",
