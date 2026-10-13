@@ -89,3 +89,7 @@ Brand marks in `public/logos` are bundled from [Simple Icons](https://github.com
 Provider buttons call `/api/watch` with the exact TMDB media type, title ID, provider ID and displayed country. On click, the server reads the public regional TMDB watch page and selects its published JustWatch click-out only when the country, provider ID and subscription/free/ad-supported offer match. Original JustWatch URLs and attribution are preserved; rental and purchase offers are excluded. No provider title URLs are guessed and no additional API key is needed.
 
 The watch-page fetch is cached for seven days with the existing revalidation tag and has an eight-second timeout. Missing links, blocked pages, changed markup and upstream failures redirect to the exact regional TMDB watch page. The UI explains that fallback and that access depends on actual location and subscription; clicking a different country does not change account entitlements.
+
+## Streaming country selector
+
+The guide has one country selector, defaulting to United States. Every title displays only the selected country's streaming providers and uses that same country in its provider links. Italy, United States, United Kingdom, France, Germany and Japan remain supported. Selecting a country updates all cards immediately without refetching title data. The root layout keeps the selection during client-side week navigation; a full reload starts with United States. Titles without providers in that country keep the existing unavailable message.

@@ -15,9 +15,7 @@ export function parseWatchTarget(params: URLSearchParams): WatchTarget | null {
 export function regionalWatchPage(target: WatchTarget): string {
   return `https://www.themoviedb.org/${target.kind}/${target.id}/watch?locale=${target.region}`;
 }
-export function providerWatchLink(kind: WatchTarget['kind'], id: number, region: StreamingRegion, provider: number): string {
-  return `/api/watch?${new URLSearchParams({ kind, id: String(id), region, provider: String(provider) })}`;
-}
+export { providerWatchLink } from '@/lib/provider-watch-link';
 
 // TMDB's API has availability but no provider deep links. Its public watch page
 // publishes JustWatch click-outs containing the provider ID and country.
