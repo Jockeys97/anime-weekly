@@ -14,9 +14,9 @@ export function useStreamingCountry() {
   if (!country) throw new Error('Streaming country provider is missing');
   return country;
 }
-export function StreamingCountrySelector() {
+export function StreamingCountrySelector({ locale = 'en' }: { locale?: string }) {
   const { region, setRegion } = useStreamingCountry();
-  const d = getDictionary();
+  const d = getDictionary(locale);
   const regions = ['US', ...STREAMING_REGIONS.filter(country => country !== 'US')] as const;
   return <div className="country-toolbar">
     <div><label htmlFor="streaming-country">{d.title.streamingCountry}</label><p>{d.title.streamingCountryHint}</p></div>

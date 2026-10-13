@@ -1,39 +1,14 @@
 import 'server-only';
-import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
+import { CACHE_TAG } from '@/lib/config';
 import { chooseAnimeMatch, type AnimeCandidate, type AnimeSearch } from '@/lib/anime-match';
 import type { Ratings } from '@/lib/ratings';
 
-const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
-function throttle(spacing: number, timeoutMs = 10000) {
-  let tail: Promise<unknown> = Promise.resolve();
-  let lastStart: number | undefined;
-  return (url: string, init: RequestInit = {}): Promise<Response> => {
-    const request = tail.then(async () => {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (lastStart != null) await sleep(Math.max(0, lastStart + spacing - Date.now()));
-        lastStart = Date.now();
-        const response = await fetch(url, { ...init, cache: 'force-cache', next: { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(timeoutMs) });
-        if (response.status !== 429 || attempt === 2) return response;
-        const retryAfter = response.headers.get('Retry-After');
-        const seconds = retryAfter?.trim() ? Number(retryAfter) : NaN;
-        const retryMs = Number.isFinite(seconds) ? seconds * 1000 : retryAfter ? Date.parse(retryAfter) - Date.now() : 0;
-        await response.body?.cancel();
-        await sleep(Math.max(spacing * 2 ** attempt, Number.isFinite(retryMs) ? retryMs : 0));
-      }
-      throw new Error('Retry limit reached');
-    });
-    tail = request.catch(() => undefined);
-    return request;
-  };
-}
-// Module-level queues serialize all requests, including retry attempts.
-// AniList currently advertises 30 req/min (X-RateLimit-Limit), so space requests ~2.1s.
-const anilist = throttle(2100);
+import { anilistFetch as anilist, throttle } from '@/lib/rate-limited-fetch';
 const jikan = throttle(400, 6000);
+export const JIKAN_REVALIDATE = 86400;
 // Overall budget per process so a slow/blocked upstream degrades to n/a instead of stalling the page.
 const BUDGET_MS = 150_000;
 let budgetStart: number | undefined;
-let jikanFailures = 0;
 const overBudget = () => { budgetStart ??= Date.now(); return Date.now() - budgetStart > BUDGET_MS; };
 const query = `query ($search: String!, $formats: [MediaFormat]) {
   Page(page: 1, perPage: 50) {
@@ -64,15 +39,21 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
     }
     if (!match) return {};
     const fallback: Ratings = { anilistId: match.id, anilistScore: match.averageScore };
-    if (!Number.isSafeInteger(match.idMal) || match.idMal! <= 0) return fallback;
-    fallback.malId = match.idMal!;
-    if (jikanFailures >= 3 || overBudget()) return fallback;
-    try {
-      const response = await jikan(`https://api.jikan.moe/v4/anime/${match.idMal}`);
-      if (!response.ok) { jikanFailures++; return fallback; }
-      jikanFailures = 0;
-      const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
-      return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
-    } catch { jikanFailures++; return fallback; }
+    if (Number.isSafeInteger(match.idMal) && match.idMal! > 0) fallback.malId = match.idMal!;
+    if (overBudget()) return fallback;
+    return { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore) };
   } catch { return {}; }
+}
+
+// Details already have an exact MAL ID, so reuse Jikan without another title lookup.
+export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE): Promise<Ratings> {
+  const fallback: Ratings = { anilistScore: averageScore };
+  if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
+  fallback.malId = idMal!;
+  try {
+    const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, { next: { revalidate, tags: [CACHE_TAG] } });
+    if (!response.ok) return fallback;
+    const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
+    return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
+  } catch { return fallback; }
 }

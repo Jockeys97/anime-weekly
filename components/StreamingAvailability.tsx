@@ -7,12 +7,11 @@ import { providerWatchLink } from '@/lib/provider-watch-link';
 import { ProviderLink } from '@/components/ProviderLink';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 
-export function StreamingAvailability({ anime }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'> }) {
+export function StreamingAvailability({ anime, locale = 'en', collapsible = true }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; locale?: string; collapsible?: boolean }) {
   const { region } = useStreamingCountry();
-  const d = getDictionary();
+  const d = getDictionary(locale);
   const availability = anime.providers[region];
-  return <details className="streaming">
-    <summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>
+  const content = <>
     <p className="streaming-note">{d.title.streamingLinksNote}</p>
     <div className="region-list"><div className="region"><span>{d.regions[region]}</span><div>
       {availability?.providers.length ? availability.providers.map(provider => <ProviderLink key={provider.provider_id}
@@ -22,5 +21,6 @@ export function StreamingAvailability({ anime }: { anime: Pick<AnimeTitle, 'id' 
         <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
       </ProviderLink>) : <p>{anime.providersUnavailable ? d.state.providersError : d.state.noProviders}</p>}
     </div></div></div>
-  </details>;
+  </>;
+  return collapsible ? <details className="streaming"><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
 }

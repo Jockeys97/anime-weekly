@@ -1,16 +1,161 @@
 {
-  "brand":"Anime Weekly",
-  "metadata":{"title":"Anime Weekly · Your weekly anime release guide","description":"Explore Japanese animated TV and movie releases by ISO week, with real ratings and streaming availability."},
-  "nav":{"guide":"The weekly guide","current":"This week","previous":"Previous week","next":"Next week","label":"Browse weeks"},
-  "hero":{"eyebrow":"A little less searching. A little more anime.","title":"Your next watch,","accent":"one week at a time.","description":"A weekly look at anime airing in Japan and new movie releases. Find your next story and see where it’s streaming."},
-  "week":{"label":"Week","releases":"Releases this week","subtitle":"Japanese animation · TV & movies","range":"Monday to Sunday","cap":"Showing up to 40 titles per week.","scope":"TV matches air dates during this week; movie matches use primary release dates. Streaming availability is current and may vary by country.","tv":"TV series","movie":"Movie","browse":"Browse the calendar","currentBadge":"Current week"},
-  "state":{"unconfigured":"Data source not configured","setup":"Connect TMDB to bring this week to life. Add TMDB_API_KEY or TMDB_READ_TOKEN to your environment, then restart or redeploy.","setupLink":"Get a TMDB API key","empty":"A quiet week on the calendar","emptyBody":"TMDB has no matching releases for this week. Explore the previous or next week for more anime.","error":"The guide is temporarily unavailable","errorBody":"We couldn’t load releases from TMDB. Try again later or explore another week.","partial":"Some release data could not be loaded. The available results are shown below.","omdb":"IMDb ratings and vote counts show n/a until an optional OMDb API key is configured.","noPoster":"Poster unavailable","noSynopsis":"Synopsis unavailable.","noProviders":"No subscription, free or ad-supported streaming listed.","providersError":"Streaming availability could not be loaded."},
-  "title":{"imdb":"IMDb","animeScore":"Anime score","votes":"IMDb votes","voteCount":"votes","members":"members","opensNewTab":"opens in a new tab","liked":"If you liked","streaming":"Where to watch","streamingCountry":"Streaming country","streamingCountryHint":"Show watch options for your selected country.","watch":"Watch options","streamingLinksNote":"Open this title on a service for the country shown. If a direct link is unavailable, view the regional watch options. Access depends on your location and subscription.","tmdb":"View on TMDB"},
-  "regions":{"IT":"Italy","US":"United States","GB":"United Kingdom","FR":"France","DE":"Germany","JP":"Japan"},
-  "sponsor":{"label":"Sponsor space","body":"A small space for partners who love anime."},
-  "footer":{"tagline":"A new week. A new story.","tmdbBadge":"TMDB","tmdb":"This product uses the TMDB API but is not endorsed or certified by TMDB","justwatch":"Streaming data provided by JustWatch","omdb":"IMDb ratings provided by OMDb","anilist":"Anime matching and fallback scores by AniList","mal":"MyAnimeList scores via Jikan","note":"Release dates and availability come from the credited sources. No ratings are estimated."},
-  "notFound":{"title":"That week isn’t on the calendar","body":"Use an ISO week in yyyy-ww format, such as 2026-42.","back":"Back to this week"},
-  "error":{"title":"Something interrupted the guide","body":"Please try loading the guide again.","retry":"Try again"},
-  "loading":"Loading the weekly guide…",
-  "api":{"invalidWatchTarget":"Invalid streaming title, country or provider","unauthorized":"Unauthorized","missingSecret":"Revalidation secret is not configured"}
+  "brand": "Anime Weekly",
+  "metadata": {
+    "title": "Anime Weekly · Your weekly anime release guide",
+    "description": "Explore Japanese animated TV and movie releases by ISO week, with real ratings and streaming availability."
+  },
+  "nav": {
+    "guide": "The weekly guide",
+    "current": "This week",
+    "previous": "Previous week",
+    "next": "Next week",
+    "label": "Browse weeks"
+  },
+  "hero": {
+    "eyebrow": "A little less searching. A little more anime.",
+    "title": "Your next watch,",
+    "accent": "one week at a time.",
+    "description": "A weekly look at anime airing in Japan and new movie releases. Find your next story and see where it’s streaming."
+  },
+  "week": {
+    "label": "Week",
+    "releases": "Releases this week",
+    "subtitle": "Japanese animation · TV & movies",
+    "range": "Monday to Sunday",
+    "cap": "Showing up to 40 titles per week.",
+    "scope": "TV matches air dates during this week; movie matches use primary release dates. Streaming availability is current and may vary by country.",
+    "tv": "TV series",
+    "movie": "Movie",
+    "browse": "Browse the calendar",
+    "currentBadge": "Current week"
+  },
+  "state": {
+    "unconfigured": "Data source not configured",
+    "setup": "Connect TMDB to bring this week to life. Add TMDB_API_KEY or TMDB_READ_TOKEN to your environment, then restart or redeploy.",
+    "setupLink": "Get a TMDB API key",
+    "empty": "A quiet week on the calendar",
+    "emptyBody": "TMDB has no matching releases for this week. Explore the previous or next week for more anime.",
+    "error": "The guide is temporarily unavailable",
+    "errorBody": "We couldn’t load releases from TMDB. Try again later or explore another week.",
+    "partial": "Some release data could not be loaded. The available results are shown below.",
+    "omdb": "IMDb ratings and vote counts show n/a until an optional OMDb API key is configured.",
+    "noPoster": "Poster unavailable",
+    "noSynopsis": "Synopsis unavailable.",
+    "noProviders": "No subscription, free or ad-supported streaming listed.",
+    "providersError": "Streaming availability could not be loaded."
+  },
+  "title": {
+    "imdb": "IMDb",
+    "animeScore": "Anime score",
+    "votes": "IMDb votes",
+    "liked": "If you liked",
+    "streaming": "Where to watch",
+    "watch": "Watch options",
+    "tmdb": "View on TMDB",
+    "voteCount": "votes",
+    "members": "members",
+    "opensNewTab": "opens in a new tab",
+    "streamingLinksNote": "Open this title on a service for the country shown. If a direct link is unavailable, view the regional watch options. Access depends on your location and subscription.",
+    "streamingCountry": "Streaming country",
+    "streamingCountryHint": "Show watch options for your selected country."
+  },
+  "regions": {
+    "IT": "Italy",
+    "US": "United States",
+    "GB": "United Kingdom",
+    "FR": "France",
+    "DE": "Germany",
+    "JP": "Japan"
+  },
+  "sponsor": {
+    "label": "Sponsor space",
+    "body": "A small space for partners who love anime."
+  },
+  "footer": {
+    "tagline": "A new week. A new story.",
+    "tmdbBadge": "TMDB",
+    "tmdb": "This product uses the TMDB API but is not endorsed or certified by TMDB",
+    "justwatch": "Streaming data provided by JustWatch",
+    "omdb": "IMDb ratings provided by OMDb",
+    "anilist": "Anime matching and fallback scores by AniList",
+    "mal": "MyAnimeList scores via Jikan",
+    "note": "Release dates and availability come from the credited sources. No ratings are estimated."
+  },
+  "notFound": {
+    "title": "That week isn’t on the calendar",
+    "body": "Use an ISO week in yyyy-ww format, such as 2026-42.",
+    "back": "Back to this week"
+  },
+  "error": {
+    "title": "Something interrupted the guide",
+    "body": "Please try loading the guide again.",
+    "retry": "Try again"
+  },
+  "loading": "Loading the weekly guide…",
+  "api": {
+    "unauthorized": "Unauthorized",
+    "missingSecret": "Revalidation secret is not configured",
+    "invalidWatchTarget": "Invalid streaming title, country or provider"
+  },
+  "catalog": {
+    "navLabel": "Main navigation",
+    "weekly": "Week",
+    "seasons": "Seasons",
+    "search": "Search",
+    "searchLabel": "Search anime",
+    "searchPlaceholder": "Anime title…",
+    "searchTitle": "Search for an anime",
+    "searchPrompt": "Enter a title to explore the anime catalog.",
+    "searchResults": "Results for",
+    "noResults": "No results available. Try another title or check back later.",
+    "seasonTitle": "Seasonal anime",
+    "seasonDescription": "Explore anime by season, ordered by popularity.",
+    "seasonEmpty": "No anime available for this season. Try another season or check back later.",
+    "previousSeason": "Previous season",
+    "nextSeason": "Next season",
+    "currentSeason": "Current season",
+    "yearLabel": "Choose a year",
+    "seasonLabel": "Choose a season",
+    "pagination": "Result pages",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "page": "Page",
+    "seasonNames": {
+      "winter": "Winter",
+      "spring": "Spring",
+      "summer": "Summer",
+      "fall": "Fall"
+    },
+    "formats": {
+      "TV": "TV series",
+      "TV_SHORT": "Short TV series",
+      "MOVIE": "Movie",
+      "ONA": "ONA",
+      "OVA": "OVA",
+      "SPECIAL": "Special",
+      "MUSIC": "Music"
+    },
+    "statuses": {
+      "FINISHED": "Finished",
+      "RELEASING": "Airing",
+      "NOT_YET_RELEASED": "Upcoming",
+      "CANCELLED": "Cancelled",
+      "HIATUS": "On hiatus"
+    },
+    "unknown": "Unavailable",
+    "episodes": "Episodes",
+    "format": "Format",
+    "status": "Status",
+    "startDate": "Release date",
+    "studios": "Studios",
+    "genres": "Genres",
+    "season": "Season",
+    "details": "View details",
+    "source": "View on AniList",
+    "noPlatforms": "No platforms found",
+    "availabilityNote": "Streaming availability is current and may vary by country.",
+    "notFoundTitle": "Anime or season not found",
+    "notFoundBody": "Check the address or explore the seasonal catalog.",
+    "back": "Back to seasons"
+  }
 }

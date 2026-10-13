@@ -14,6 +14,51 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('anime rating lookups (offline)', () => {
+  it('uses an exact MAL ID with a daily cache and prefers its score', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { score: 8.12, members: 1200000 } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getAnimeRatingsById } = await import('../lib/anime-ratings');
+    const { formatAnimeScore } = await import('../lib/ratings');
+    const ratings = await getAnimeRatingsById(123, 81);
+    expect(formatAnimeScore(ratings)).toBe('MAL 8.12 · 1.2M members');
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://api.jikan.moe/v4/anime/123', expect.objectContaining({
+      cache: 'force-cache', next: { revalidate: 86400, tags: ['anime-week'] },
+    }));
+  });
+  it.each([null, undefined, 0, -1, 1.5, NaN])('skips Jikan for invalid exact MAL ID %s', async id => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const { getAnimeRatingsById } = await import('../lib/anime-ratings');
+    expect(await getAnimeRatingsById(id, 81)).toEqual({ anilistScore: 81 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it.each(['missing', 'http', 'json', 'network'] as const)('formats the AniList fallback when Jikan score is unavailable (%s)', async failure => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      if (failure === 'network') throw new Error('offline');
+      if (failure === 'http') return new Response(null, { status: 503 });
+      if (failure === 'json') return new Response('invalid JSON');
+      return Response.json({ data: { score: null, members: 100 } });
+    }));
+    const { getAnimeRatingsById } = await import('../lib/anime-ratings');
+    const { formatAnimeScore } = await import('../lib/ratings');
+    expect(formatAnimeScore(await getAnimeRatingsById(123, 81))).toBe('AniList 81%');
+  });
+  it('recovers exact-ID lookups after repeated failures and 150 seconds of process uptime', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline')).mockResolvedValue(Response.json({ data: { score: 8 } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getAnimeRatingsById } = await import('../lib/anime-ratings');
+    for (let i = 0; i < 3; i++) {
+      const pending = getAnimeRatingsById(123, 81);
+      await vi.runAllTimersAsync();
+      expect(await pending).toEqual({ anilistScore: 81, malId: 123 });
+    }
+    await vi.advanceTimersByTimeAsync(150001);
+    const recovered = getAnimeRatingsById(123, 81);
+    await vi.runAllTimersAsync();
+    expect((await recovered).malScore).toBe(8);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
   it('searches the original first, then display title, and fetches only the matched MAL ID', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(noMatch()).mockResolvedValueOnce(matchResponse()).mockResolvedValueOnce(Response.json({ data: { score: 8.12, members: 1200000 } }));
     vi.stubGlobal('fetch', fetchMock);
@@ -24,8 +69,8 @@ describe('anime rating lookups (offline)', () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.search).toBe('Original');
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.search).toBe('Display');
     expect(fetchMock.mock.calls[2][0]).toBe('https://api.jikan.moe/v4/anime/123');
-    for (const [, init] of fetchMock.mock.calls) {
-      expect(init).toMatchObject({ cache: 'force-cache', next: { revalidate: 604800, tags: ['anime-week'] } });
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(init).toMatchObject({ cache: 'force-cache', next: { revalidate: url.includes('jikan') ? 86400 : 604800, tags: ['anime-week'] } });
     }
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
