@@ -6,6 +6,7 @@ import type { Ratings } from '@/lib/ratings';
 import { getAnimeRatings } from '@/lib/anime-ratings';
 import { chooseTMDBMatch, type TMDBCandidate } from '@/lib/anime-match';
 import { weekRange, type ISOWeek } from '@/lib/week';
+import { readEpisodeDates, selectEpisodeSeasons, type EpisodeDate, type EpisodeDetails } from '@/lib/episode-dates';
 
 type Kind = 'tv' | 'movie';
 interface RawTitle { id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
@@ -170,4 +171,20 @@ export async function getLocalizedSynopsis(titles: string[], year: number | unde
     const translations = result.translations?.filter(item => item.iso_639_1 === locale && item.data?.overview?.trim()) || [];
     return (translations.find(item => item.iso_3166_1 === country) || translations[0])?.data?.overview?.trim() || null;
   } catch { return null; }
+}
+
+// Episode dates belong to the exact TMDB series ID, independently of score matching.
+// Refresh hourly; a discovery result or a series premiere is never an episode date.
+export async function getTMDBWeekEpisodes(id: number, week: ISOWeek): Promise<{ episodes: EpisodeDate[]; unavailable: boolean }> {
+  if (!isTMDBConfigured() || !Number.isSafeInteger(id) || id <= 0) return { episodes: [], unavailable: true };
+  const { start, end } = weekRange(week);
+  try {
+    const details = await tmdb<EpisodeDetails>(`tv/${id}`, {}, 3600);
+    const episodes = readEpisodeDates(id, [details.last_episode_to_air, details.next_episode_to_air], start, end);
+    const seasons = selectEpisodeSeasons(details.seasons, end);
+    const results = await Promise.allSettled(seasons.map(season => tmdb<{ episodes?: unknown[] }>(`tv/${id}/season/${season}`, {}, 3600)));
+    for (const result of results) if (result.status === 'fulfilled') episodes.push(...readEpisodeDates(id, result.value.episodes, start, end));
+    const unique = new Map(episodes.map(episode => [`${episode.season}:${episode.episode}`, episode]));
+    return { episodes: [...unique.values()], unavailable: results.some(result => result.status === 'rejected') };
+  } catch { return { episodes: [], unavailable: true }; }
 }

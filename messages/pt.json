@@ -155,7 +155,7 @@
     "description": "Anime em exibição no Japão e novas estreias de cinema. Encontra a tua próxima história e descobre onde a ver."
   },
   "calendar": {
-    "timezoneNote": "Os dias e horários estão em UTC. Os horários dos episódios vêm do AniList; as estreias em streaming podem variar por serviço e país. Os filmes usam a data de estreia do TMDB.",
+    "timezoneNote": "Os horários de transmissão do AniList são apresentados em UTC. As datas dos episódios do TMDB não incluem hora nem fuso e são apresentadas como fornecidas. As estreias em streaming podem variar por serviço e país. Os filmes usam a primeira data de estreia do TMDB.",
     "navigation": "Explorar dias de estreia",
     "releases": "estreias",
     "titles": "títulos",
@@ -165,7 +165,7 @@
     "timeUnavailable": "Horário indisponível",
     "emptyDay": "Sem estreias com data confirmada neste dia entre os títulos selecionados.",
     "undated": "Data por confirmar",
-    "undatedNote": "Estes títulos correspondem à semana no TMDB, mas a data do episódio não está confirmada. Não se estimam dias nem horários.",
+    "undatedNote": "Estes títulos aparecem na seleção semanal do TMDB, mas não foi encontrada uma data de episódio desta semana nos dados disponíveis do AniList ou TMDB. Pode haver dados em falta, uma pausa ou uma temporada futura; isto não confirma uma estreia nesta semana.",
     "partial": "Alguns horários não foram carregados. As estreias confirmadas são apresentadas; os outros títulos aparecem abaixo.",
     "loading": "A carregar o calendário diário…",
     "release": "estreia",
