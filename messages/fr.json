@@ -52,6 +52,8 @@
     "opensNewTab": "s’ouvre dans un nouvel onglet",
     "streamingLinksNote": "Ouvrez le titre sur le service du pays indiqué. Sans lien direct, les options régionales s’affichent. L’accès dépend de votre localisation et de votre abonnement.",
     "streamingCountry": "Pays de streaming",
+    "searchCountry": "Rechercher un pays…",
+    "noMatchingCountry": "Aucun pays trouvé.",
     "streamingCountryHint": "Afficher uniquement les services du pays sélectionné.",
     "seriesWatch": "Plateformes de la série",
     "seriesWatchNote": "Ces services proposent la série dans ce pays. Vérifiez que la saison sélectionnée est incluse avant de vous abonner.",
