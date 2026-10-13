@@ -27,7 +27,7 @@ Optionally get a free OMDb key at [omdbapi.com/apikey.aspx](https://www.omdbapi.
 - Anime scores require a conservative AniList GraphQL match: search TMDB original_name/original_title first, then name/title. Only ANIME with TV, TV_SHORT or ONA for TV, or MOVIE for movies, qualifies. Normalized exact matches against romaji, English, native titles or synonyms are required; when TMDB first_air_date/release_date supplies a year, AniList startDate must be within ±1 year. Original-title matches and closer years rank first; equally good distinct matches are rejected. No fuzzy guesses are used.
 - Matched AniList idMal values are looked up through Jikan for MyAnimeList score and members, displayed as `MAL 8.12 · 1.2M members`. Missing member counts are omitted. If the MAL score is unavailable, the actual AniList averageScore appears as `AniList 81%`; otherwise `n/a`. Neither service needs a key, and these scores work without OMDb.
 - “If you liked X” uses the first real title from TMDB recommendations, falling back to similar. It is hidden if neither supplies a title.
-- Watch availability combines and deduplicates `flatrate`, `free` and `ads` providers, with logos linking to the exact regional TMDB watch page. Rental and purchase providers are excluded. The supported regions are defined once in `lib/config.ts`: IT, US, GB, FR, DE, JP. Availability is current, not a historical snapshot or a guarantee of episode availability.
+- Watch availability combines and deduplicates `flatrate`, `free` and `ads` providers, with provider buttons opening country-specific title links through `/api/watch`. Rental and purchase providers are excluded. The supported regions are defined once in `lib/config.ts`: IT, US, GB, FR, DE, JP. Availability is current, not a historical snapshot or a guarantee of episode availability.
 - Upstream failures produce an unavailable state, partial discovery notice, or missing optional fields. No fake data is used.
 
 ## Caching and Vercel Hobby
@@ -77,3 +77,15 @@ API references: [TMDB TV discovery](https://developer.themoviedb.org/reference/d
 All 95 Vitest tests pass, including the existing calendar tests and new offline anime matching, formatting and mocked API tests. ESLint and `tsc --noEmit` also pass with the existing installed dependencies; no dependency installation was needed.
 
 Production build verification remains incomplete in this restricted workspace: the default Turbopack build fails when its CSS worker tries to bind a local port (`Operation not permitted`), and the webpack fallback fails while parsing TypeScript `--showConfig` output. No live upstream calls were made. Run the production build and live API checks in an environment that permits them.
+
+## Rating source links and logos
+
+Rating cards link directly to the matched IMDb, MyAnimeList or AniList title in a new tab. The displayed anime score retains the existing MAL-first/AniList-fallback policy. IMDb links remain available when TMDB supplies an ID even without an OMDb key; unknown IDs render non-clickable cards. Vote counts and MAL members appear beneath their scores.
+
+Brand marks in `public/logos` are bundled from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. Brand names and logos remain the property of their respective owners.
+
+## Regional streaming links
+
+Provider buttons call `/api/watch` with the exact TMDB media type, title ID, provider ID and displayed country. On click, the server reads the public regional TMDB watch page and selects its published JustWatch click-out only when the country, provider ID and subscription/free/ad-supported offer match. Original JustWatch URLs and attribution are preserved; rental and purchase offers are excluded. No provider title URLs are guessed and no additional API key is needed.
+
+The watch-page fetch is cached for seven days with the existing revalidation tag and has an eight-second timeout. Missing links, blocked pages, changed markup and upstream failures redirect to the exact regional TMDB watch page. The UI explains that fallback and that access depends on actual location and subscription; clicking a different country does not change account entitlements.

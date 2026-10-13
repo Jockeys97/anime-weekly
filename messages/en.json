@@ -51,7 +51,11 @@
     "liked": "If you liked",
     "streaming": "Where to watch",
     "watch": "Watch options",
-    "tmdb": "View on TMDB"
+    "tmdb": "View on TMDB",
+    "voteCount": "votes",
+    "members": "members",
+    "opensNewTab": "opens in a new tab",
+    "streamingLinksNote": "Open this title on a service for the country shown. If a direct link is unavailable, view the regional watch options. Access depends on your location and subscription."
   },
   "regions": {
     "IT": "Italy",
@@ -88,7 +92,8 @@
   "loading": "Loading the weekly guide…",
   "api": {
     "unauthorized": "Unauthorized",
-    "missingSecret": "Revalidation secret is not configured"
+    "missingSecret": "Revalidation secret is not configured",
+    "invalidWatchTarget": "Invalid streaming title, country or provider"
   },
   "catalog": {
     "navLabel": "Main navigation",

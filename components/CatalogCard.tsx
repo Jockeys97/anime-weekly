@@ -17,7 +17,7 @@ export function CatalogCard({ anime }: { anime: AniListAnime }) {
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={`/anime/${anime.id}`} prefetch={false}>{name}</Link></h3>
       <p className="synopsis catalog-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
-      <dl className="ratings"><div><dt>{d.title.animeScore}</dt><dd>{formatAnimeScore({ anilistScore: anime.averageScore })}</dd></div></dl>
+      <dl className="catalog-ratings"><div><dt>{d.title.animeScore}</dt><dd>{formatAnimeScore({ anilistScore: anime.averageScore })}</dd></div></dl>
       <Link href={`/anime/${anime.id}`} prefetch={false} className="catalog-details">{d.catalog.details} →</Link>
     </div>
   </article>;

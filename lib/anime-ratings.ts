@@ -38,7 +38,10 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
       } catch { /* Try the display title if the original title lookup failed. */ }
     }
     if (!match) return {};
-    return getAnimeRatingsById(match.idMal, match.averageScore);
+    const fallback: Ratings = { anilistId: match.id, anilistScore: match.averageScore };
+    if (Number.isSafeInteger(match.idMal) && match.idMal! > 0) fallback.malId = match.idMal!;
+    if (overBudget()) return fallback;
+    return { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore) };
   } catch { return {}; }
 }
 
@@ -46,6 +49,7 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
 export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE): Promise<Ratings> {
   const fallback: Ratings = { anilistScore: averageScore };
   if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
+  fallback.malId = idMal!;
   try {
     const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, { next: { revalidate, tags: [CACHE_TAG] } });
     if (!response.ok) return fallback;

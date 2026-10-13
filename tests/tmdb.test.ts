@@ -21,6 +21,7 @@ describe('TMDB anime availability (offline)', () => {
         { ...candidate, id: 2, first_air_date: '2010-10-01' },
         candidate,
       ] });
+      if (url.pathname.endsWith('/tv/21/external_ids')) return Response.json({ imdb_id: null });
       if (url.pathname.endsWith('/tv/21/watch/providers')) return Response.json({ results: {
         IT: { link: link('IT'), flatrate: [netflix], free: [netflix, crunchyroll], ads: [crunchyroll] },
         US: { link: link('US'), flatrate: [crunchyroll] },
@@ -41,7 +42,7 @@ describe('TMDB anime availability (offline)', () => {
         JP: { link: link('JP'), providers: [netflix] },
       },
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     const url = fetchMock.mock.calls[0][0];
     expect(url.searchParams.get('query')).toBe('Example');
     expect(url.searchParams.get('first_air_date_year')).toBe('2026');

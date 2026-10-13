@@ -2,12 +2,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { RatingSummary } from '@/components/RatingSummary';
+import { providerWatchLink } from '@/lib/watch-links';
 import { ProviderLink } from '@/components/ProviderLink';
 import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
 import { STREAMING_REGIONS } from '@/lib/config';
 import { getDictionary } from '@/lib/i18n';
-import { formatAnimeScore, formatRating, formatVotes } from '@/lib/ratings';
 import { isSeason, seasonPath } from '@/lib/season';
 import { getAnimeAvailability } from '@/lib/tmdb';
 
@@ -28,7 +29,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
     getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate),
     getAnimeAvailability(aliases, year),
   ]);
-  const ratings = { ...availability.ratings, ...animeRatings };
+  const ratings = { ...availability.ratings, ...animeRatings, anilistId: anime.id };
   const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
@@ -48,11 +49,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
         {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
         <p className="synopsis detail-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
-        <dl className="ratings">
-          <div><dt>{d.title.animeScore}</dt><dd>{formatAnimeScore(ratings)}</dd></div>
-          <div><dt>{d.title.imdb}</dt><dd>{formatRating(ratings.imdbRating)}</dd></div>
-          <div><dt>{d.title.votes}</dt><dd>{formatVotes(ratings.imdbVotes)}</dd></div>
-        </dl>
+        <RatingSummary ratings={ratings} title={name} locale="it" />
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
           <div><dt>{c.status}</dt><dd>{status}</dd></div>
@@ -71,12 +68,13 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
       <div className="region-list">{STREAMING_REGIONS.map(region => {
         const entry = availability.providers[region];
         return <div className="region" key={region}><span>{d.regions[region]}</span><div>
-          {entry ? entry.providers.map(provider => <ProviderLink key={provider.provider_id} href={entry.link} label={`${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
+          {entry && availability.match ? entry.providers.map(provider => <ProviderLink key={provider.provider_id} href={providerWatchLink(availability.match!.kind, availability.match!.id, region, provider.provider_id)} label={`${name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
             {provider.logo_path && <Image src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`} alt="" width={24} height={24} />}
-            <span>{provider.provider_name}</span>
+            <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
           </ProviderLink>) : <p>{availability.providersUnavailable ? d.state.providersError : c.noPlatforms}</p>}
         </div></div>;
       })}</div>
+      <p className="streaming-note">{d.title.streamingLinksNote}</p>
       <p className="catalog-intro">{c.availabilityNote}</p>
     </section>
   </main>;
