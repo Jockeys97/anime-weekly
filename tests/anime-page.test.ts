@@ -5,7 +5,7 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('next/server', () => ({ connection: async () => undefined }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); } }));
-vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), animeName: () => 'Example anime', animeDescription: () => 'Example synopsis' }));
+vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), getSeasonFamily: vi.fn().mockResolvedValue([]), animeName: () => 'Example anime', animeDescription: () => 'Example synopsis' }));
 vi.mock('../lib/anime-ratings', () => ({ getAnimeRatingsById: vi.fn() }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime } from '../lib/anilist';

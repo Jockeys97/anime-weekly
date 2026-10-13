@@ -72,6 +72,21 @@ export async function searchAnime(query: string): Promise<AniListAnime[]> {
   return Array.isArray(data?.Page?.media) ? data.Page.media : [];
 }
 
+// Fetch season siblings and their prequel edges in one bounded request. Exact
+// relation IDs are still verified by the caller; search results alone prove nothing.
+export async function getSeasonFamily(search: string): Promise<AniListAnime[]> {
+  if (!search.trim()) return [];
+  const data = await graphql<{ Page?: { media?: AniListAnime[] } }>(`query ($search: String!) {
+    Page(page: 1, perPage: 50) {
+      media(type: ANIME, search: $search, sort: SEARCH_MATCH, format_in: [TV, TV_SHORT, ONA]) {
+        ${fields}
+        relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }
+      }
+    }
+  }`, { search: search.trim() });
+  return Array.isArray(data?.Page?.media) ? data.Page.media : [];
+}
+
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }

@@ -88,12 +88,12 @@ export interface AnimeAvailability {
   providersUnavailable: boolean;
 }
 
-export async function getAnimeAvailability(titles: string[], year?: number): Promise<AnimeAvailability> {
+export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind): Promise<AnimeAvailability> {
   const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
   if (!isTMDBConfigured()) return empty;
   const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))];
   const revalidate = 86400;
-  for (const kind of ['tv', 'movie'] as const) {
+  for (const kind of kindHint ? [kindHint] : ['tv', 'movie'] as const) {
     const candidates: TMDBCandidate[] = [];
     const results = await Promise.all(aliases.map(async title => {
       try {

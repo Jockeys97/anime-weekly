@@ -1,7 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
-import { animeName, getAnime, type AniListAnime } from '@/lib/anilist';
+import { animeName, getAnime, getSeasonFamily, type AniListAnime } from '@/lib/anilist';
 import { normalizeTitle } from '@/lib/anime-match';
 import { getAnimeAvailability, type AnimeAvailability } from '@/lib/tmdb';
 
@@ -23,13 +23,21 @@ export async function findSeasonSeries(anime: AniListAnime): Promise<AniListAnim
   const bases = titlesOf(anime).map(seriesBaseTitle).map(normalizeTitle).filter(Boolean);
   const visited = new Set([anime.id]);
   let current = anime;
+  let family: Map<number, AniListAnime> | undefined;
   for (let hop = 0; hop < 8; hop++) {
     const candidates = (current.relations?.edges || []).filter(edge => edge.relationType === 'PREQUEL'
       && edge.node.type === 'ANIME' && seriesFormats.includes(edge.node.format || '')
       && titlesOf(edge.node).some(title => bases.includes(normalizeTitle(seriesBaseTitle(title)))));
     const unique = [...new Map(candidates.map(edge => [edge.node.id, edge.node])).values()];
     if (unique.length !== 1 || visited.has(unique[0].id)) return null;
-    const parent = await getAnime(unique[0].id);
+    // A chain of four seasons used to require four serial, throttled requests.
+    // Load the family once, then follow the same verified IDs locally. If search
+    // omits a season (or fails), retain the exact-ID lookup as a safe fallback.
+    if (!family && titlesOf(unique[0]).some(title => seriesBaseTitle(title) !== title.normalize('NFKC').trim())) {
+      const search = seriesBaseTitle(anime.title.romaji || anime.title.english || anime.title.native || '');
+      family = new Map((await getSeasonFamily(search)).map(item => [item.id, item]));
+    }
+    const parent = family?.get(unique[0].id) || await getAnime(unique[0].id);
     if (!parent || !seriesFormats.includes(parent.format || '') || !titlesOf(parent).some(title => bases.includes(normalizeTitle(seriesBaseTitle(title))))) return null;
     const parentYear = parent.startDate?.year;
     if (!parentYear || (current.startDate?.year && parentYear > current.startDate.year)) return null;
@@ -46,12 +54,17 @@ export interface DetailAvailability extends AnimeAvailability {
 
 export async function getDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-  const [direct, series] = await Promise.all([
-    getAnimeAvailability(titlesOf(anime), year),
-    findSeasonSeries(anime),
+  const kind = seriesFormats.includes(anime.format || '') ? 'tv' : anime.format === 'MOVIE' ? 'movie' : undefined;
+  const originalLookup = findSeasonSeries(anime).then(async series => series ? {
+    series,
+    original: await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined, 'tv'),
+  } : null);
+  const [direct, resolved] = await Promise.all([
+    getAnimeAvailability(titlesOf(anime), year, kind),
+    originalLookup,
   ]);
-  if (!series) return direct;
-  const original = await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined);
+  if (!resolved) return direct;
+  const { series, original } = resolved;
   // Keep exact-season providers separate. The client selects a series reference only
   // when the chosen country has no direct offers, without claiming season coverage.
   return {
@@ -75,7 +88,7 @@ const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
   if ((!result.match && !result.seriesWatch) || result.providersUnavailable || result.seriesWatch?.providersUnavailable
     || (result.ratings.imdbId && !result.ratings.imdbRating)) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v1-series-watch'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v2-batched-series'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }
