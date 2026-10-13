@@ -118,3 +118,9 @@ Exact AniList detail results use Next's persistent data cache for 24 hours, tagg
 AniList may publish a separate entry for each season while TMDB/IMDb represent the complete TV series. If a season detail has no direct IMDb ID, follow up to eight confirmed AniList PREQUEL relations only for TV/TV_SHORT/ONA entries whose normalized base titles match after removing explicit season/cour suffixes. Use the confirmed original entry's titles and original release year with the existing conservative TMDB matcher. Ambiguity, cycles, films, different named sequels and unavailable parent data keep the score unavailable.
 
 Inherited IMDb ratings and links are labelled as the original series rating. MAL/AniList scores still belong to the selected season. Series-wide streaming providers are not inherited, because they do not establish availability of that season.
+
+## Progressive weekly guide
+
+Request-specific language selection keeps the home route dynamic, so the localized weekly data cache can be cold. The weekly shell now renders without waiting for enrichment. A fast TMDB-only catalog provides real titles, synopses and posters while a separate Suspense boundary finishes ratings, providers and the day calendar. Quick cards explicitly show enrichment in progress instead of displaying unavailable ratings or providers as if their lookups had completed. The full localized-week cache remains in use.
+
+If an upstream 429 asks for a cooldown longer than ten seconds, the lookup returns the unavailable response without retrying early or holding the optional section for minutes.

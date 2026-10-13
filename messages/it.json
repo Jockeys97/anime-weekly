@@ -154,7 +154,8 @@
     "partial": "Alcuni calendari non sono disponibili. Le uscite confermate sono mostrate; gli altri titoli sono elencati sotto.",
     "loading": "Caricamento del calendario giornaliero…",
     "release": "uscita",
-    "title": "titolo"
+    "title": "titolo",
+    "enrichmentLoading": "Caricamento di voti e piattaforme…"
   },
   "nav": {
     "guide": "La guida settimanale",

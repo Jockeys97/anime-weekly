@@ -16,6 +16,8 @@ export function throttle(spacing: number, timeoutMs = 10000) {
         const retryAfter = response.headers.get('Retry-After');
         const seconds = retryAfter?.trim() ? Number(retryAfter) : NaN;
         const retryMs = Number.isFinite(seconds) ? seconds * 1000 : retryAfter ? Date.parse(retryAfter) - Date.now() : 0;
+        // Respect long Retry-After by declining this optional lookup, never retrying early.
+        if (retryMs > 10000) return response;
         await response.body?.cancel();
         await sleep(Math.max(spacing * 2 ** attempt, Number.isFinite(retryMs) ? retryMs : 0));
       }

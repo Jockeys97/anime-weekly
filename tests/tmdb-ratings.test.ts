@@ -26,3 +26,18 @@ describe('IMDb title link enrichment', () => {
     if (scenario === 'no-key' || scenario === 'invalid-id') expect(fetchMock.mock.calls.some(([url]) => String(url).includes('omdbapi'))).toBe(false);
   });
 });
+
+it('returns the quick title catalog without waiting for rating or provider enrichment', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  const fetchMock = vi.fn(async (input: URL | string) => {
+    const url = String(input);
+    if (url.includes('discover/tv')) return Response.json({ results: [{ id: 1, name: 'Quick title', overview: 'Real synopsis', poster_path: '/poster.jpg' }], total_pages: 1 });
+    if (url.includes('discover/movie')) return Response.json({ results: [], total_pages: 1 });
+    return new Promise<Response>(() => {});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { getQuickWeekData } = await import('../lib/tmdb');
+  const data = await getQuickWeekData({ year: 2026, week: 42 });
+  expect(data.titles[0]).toMatchObject({ id: 1, name: 'Quick title', overview: 'Real synopsis', poster: '/poster.jpg', ratings: {}, providers: {} });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
