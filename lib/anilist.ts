@@ -1,9 +1,11 @@
 import 'server-only';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
+import type { AnimeTrailer } from '@/lib/trailer';
 import { isSeason, type Season } from '@/lib/season';
 
 export const ANILIST_REVALIDATE = 86400;
 export interface AniListAnime {
+  trailer?: AnimeTrailer | null;
   id: number;
   idMal: number | null;
   title: { romaji: string | null; english: string | null; native: string | null };
@@ -70,7 +72,7 @@ export async function searchAnime(query: string): Promise<AniListAnime[]> {
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
   const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
-    Media(id: $id, type: ANIME) { ${fields} }
+    Media(id: $id, type: ANIME) { ${fields} trailer { id site } }
   }`, { id });
   return data?.Media?.id === id ? data.Media : null;
 }

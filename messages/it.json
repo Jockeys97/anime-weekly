@@ -111,5 +111,12 @@
     "HK": "Hong Kong",
     "SG": "Singapore",
     "ZA": "Sudafrica"
+  },
+  "trailer": {
+    "heading": "Trailer",
+    "play": "Guarda il trailer",
+    "external": "Apri sulla piattaforma video",
+    "unavailable": "Trailer non disponibile per questa specifica stagione o cour.",
+    "note": "Il lettore video viene caricato solo quando premi play."
   }
 }

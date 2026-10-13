@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { AnimeTrailer } from '@/components/AnimeTrailer';
 import { RatingSummary } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
@@ -60,6 +61,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         <a className="catalog-details" href={`https://anilist.co/anime/${anime.id}`} target="_blank" rel="noopener noreferrer">{c.source} ↗</a>
       </div>
     </article>
+    <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} locale="it" />
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
       <StreamingCountrySelector locale="it" />
