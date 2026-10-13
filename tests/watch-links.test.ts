@@ -15,6 +15,12 @@ describe('country and provider offer selection', () => {
     const desired = offer();
     expect(findProviderOffer(anchor(offer({ country: 'us' })) + anchor(offer({ provider: 283 })) + anchor(desired), target)).toBe(desired);
   });
+  it('accepts Spain and retains the Spanish offer country', () => {
+    const spanish = { ...target, region: 'ES' as const };
+    expect(parseWatchTarget(new URL(providerWatchLink('tv', 45790, 'ES', 8), 'https://example.com').searchParams)).toEqual(spanish);
+    expect(findProviderOffer(anchor(offer({ country: 'es' })), spanish)).toBe(offer({ country: 'es' }));
+    expect(findProviderOffer(anchor(offer({ country: 'it' })), spanish)).toBeNull();
+  });
   it.each(['flatrate', 'free', 'ads'])('accepts %s streaming offers', type => {
     expect(findProviderOffer(anchor(offer({ type })), target)).toBe(offer({ type }));
   });
