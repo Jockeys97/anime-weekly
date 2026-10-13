@@ -23,3 +23,8 @@
 .ratings .rating-detail{margin-top:5px;font-size:10px;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}
 @media(max-width:380px){.ratings{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.rating-tile-linked{transition:none}}
+
+.streaming-note{font-size:10px;line-height:1.5;color:var(--muted);margin:12px 0}
+.provider-link{border:1px solid transparent;transition:background .15s,border-color .15s}
+.provider-link:hover{background:#e6edda;border-color:#b8c9a8;text-decoration:none}
+.provider-external{font-size:12px;color:var(--muted);margin-left:2px}
