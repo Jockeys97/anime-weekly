@@ -21,6 +21,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const page = pageQuery == null ? 1 : Number(pageQuery);
   if (!Number.isSafeInteger(page) || page > 2147483647) notFound();
   const data = await getSeason(value.year, value.season, page);
+  // Cards use AniList averageScore: per-item Jikan requests would stall a 50-title page.
   const d = getDictionary('it').catalog;
   const previous = shiftSeason(value, -1);
   const next = shiftSeason(value, 1);

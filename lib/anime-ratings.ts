@@ -1,14 +1,14 @@
 import 'server-only';
-import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
+import { CACHE_TAG } from '@/lib/config';
 import { chooseAnimeMatch, type AnimeCandidate, type AnimeSearch } from '@/lib/anime-match';
 import type { Ratings } from '@/lib/ratings';
 
 import { anilistFetch as anilist, throttle } from '@/lib/rate-limited-fetch';
 const jikan = throttle(400, 6000);
+export const JIKAN_REVALIDATE = 86400;
 // Overall budget per process so a slow/blocked upstream degrades to n/a instead of stalling the page.
 const BUDGET_MS = 150_000;
 let budgetStart: number | undefined;
-let jikanFailures = 0;
 const overBudget = () => { budgetStart ??= Date.now(); return Date.now() - budgetStart > BUDGET_MS; };
 const query = `query ($search: String!, $formats: [MediaFormat]) {
   Page(page: 1, perPage: 50) {
@@ -43,14 +43,13 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
 }
 
 // Details already have an exact MAL ID, so reuse Jikan without another title lookup.
-export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = CACHE_SECONDS): Promise<Ratings> {
+export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE): Promise<Ratings> {
   const fallback: Ratings = { anilistScore: averageScore };
-  if (!Number.isSafeInteger(idMal) || idMal! <= 0 || jikanFailures >= 3 || overBudget()) return fallback;
+  if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
   try {
     const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, { next: { revalidate, tags: [CACHE_TAG] } });
-    if (!response.ok) { jikanFailures++; return fallback; }
-    jikanFailures = 0;
+    if (!response.ok) return fallback;
     const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
     return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
-  } catch { jikanFailures++; return fallback; }
+  } catch { return fallback; }
 }
