@@ -46,3 +46,12 @@
 
 .detail-streaming .region-list{display:block}
 .streaming-static{border-top:0;padding-top:0}
+
+.detail-loading{padding:16px;border:1px solid var(--line);border-radius:9px;background:#f0f3e9;color:var(--muted);font-size:12px;min-height:70px}
+.detail-loading-ratings{min-height:100px}
+.anime-loading{margin:32px 0;display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:start}
+.anime-loading-poster{aspect-ratio:2/3;border-radius:9px;background:#e8eddf}
+.anime-loading-copy{padding-top:10px}
+.anime-loading-line{height:16px;border-radius:5px;background:#e8eddf;margin:16px 0;max-width:90%}
+.anime-loading-line:first-child{height:32px;max-width:65%}
+@media(max-width:600px){.anime-loading{grid-template-columns:95px 1fr;gap:16px}}
