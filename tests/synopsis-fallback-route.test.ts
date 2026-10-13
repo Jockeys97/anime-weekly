@@ -1,3 +1,5 @@
+vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/tmdb', () => ({ getLocalizedSynopsis: vi.fn() }));
 vi.mock('../lib/deepl', () => ({ isDeepLConfigured: vi.fn(), translateSynopsis: vi.fn() }));
