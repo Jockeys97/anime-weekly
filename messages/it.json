@@ -1,0 +1,83 @@
+{
+  "catalog": {
+    "navLabel": "Navigazione principale",
+    "weekly": "Settimana",
+    "seasons": "Stagioni",
+    "search": "Cerca",
+    "searchLabel": "Cerca anime",
+    "searchPlaceholder": "Titolo dell’anime…",
+    "searchTitle": "Cerca un anime",
+    "searchPrompt": "Inserisci un titolo per esplorare il catalogo anime.",
+    "searchResults": "Risultati per",
+    "noResults": "Nessun risultato disponibile. Prova un altro titolo o riprova più tardi.",
+    "seasonTitle": "Anime della stagione",
+    "seasonDescription": "Esplora gli anime per stagione, ordinati per popolarità.",
+    "seasonEmpty": "Nessun anime disponibile per questa stagione. Prova un’altra stagione o riprova più tardi.",
+    "previousSeason": "Stagione precedente",
+    "nextSeason": "Stagione successiva",
+    "currentSeason": "Stagione attuale",
+    "yearLabel": "Scegli un anno",
+    "seasonLabel": "Scegli una stagione",
+    "pagination": "Pagine dei risultati",
+    "previousPage": "Pagina precedente",
+    "nextPage": "Pagina successiva",
+    "page": "Pagina",
+    "seasonNames": {
+      "winter": "Inverno",
+      "spring": "Primavera",
+      "summer": "Estate",
+      "fall": "Autunno"
+    },
+    "formats": {
+      "TV": "Serie TV",
+      "TV_SHORT": "Serie TV breve",
+      "MOVIE": "Film",
+      "ONA": "ONA",
+      "OVA": "OVA",
+      "SPECIAL": "Speciale",
+      "MUSIC": "Musica"
+    },
+    "statuses": {
+      "FINISHED": "Concluso",
+      "RELEASING": "In corso",
+      "NOT_YET_RELEASED": "In arrivo",
+      "CANCELLED": "Cancellato",
+      "HIATUS": "In pausa"
+    },
+    "unknown": "Non disponibile",
+    "episodes": "Episodi",
+    "format": "Formato",
+    "status": "Stato",
+    "startDate": "Data di uscita",
+    "studios": "Studi",
+    "genres": "Generi",
+    "season": "Stagione",
+    "details": "Vedi dettagli",
+    "source": "Vedi su AniList",
+    "noPlatforms": "Nessuna piattaforma trovata",
+    "availabilityNote": "La disponibilità è attuale e può variare in base al paese.",
+    "notFoundTitle": "Anime o stagione non trovati",
+    "notFoundBody": "Controlla l’indirizzo o esplora il catalogo delle stagioni.",
+    "back": "Torna alle stagioni"
+  },
+  "state": {
+    "noPoster": "Locandina non disponibile",
+    "noSynopsis": "Trama non disponibile.",
+    "noProviders": "Nessuna piattaforma trovata",
+    "providersError": "Disponibilità streaming temporaneamente non disponibile."
+  },
+  "title": {
+    "animeScore": "Voto anime",
+    "streaming": "Dove guardarlo",
+    "watch": "Opzioni di visione",
+    "votes": "Voti IMDb"
+  },
+  "regions": {
+    "IT": "Italia",
+    "US": "Stati Uniti",
+    "GB": "Regno Unito",
+    "FR": "Francia",
+    "DE": "Germania",
+    "JP": "Giappone"
+  }
+}

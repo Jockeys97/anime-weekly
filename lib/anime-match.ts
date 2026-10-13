@@ -37,3 +37,34 @@ export function chooseAnimeMatch(candidates: AnimeCandidate[], search: AnimeSear
   const matches = [...ranked.values()].sort((a, b) => a.rank - b.rank);
   return matches.length && (matches.length === 1 || matches[0].rank < matches[1].rank) ? matches[0].candidate : null;
 }
+
+export interface TMDBCandidate {
+  id: number;
+  name?: string;
+  title?: string;
+  original_name?: string;
+  original_title?: string;
+  first_air_date?: string;
+  release_date?: string;
+  genre_ids?: number[];
+  origin_country?: string[];
+}
+
+// Reverse lookup: require an exact normalized alias and a nearby release year.
+// Refuse tied matches so unrelated adaptations do not inherit providers or scores.
+export function chooseTMDBMatch(candidates: TMDBCandidate[], titles: string[], year?: number): TMDBCandidate | null {
+  const aliases = titles.map(normalizeTitle).filter(Boolean);
+  const ranked = new Map<number, { candidate: TMDBCandidate; distance: number }>();
+  for (const candidate of candidates) {
+    if (candidate.genre_ids?.length && !candidate.genre_ids.includes(16)) continue;
+    if (candidate.origin_country?.length && !candidate.origin_country.includes('JP')) continue;
+    const names = [candidate.name, candidate.title, candidate.original_name, candidate.original_title];
+    if (!names.some(name => name && aliases.includes(normalizeTitle(name)))) continue;
+    const date = candidate.first_air_date || candidate.release_date;
+    const releaseYear = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.slice(0, 4)) : undefined;
+    if (year != null && (releaseYear == null || Math.abs(releaseYear - year) > 1)) continue;
+    ranked.set(candidate.id, { candidate, distance: year == null ? 0 : Math.abs(releaseYear! - year) });
+  }
+  const matches = [...ranked.values()].sort((a, b) => a.distance - b.distance);
+  return matches.length && (matches.length === 1 || matches[0].distance < matches[1].distance) ? matches[0].candidate : null;
+}
