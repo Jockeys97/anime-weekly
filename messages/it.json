@@ -87,6 +87,8 @@
     "streamingCountry": "Paese per lo streaming",
     "searchCountry": "Cerca paese…",
     "noMatchingCountry": "Nessun paese trovato.",
+    "recoveredWatchSource": "Offerte verificate su JustWatch",
+    "noWatchData": "Nessuna offerta trovata nelle fonti consultate per questo paese.",
     "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato.",
     "imdb": "IMDb",
     "liked": "Se ti è piaciuto",

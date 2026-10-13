@@ -59,6 +59,8 @@
     "streamingCountry": "Streaming country",
     "searchCountry": "Search country…",
     "noMatchingCountry": "No matching country.",
+    "recoveredWatchSource": "Offers verified on JustWatch",
+    "noWatchData": "No offers found in the sources checked for this country.",
     "streamingCountryHint": "Show watch options for your selected country.",
     "seriesWatch": "Series watch options",
     "seriesWatchNote": "These services list the series in this country. Check that the selected season is included before subscribing.",
