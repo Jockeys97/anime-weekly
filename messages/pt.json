@@ -158,7 +158,7 @@
     "description": "Anime em exibição no Japão e novas estreias de cinema. Encontra a tua próxima história e descobre onde a ver."
   },
   "calendar": {
-    "timezoneNote": "Os horários de transmissão do AniList são apresentados em UTC. As datas dos episódios do TMDB não incluem hora nem fuso e são apresentadas como fornecidas. As estreias em streaming podem variar por serviço e país. Os filmes usam a primeira data de estreia do TMDB.",
+    "timezoneNote": "Os horários de transmissão do AniList ou de anúncios oficiais datados são apresentados em UTC. As datas dos episódios do TMDB não incluem hora nem fuso e são apresentadas como fornecidas. As estreias em streaming podem variar por serviço e país. Os filmes usam a primeira data de estreia do TMDB.",
     "navigation": "Explorar dias de estreia",
     "releases": "estreias",
     "titles": "títulos",

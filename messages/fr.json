@@ -158,7 +158,7 @@
     "description": "Les anime diffusés au Japon et les nouvelles sorties au cinéma. Trouvez votre prochaine histoire et découvrez où la regarder."
   },
   "calendar": {
-    "timezoneNote": "Les horaires de diffusion AniList sont en UTC. Les dates des épisodes TMDB n’ont ni heure ni fuseau et sont affichées telles que fournies. Les sorties en streaming peuvent varier selon le service et le pays. Les films utilisent leur première date de sortie TMDB.",
+    "timezoneNote": "Les horaires de diffusion AniList ou des annonces officielles datées sont en UTC. Les dates des épisodes TMDB n’ont ni heure ni fuseau et sont affichées telles que fournies. Les sorties en streaming peuvent varier selon le service et le pays. Les films utilisent leur première date de sortie TMDB.",
     "navigation": "Parcourir les jours de sortie",
     "releases": "sorties",
     "titles": "titres",

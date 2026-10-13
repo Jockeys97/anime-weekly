@@ -61,4 +61,18 @@ describe('weekly day calendar', () => {
     expect(result.days[6].releases).toHaveLength(1);
   });
 
+  it('uses a dated official announcement for the exact series, with the real source and UTC time', () => {
+    const anime = { ...tv(220542), ratings: {} };
+    const result = buildWeeklyCalendar([anime], [], week);
+    expect(result.days[4].releases[0]).toMatchObject({ episode: 51, airingAt: time('2026-10-16T14:00:00Z'), source: 'official', sourceUrl: 'https://kusuriyanohitorigoto.jp/' });
+    expect(result.undated).toEqual([]);
+    expect(buildWeeklyCalendar([anime], [], { year: 2026, week: 43 }).undated).toEqual([anime]);
+  });
+  it('prioritizes a dated official announcement without duplicating a conflicting AniList entry', () => {
+    const anime = tv(220542);
+    const result = buildWeeklyCalendar([anime], [event(time('2026-10-17T14:00:00Z'), 3, 220542)], week);
+    expect(result.days.flatMap(day => day.releases)).toHaveLength(1);
+    expect(result.days[4].releases[0].source).toBe('official');
+  });
+
 });
