@@ -1,4 +1,5 @@
 import { connection } from 'next/server';
+import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { CatalogCard } from '@/components/CatalogCard';
 import { SearchBox } from '@/components/SearchBox';
 import { searchAnime } from '@/lib/anilist';
@@ -17,7 +18,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     <SearchBox query={query} id="catalog-search" />
     {query ? <>
       <h2 className="search-results-heading">{d.searchResults} «{query}»</h2>
-      {results.length ? <div className="anime-grid">{results.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div> : <div className="empty-state" role="status"><p>{d.noResults}</p></div>}
+      {results.length ? <><StreamingCountrySelector locale="it" /><div className="anime-grid">{results.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div></> : <div className="empty-state" role="status"><p>{d.noResults}</p></div>}
     </> : <p className="catalog-intro">{d.searchPrompt}</p>}
   </main>;
 }

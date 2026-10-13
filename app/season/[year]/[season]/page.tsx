@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { CatalogCard } from '@/components/CatalogCard';
 import { getSeason } from '@/lib/anilist';
 import { getDictionary } from '@/lib/i18n';
@@ -21,7 +22,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const page = pageQuery == null ? 1 : Number(pageQuery);
   if (!Number.isSafeInteger(page) || page > 2147483647) notFound();
   const data = await getSeason(value.year, value.season, page);
-  // Cards use AniList averageScore: per-item Jikan requests would stall a 50-title page.
+  // Card enrichment is deferred until each card approaches the viewport.
   const d = getDictionary('it').catalog;
   const previous = shiftSeason(value, -1);
   const next = shiftSeason(value, 1);
@@ -38,7 +39,7 @@ export default async function SeasonPage({ params, searchParams }: {
     </div>
     <nav className="catalog-filters" aria-label={d.yearLabel}>{years.map(item => <Link key={item} prefetch={false} href={seasonPath({ ...value, year: item })} aria-current={item === value.year ? 'page' : undefined}>{item}</Link>)}</nav>
     <nav className="catalog-filters" aria-label={d.seasonLabel}>{SEASONS.map(item => <Link key={item} prefetch={false} href={seasonPath({ ...value, season: item })} aria-current={item === value.season ? 'page' : undefined}>{d.seasonNames[item]}</Link>)}</nav>
-    {data.media.length ? <div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <><StreamingCountrySelector locale="it" /><div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div></> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

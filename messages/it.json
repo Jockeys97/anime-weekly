@@ -61,7 +61,8 @@
     "back": "Torna alle stagioni",
     "loadingAnime": "Caricamento della scheda anime…",
     "loadingRatings": "Caricamento dei voti…",
-    "loadingAvailability": "Caricamento delle piattaforme streaming…"
+    "loadingAvailability": "Caricamento delle piattaforme streaming…",
+    "enrichmentUnavailable": "Voti e piattaforme temporaneamente non disponibili."
   },
   "state": {
     "noPoster": "Locandina non disponibile",

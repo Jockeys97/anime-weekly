@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { animeDescription, animeName, type AniListAnime } from '@/lib/anilist';
 import { getDictionary } from '@/lib/i18n';
-import { formatAnimeScore } from '@/lib/ratings';
+import { CatalogCardExtras } from '@/components/CatalogCardExtras';
 
 export function CatalogCard({ anime }: { anime: AniListAnime }) {
   const d = getDictionary('it');
@@ -17,7 +17,7 @@ export function CatalogCard({ anime }: { anime: AniListAnime }) {
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={`/anime/${anime.id}`} prefetch={false}>{name}</Link></h3>
       <p className="synopsis catalog-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
-      <dl className="catalog-ratings"><div><dt>{d.title.animeScore}</dt><dd>{formatAnimeScore({ anilistScore: anime.averageScore })}</dd></div></dl>
+      <CatalogCardExtras id={anime.id} name={name} score={anime.averageScore} />
       <Link href={`/anime/${anime.id}`} prefetch={false} className="catalog-details">{d.catalog.details} →</Link>
     </div>
   </article>;

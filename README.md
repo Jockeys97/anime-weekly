@@ -105,3 +105,11 @@ Titles without a confirmed date stay visible under “Date to be confirmed”; m
 Anime detail pages render the title, synopsis, cover and facts as soon as AniList resolves. Optional ratings and streaming availability load in separate Suspense boundaries, with explicit loading states instead of delaying the whole page. Both sections share one availability lookup per request. Alternate TMDB title searches run in parallel within each media type; all candidates are still considered for conservative matching.
 
 Exact AniList detail results use Next's persistent data cache for 24 hours, tagged for the existing revalidation endpoint. Cache hits bypass the process-wide upstream queue. Transient upstream errors are not cached as missing anime. A route-specific skeleton replaces the generic weekly loading screen.
+
+## Catalog card parity
+
+Season and search cards use the same branded IMDb and AniList rating tiles as the weekly guide. The existing AniList score links to the exact catalog ID; IMDb ratings/votes and links require a conservative TMDB match and a real IMDb ID. No ratings or season matches are estimated.
+
+A card near the viewport loads its summary through `/api/anime-card/[id]`. Browser requests are deduplicated and limited to two concurrent lookups; successful summaries are briefly cached, while failures permit an explicit retry. Titles and synopses render without waiting for enrichment. The same country selector and streaming-link resolver work across weekly, seasonal and search views.
+
+Weekly cards now offer internal detail navigation. Confirmed AniList IDs open `/anime/[id]`; titles without a confirmed ID open a title search rather than a guessed detail page.
