@@ -11,7 +11,8 @@ import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
 import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
-import { getAnimeAvailability, type AnimeAvailability } from '@/lib/tmdb';
+import type { AnimeAvailability } from '@/lib/tmdb';
+import { getDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 
 export const revalidate = 86400;
@@ -26,10 +27,9 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const c = d.catalog;
   const name = animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-  const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
-  const availability = getAnimeAvailability(aliases, year);
+  const availability = getDetailAvailability(anime);
   const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;

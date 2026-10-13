@@ -75,7 +75,8 @@
     "watch": "Opzioni di visione",
     "votes": "Voti IMDb",
     "streamingCountry": "Paese per lo streaming",
-    "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato."
+    "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato.",
+    "seriesRating": "Voto della serie"
   },
   "regions": {
     "IT": "Italia",

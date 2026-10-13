@@ -22,9 +22,10 @@ export function RatingSummary({ ratings, title, locale }: { ratings: Ratings; ti
   const source = isMal ? 'myanimelist' : 'anilist';
   const members = formatMembers(ratings.malMembers);
   return <dl className="ratings">
-    <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={title} locale={locale}>
+    <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={ratings.imdbSeriesTitle || title} locale={locale}>
       <dd className="rating-value">{formatRating(ratings.imdbRating)}{formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
       <dd className="rating-detail">{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</dd>
+      {ratings.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {ratings.imdbSeriesTitle}</dd>}
     </SourceTile>
     <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>
       <dd className="rating-value">{isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>

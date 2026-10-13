@@ -105,3 +105,9 @@ Titles without a confirmed date stay visible under “Date to be confirmed”; m
 Anime detail pages render the title, synopsis, cover and facts as soon as AniList resolves. Optional ratings and streaming availability load in separate Suspense boundaries, with explicit loading states instead of delaying the whole page. Both sections share one availability lookup per request. Alternate TMDB title searches run in parallel within each media type; all candidates are still considered for conservative matching.
 
 Exact AniList detail results use Next's persistent data cache for 24 hours, tagged for the existing revalidation endpoint. Cache hits bypass the process-wide upstream queue. Transient upstream errors are not cached as missing anime. A route-specific skeleton replaces the generic weekly loading screen.
+
+## IMDb scores for separate anime seasons
+
+AniList may publish a separate entry for each season while TMDB/IMDb represent the complete TV series. If a season detail has no direct IMDb ID, follow up to eight confirmed AniList PREQUEL relations only for TV/TV_SHORT/ONA entries whose normalized base titles match after removing explicit season/cour suffixes. Use the confirmed original entry's titles and original release year with the existing conservative TMDB matcher. Ambiguity, cycles, films, different named sequels and unavailable parent data keep the score unavailable.
+
+Inherited IMDb ratings and links are labelled as the original series rating. MAL/AniList scores still belong to the selected season. Series-wide streaming providers are not inherited, because they do not establish availability of that season.
