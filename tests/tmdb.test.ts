@@ -29,6 +29,8 @@ describe('TMDB anime availability (offline)', () => {
         FR: { link: 'https://untrusted.example/', flatrate: [netflix] },
         DE: { link: link('DE'), flatrate: [] },
         CA: { link: link('CA'), flatrate: [netflix] },
+        ES: { link: link('ES'), flatrate: [crunchyroll] },
+        ZZ: { link: link('ZZ'), flatrate: [netflix] },
       } });
       throw new Error('Unexpected request');
     });
@@ -40,6 +42,8 @@ describe('TMDB anime availability (offline)', () => {
         IT: { link: link('IT'), providers: [netflix, crunchyroll] },
         US: { link: link('US'), providers: [crunchyroll] },
         JP: { link: link('JP'), providers: [netflix] },
+        CA: { link: link('CA'), providers: [netflix] },
+        ES: { link: link('ES'), providers: [crunchyroll] },
       },
     });
     expect(fetchMock).toHaveBeenCalledTimes(3);

@@ -17,7 +17,7 @@ export function useStreamingCountry() {
 export function StreamingCountrySelector({ locale = 'en' }: { locale?: string }) {
   const { region, setRegion } = useStreamingCountry();
   const d = getDictionary(locale);
-  const regions = ['US', ...STREAMING_REGIONS.filter(country => country !== 'US')] as const;
+  const regions = ['US', ...STREAMING_REGIONS.filter(country => country !== 'US').sort((a, b) => d.regions[a].localeCompare(d.regions[b], locale))] as const;
   return <div className="country-toolbar">
     <div><label htmlFor="streaming-country">{d.title.streamingCountry}</label><p>{d.title.streamingCountryHint}</p></div>
     <select id="streaming-country" value={region} onChange={event => {
