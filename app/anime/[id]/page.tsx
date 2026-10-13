@@ -13,7 +13,7 @@ import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
-import type { AnimeAvailability } from '@/lib/tmdb';
+import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
 import { getDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 
@@ -88,7 +88,7 @@ async function DetailRatings({ animeRatings, availability, id, name, locale }: {
 
 async function DetailAvailability({ availability, name, locale }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale }) {
   const watch = await availability;
-  return <StreamingAvailability locale={locale} collapsible={false} anime={{
+  return <StreamingAvailability locale={locale} collapsible={false} seriesWatch={watch.seriesWatch} anime={{
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
     providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
   }} />;

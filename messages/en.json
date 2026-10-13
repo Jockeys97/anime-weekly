@@ -58,6 +58,8 @@
     "streamingLinksNote": "Open this title on a service for the country shown. If a direct link is unavailable, view the regional watch options. Access depends on your location and subscription.",
     "streamingCountry": "Streaming country",
     "streamingCountryHint": "Show watch options for your selected country.",
+    "seriesWatch": "Series watch options",
+    "seriesWatchNote": "These services list the series in this country. Check that the selected season is included before subscribing.",
     "seriesRating": "Series rating"
   },
   "regions": {

@@ -93,6 +93,8 @@
     "members": "utenti",
     "opensNewTab": "si apre in una nuova scheda",
     "streamingLinksNote": "Apri il titolo sul servizio per il paese indicato. Se manca il link diretto, vedrai le opzioni regionali. L’accesso dipende dalla tua posizione e dall’abbonamento.",
+    "seriesWatch": "Piattaforme della serie",
+    "seriesWatchNote": "Questi servizi indicano la serie in questo paese. Verifica che includano la stagione selezionata prima di abbonarti.",
     "seriesRating": "Voto della serie"
   },
   "regions": {

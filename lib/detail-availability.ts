@@ -7,9 +7,9 @@ const titlesOf = (anime: Pick<AniListAnime, 'title'>) => [anime.title.english, a
 const seriesFormats = ['TV', 'TV_SHORT', 'ONA'];
 // Strip explicit season/cour suffixes only: numbers within names remain intact.
 export function seriesBaseTitle(title: string): string {
-  let base = title.trim();
+  let base = title.normalize("NFKC").trim();
   for (let i = 0; i < 4; i++) {
-    const next = base.replace(/\s*(?:[-:–]\s*)?(?:season\s+\d+|\d+(?:st|nd|rd|th)?\s+season|part\s+\d+|第\s*\d+\s*(?:期|クール))\s*$/iu, '').trim();
+    const next = base.replace(/\s*(?:[-:–]\s*)?(?:(?:the\s+)?final\s+season|season\s*\d+|\d+(?:st|nd|rd|th)?\s+season|part\s*\.?\s*\d+|第\s*\d+\s*(?:期|クール))\s*$/iu, '').trim();
     if (next === base) break;
     base = next;
   }
@@ -17,7 +17,7 @@ export function seriesBaseTitle(title: string): string {
 }
 
 export async function findSeasonSeries(anime: AniListAnime): Promise<AniListAnime | null> {
-  if (!seriesFormats.includes(anime.format || '') || !titlesOf(anime).some(title => seriesBaseTitle(title) !== title.trim())) return null;
+  if (!seriesFormats.includes(anime.format || '') || !titlesOf(anime).some(title => seriesBaseTitle(title) !== title.normalize('NFKC').trim())) return null;
   const bases = titlesOf(anime).map(seriesBaseTitle).map(normalizeTitle).filter(Boolean);
   const visited = new Set([anime.id]);
   let current = anime;
@@ -32,20 +32,31 @@ export async function findSeasonSeries(anime: AniListAnime): Promise<AniListAnim
     const parentYear = parent.startDate?.year;
     if (!parentYear || (current.startDate?.year && parentYear > current.startDate.year)) return null;
     visited.add(parent.id);
-    if (!titlesOf(parent).some(title => seriesBaseTitle(title) !== title.trim())) return parent;
+    if (!titlesOf(parent).some(title => seriesBaseTitle(title) !== title.normalize('NFKC').trim())) return parent;
     current = parent;
   }
   return null;
 }
 
-export async function getDetailAvailability(anime: AniListAnime): Promise<AnimeAvailability> {
+export interface DetailAvailability extends AnimeAvailability {
+  seriesWatch?: { id: number; kind: 'tv'; name: string; providers: AnimeAvailability['providers']; providersUnavailable: boolean };
+}
+
+export async function getDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const direct = await getAnimeAvailability(titlesOf(anime), year);
-  if (direct.ratings.imdbId) return direct;
   const series = await findSeasonSeries(anime);
   if (!series) return direct;
   const original = await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined);
-  if (!original.ratings.imdbId) return direct;
-  // Inherit only IMDb. Series-wide watch providers do not prove this season is streaming.
-  return { ...direct, ratings: { ...direct.ratings, ...original.ratings, imdbSeriesTitle: animeName(series) } };
+  // Keep exact-season providers separate. The client selects a series reference only
+  // when the chosen country has no direct offers, without claiming season coverage.
+  return {
+    ...direct,
+    ratings: !direct.ratings.imdbId && original.ratings.imdbId
+      ? { ...direct.ratings, ...original.ratings, imdbSeriesTitle: animeName(series) }
+      : direct.ratings,
+    ...(original.match?.kind === 'tv' && original.match.id !== direct.match?.id ? {
+      seriesWatch: { id: original.match.id, kind: 'tv' as const, name: animeName(series), providers: original.providers, providersUnavailable: original.providersUnavailable },
+    } : {}),
+  };
 }
