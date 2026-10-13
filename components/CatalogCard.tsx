@@ -17,7 +17,7 @@ export function CatalogCard({ anime, locale = 'en' }: { anime: AniListAnime; loc
     <div className="card-body">
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={`/anime/${anime.id}`} prefetch={false}>{name}</Link></h3>
-      <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />
+      <LocalizedSynopsis anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />
       <CatalogCardExtras id={anime.id} name={name} score={anime.averageScore} locale={locale} />
       <Link href={`/anime/${anime.id}`} prefetch={false} className="catalog-details">{d.catalog.details} →</Link>
     </div>

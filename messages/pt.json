@@ -136,7 +136,8 @@
     "label": "Idioma",
     "error": "Não foi possível alterar o idioma. Tenta novamente.",
     "originalSynopsis": "Tradução indisponível; é apresentada a sinopse em inglês.",
-    "loadingSynopsis": "A carregar a sinopse traduzida…"
+    "loadingSynopsis": "A carregar a sinopse traduzida…",
+    "machineTranslation": "Tradução automática"
   },
   "loading": "A carregar o guia semanal…",
   "notFound": {

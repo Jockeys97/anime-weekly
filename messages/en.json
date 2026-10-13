@@ -224,6 +224,7 @@
     "label": "Language",
     "error": "The language could not be changed. Please try again.",
     "originalSynopsis": "Translation unavailable; showing the English synopsis.",
-    "loadingSynopsis": "Loading translated synopsis…"
+    "loadingSynopsis": "Loading translated synopsis…",
+    "machineTranslation": "Automatic translation"
   }
 }
