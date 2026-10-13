@@ -53,6 +53,8 @@
     "streamingLinksNote": "Ouvrez le titre sur le service du pays indiqué. Sans lien direct, les options régionales s’affichent. L’accès dépend de votre localisation et de votre abonnement.",
     "streamingCountry": "Pays de streaming",
     "streamingCountryHint": "Afficher uniquement les services du pays sélectionné.",
+    "seriesWatch": "Plateformes de la série",
+    "seriesWatchNote": "Ces services proposent la série dans ce pays. Vérifiez que la saison sélectionnée est incluse avant de vous abonner.",
     "seriesRating": "Note de la série"
   },
   "catalog": {
