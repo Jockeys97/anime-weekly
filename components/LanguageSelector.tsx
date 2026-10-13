@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useOptimistic, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDictionary } from '@/lib/i18n';
 import { isLocale, localeNames, locales, type Locale } from '@/lib/locales';
@@ -8,18 +8,21 @@ export function LocaleProvider({ locale, children }: { locale: Locale; children:
 export const useLocale = () => useContext(LocaleContext);
 export function LanguageSelector({ locale }: { locale: Locale }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [busy, startTransition] = useTransition();
+  const [selectedLocale, selectLocale] = useOptimistic(locale);
   const [failed, setFailed] = useState(false);
   const d = getDictionary(locale);
-  return <div className="language-control"><label className="sr-only" htmlFor="site-language">{d.language.label}</label><select id="site-language" value={locale} disabled={busy} onChange={async event => {
+  return <div className="language-control"><label className="sr-only" htmlFor="site-language">{d.language.label}</label><select id="site-language" value={selectedLocale} disabled={busy} aria-busy={busy} onChange={event => {
     const value = event.target.value;
     if (!isLocale(value)) return;
-    setBusy(true); setFailed(false);
-    try {
-      const response = await fetch('/api/language', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: value }) });
-      if (!response.ok) throw new Error('Language update failed');
-      router.refresh();
-    } catch { setFailed(true); }
-    finally { setBusy(false); }
+    setFailed(false);
+    startTransition(async () => {
+      selectLocale(value);
+      try {
+        const response = await fetch('/api/language', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: value }), signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error('Language update failed');
+        router.refresh();
+      } catch { setFailed(true); }
+    });
   }}>{locales.map(value => <option key={value} value={value} lang={value}>{localeNames[value]}</option>)}</select>{failed && <span role="alert">{d.language.error}</span>}</div>;
 }
