@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: (...args: unknown[]) => unknown) => fn }));
-vi.mock('../lib/anime-ratings', () => ({ getAnimeRatings: async () => ({}) }));
+vi.mock('../lib/anime-ratings', () => ({ getAnimeRatings: vi.fn(async () => ({})) }));
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('IMDb title link enrichment', () => {
@@ -98,4 +98,21 @@ it('shares score and provider enrichment across different languages and overlays
   expect(fr.titles.map(title => title.overview)).toEqual(['tv fr-FR', 'movie fr-FR']);
   expect(it.titles[0].ratings).toEqual(en.titles[0].ratings);
   expect(fr.titles[1].providers).toEqual(en.titles[1].providers);
+});
+
+it('returns IMDb and watch providers without starting optional AniList enrichment', async () => {
+  vi.clearAllMocks(); vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', ''); vi.stubEnv('OMDB_API_KEY', 'test');
+  vi.stubGlobal('fetch', vi.fn(async (url: URL) => {
+    if (url.pathname.endsWith('/discover/tv')) return Response.json({ results: [{ id: 77, name: 'Fast title' }], total_pages: 1 });
+    if (url.pathname.endsWith('/external_ids')) return Response.json({ imdb_id: 'tt77' });
+    if (url.hostname === 'www.omdbapi.com') return Response.json({ Response: 'True', imdbRating: '8.2' });
+    if (url.pathname.endsWith('/watch/providers')) return Response.json({ results: { US: { link: 'https://www.themoviedb.org/tv/77/watch?locale=US', flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
+    return Response.json({ results: [], total_pages: 1 });
+  }));
+  const { getCachedPrimaryWeekData } = await import('../lib/tmdb');
+  const { getAnimeRatings } = await import('../lib/anime-ratings');
+  const data = await getCachedPrimaryWeekData({ year: 2026, week: 44 });
+  expect(data.titles[0].ratings).toMatchObject({ imdbRating: '8.2' });
+  expect(data.titles[0].providers.US?.providers[0].provider_id).toBe(8);
+  expect(getAnimeRatings).not.toHaveBeenCalled();
 });

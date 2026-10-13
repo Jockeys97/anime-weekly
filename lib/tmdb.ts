@@ -159,6 +159,30 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
   return { status: selection.status, titles, partial: selection.partial };
 }
 
+async function getPrimaryWeekData(week: ISOWeek): Promise<WeekData> {
+  const selection = await selectWeekTitles(week, 'en');
+  const titles: AnimeTitle[] = [];
+  for (let i = 0; i < selection.selected.length; i += 10) {
+    titles.push(...await Promise.all(selection.selected.slice(i, i + 10).map(async ({ raw, kind }) => {
+      const [ratings, watch] = await Promise.all([
+        getRatings(kind, raw.id),
+        tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null),
+      ]);
+      return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null,
+        releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: null,
+        providers: watchProviders(watch), providersUnavailable: watch === null };
+    })));
+  }
+  return { status: selection.status, partial: selection.partial, titles };
+}
+const cachedPrimaryWeek = unstable_cache(getPrimaryWeekData, ['weekly-primary-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+export async function getCachedPrimaryWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  const [core, localized] = await Promise.all([cachedPrimaryWeek(week), locale === 'en' ? Promise.resolve(null) : selectWeekTitles(week, locale, false)]);
+  if (!localized) return core;
+  const overviews = new Map(localized.selected.map(({ kind, raw }) => [`${kind}:${raw.id}`, raw.overview]));
+  return { ...core, titles: core.titles.map(anime => ({ ...anime, overview: overviews.get(`${anime.kind}:${anime.id}`) || anime.overview })) };
+}
+
 // Scores, source matches, recommendations and regional providers are shared
 // across languages. Only the overview changes when the visitor switches locale.
 const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v2-english-names'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
