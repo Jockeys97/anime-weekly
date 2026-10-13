@@ -164,14 +164,15 @@ export async function getLocalizedSynopsis(titles: string[], year: number | unde
   if (locale === 'en' || !isTMDBConfigured()) return null;
   const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))].slice(0, 3);
   const candidates: TMDBCandidate[] = [];
-  for (const title of aliases) {
+  const results = await Promise.all(aliases.map(async title => {
     try {
       const query: Record<string, string> = { query: title, include_adult: 'false' };
       if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
       const page = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, 86400);
-      if (Array.isArray(page.results)) candidates.push(...page.results);
-    } catch { /* Never guess a translation after an unavailable source. */ }
-  }
+      return Array.isArray(page.results) ? page.results : [];
+    } catch { return []; }
+  }));
+  for (const result of results) candidates.push(...result);
   const match = chooseTMDBMatch(candidates, aliases, year);
   if (!match) return null;
   try {
