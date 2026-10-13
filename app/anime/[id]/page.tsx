@@ -52,8 +52,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{name}</h1>
-        {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
-        {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
+        {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
         <Suspense fallback={<p className="synopsis detail-synopsis" role="status">{d.language.loadingSynopsis}</p>}>
           <DetailSynopsis synopsis={synopsis} anime={anime} aliases={aliases} year={year} locale={locale} />
         </Suspense>

@@ -55,7 +55,7 @@ it('shares one cold weekly enrichment across simultaneous requests for the same 
   const { getCachedWeekData } = await import('../lib/tmdb');
   const results = await Promise.all([getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it')]);
   expect(results.every(data => data.status === 'ready')).toBe(true);
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock).toHaveBeenCalledTimes(4);
 });
 
 it('skips movie searches when AniList confirms a TV season', async () => {
@@ -66,4 +66,12 @@ it('skips movie searches when AniList confirms a TV season', async () => {
   expect((await getAnimeAvailability(['Example Season 3'], 2026, 'tv')).match).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(String(fetchMock.mock.calls[0][0])).toContain('/search/tv');
+});
+
+it('keeps English catalog titles and localized synopses in the weekly guide', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  vi.stubGlobal('fetch', vi.fn(async (url: URL) => Response.json({ results: url.pathname.endsWith('/discover/tv') ? [{ id: 1, name: url.searchParams.get('language') === 'en-US' ? 'Original English Title' : 'Titolo italiano', overview: 'Trama italiana.' }] : [], total_pages: 1 })));
+  const { getQuickWeekData } = await import('../lib/tmdb');
+  const data = await getQuickWeekData({ year: 2026, week: 42 }, 'it');
+  expect(data.titles[0]).toMatchObject({ name: 'Original English Title', overview: 'Trama italiana.' });
 });
