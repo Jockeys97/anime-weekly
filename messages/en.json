@@ -190,5 +190,12 @@
     "loadingAnime": "Loading anime details…",
     "loadingRatings": "Loading ratings…",
     "loadingAvailability": "Loading streaming availability…"
+  },
+  "trailer": {
+    "heading": "Trailer",
+    "play": "Play trailer",
+    "external": "Watch on video platform",
+    "unavailable": "No trailer is available for this specific season or cour.",
+    "note": "The video player loads only when you press play."
   }
 }
