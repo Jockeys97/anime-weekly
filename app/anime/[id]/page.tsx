@@ -30,6 +30,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const c = d.catalog;
   const name = animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
+  const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
   const availability = getDetailAvailability(anime);
