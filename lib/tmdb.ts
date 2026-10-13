@@ -11,7 +11,7 @@ import { readEpisodeDates, selectEpisodeSeasons, type EpisodeDate, type EpisodeD
 type Kind = 'tv' | 'movie';
 interface RawTitle { id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
 interface Page { results: RawTitle[]; total_pages: number }
-export interface Provider { provider_id: number; provider_name: string; logo_path: string | null }
+export interface Provider { watch_url?: string; provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
 export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getDictionary } from '../lib/i18n';
 import { isLocale, locales, negotiateLocale } from '../lib/locales';
 
@@ -35,4 +35,12 @@ describe('visitor language selection', () => {
     expect(d.catalog.search).toBe('Cerca');
     expect(d.regions.ES).toBe('Spagna');
   });
+});
+
+it('uses identical country names even when runtime region naming differs', () => {
+  const names = vi.spyOn(Intl, 'DisplayNames').mockImplementation(() => { throw new Error('Different browser ICU'); });
+  try {
+    expect(getDictionary('it').regions.HK).toBe('Hong Kong');
+    expect(getDictionary('fr').regions.IT).toBe('Italie');
+  } finally { names.mockRestore(); }
 });

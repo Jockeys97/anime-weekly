@@ -77,7 +77,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
       <h2 id="streaming-heading">{d.title.streaming}</h2>
       <StreamingCountrySelector locale={locale} />
       <Suspense fallback={<p className="detail-loading" role="status">{c.loadingAvailability}</p>}>
-        <DetailAvailability availability={availability} name={name} locale={locale} />
+        <DetailAvailability availability={availability} name={name} locale={locale} id={anime.id} />
       </Suspense>
       <p className="catalog-intro">{c.availabilityNote}</p>
     </section>
@@ -98,9 +98,9 @@ async function DetailAnimeRating({ animeRatings, id, name, locale }: {
   return <AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} />;
 }
 
-async function DetailAvailability({ availability, name, locale }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale }) {
+async function DetailAvailability({ availability, name, locale, id }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale; id: number }) {
   const watch = await availability;
-  return <StreamingAvailability locale={locale} collapsible={false} seriesWatch={watch.seriesWatch} anime={{
+  return <StreamingAvailability locale={locale} collapsible={false} recoveryId={id} seriesWatch={watch.seriesWatch} anime={{
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
     providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
   }} />;

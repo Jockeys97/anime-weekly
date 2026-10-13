@@ -11,6 +11,5 @@ const translations = { it, es, fr, de, pt };
 export function getDictionary(value: string = defaultLocale): Dictionary {
   const locale = isLocale(value) ? value : defaultLocale;
   const translated = locale === 'en' ? en : translations[locale];
-  const names = new Intl.DisplayNames([locale], { type: 'region' });
-  return { ...en, ...translated, title: { ...en.title, ...translated.title }, regions: Object.fromEntries(Object.keys(en.regions).map(code => [code, names.of(code) || en.regions[code as keyof typeof en.regions]])) as typeof en.regions };
+  return { ...en, ...translated, title: { ...en.title, ...translated.title }, regions: { ...en.regions, ...translated.regions } };
 }
