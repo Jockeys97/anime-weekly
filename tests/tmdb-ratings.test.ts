@@ -57,3 +57,13 @@ it('shares one cold weekly enrichment across simultaneous requests for the same 
   expect(results.every(data => data.status === 'ready')).toBe(true);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it('skips movie searches when AniList confirms a TV season', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  const fetchMock = vi.fn().mockResolvedValue(Response.json({ results: [] }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getAnimeAvailability } = await import('../lib/tmdb');
+  expect((await getAnimeAvailability(['Example Season 3'], 2026, 'tv')).match).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(String(fetchMock.mock.calls[0][0])).toContain('/search/tv');
+});

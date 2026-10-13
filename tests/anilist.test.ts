@@ -45,6 +45,18 @@ describe('AniList catalog (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('loads bounded season-family results with prequel edges in one request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: { media: [anime] } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getSeasonFamily } = await import('../lib/anilist');
+    expect(await getSeasonFamily(' Example ')).toEqual([anime]);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.variables).toEqual({ search: 'Example' });
+    expect(body.query).toContain('perPage: 50');
+    expect(body.query).toContain('relationType');
+    expect(body.query).toContain('format_in: [TV, TV_SHORT, ONA]');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it('gets the requested anime by ID', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Media: anime } }));
     vi.stubGlobal('fetch', fetchMock);

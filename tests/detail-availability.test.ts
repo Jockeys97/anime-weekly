@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), animeName: (anime: { title: { english: string } }) => anime.title.english }));
+vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), getSeasonFamily: vi.fn().mockResolvedValue([]), animeName: (anime: { title: { english: string } }) => anime.title.english }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
-import { getAnime, type AniListAnime } from '../lib/anilist';
+import { getAnime, getSeasonFamily, type AniListAnime } from '../lib/anilist';
 import { getAnimeAvailability, type AnimeAvailability } from '../lib/tmdb';
 import { findSeasonSeries, getDetailAvailability, seriesBaseTitle } from '../lib/detail-availability';
 
@@ -14,7 +14,7 @@ function prequel(child: AniListAnime, parent: AniListAnime) {
   child.relations!.edges.push({ relationType: 'PREQUEL', node: { id: parent.id, type: 'ANIME', format: parent.format, title: parent.title, startDate: { year: parent.startDate!.year } } });
 }
 const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { vi.resetAllMocks(); vi.mocked(getSeasonFamily).mockResolvedValue([]); });
 
 describe('season IMDb series fallback', () => {
   it('uses the confirmed first-season title and year for IMDb, keeping season availability separate', async () => {
@@ -25,8 +25,28 @@ describe('season IMDb series fallback', () => {
     vi.mocked(getAnime).mockImplementation(async id => id === second.id ? second : id === first.id ? first : null);
     vi.mocked(getAnimeAvailability).mockResolvedValueOnce(empty).mockResolvedValueOnce({ ...empty, match: { id: 220542, kind: 'tv' }, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453' }, providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
     expect(await getDetailAvailability(third)).toEqual({ ...empty, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' }, seriesWatch: { id: 220542, kind: 'tv', name: 'The Apothecary Diaries', providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } });
-    expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026);
-    expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023);
+    expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026, 'tv');
+    expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023, 'tv');
+  });
+  it('resolves a multi-season chain with one family request and no per-season requests', async () => {
+    const first = anime(1, 'Attack on Titan', 2013);
+    const second = anime(2, 'Attack on Titan Season 2', 2017);
+    const third = anime(3, 'Attack on Titan Season 3', 2018);
+    const current = anime(4, 'Attack on Titan Final Season', 2020);
+    prequel(current, third); prequel(third, second); prequel(second, first);
+    vi.mocked(getSeasonFamily).mockResolvedValue([third, second, first, anime(9, 'Unrelated title', 2001)]);
+    expect(await findSeasonSeries(current)).toEqual(first);
+    expect(getSeasonFamily).toHaveBeenCalledTimes(1);
+    expect(getSeasonFamily).toHaveBeenCalledWith('Attack on Titan');
+    expect(getAnime).not.toHaveBeenCalled();
+  });
+  it('does not accept a similarly named search result without a confirmed prequel ID', async () => {
+    const current = anime(3, 'Example Season 3', 2026);
+    const second = anime(2, 'Example Season 2', 2024); prequel(current, second);
+    vi.mocked(getSeasonFamily).mockResolvedValue([anime(1, 'Example', 2023)]);
+    vi.mocked(getAnime).mockResolvedValue(null);
+    expect(await findSeasonSeries(current)).toBeNull();
+    expect(getAnime).toHaveBeenCalledWith(2);
   });
   it('retains a direct IMDb match without following prequels', async () => {
     const data = { ...empty, ratings: { imdbId: 'tt123' } };
