@@ -27,15 +27,27 @@ async function tmdb<T>(path: string, query: Record<string, string> = {}, revalid
   if (!response.ok) throw new Error('TMDB request failed');
   return response.json() as Promise<T>;
 }
-async function discover(kind: Kind, week: ISOWeek, locale: Locale): Promise<RawTitle[]> {
+async function discover(kind: Kind, week: ISOWeek, locale: Locale, englishNames = true): Promise<RawTitle[]> {
   const { start, end } = weekRange(week);
   const dateField = kind === 'tv' ? 'air_date' : 'primary_release_date';
   const query = { language: tmdbLanguages[locale], with_genres: '16', with_origin_country: 'JP', include_adult: 'false', [`${dateField}.gte`]: start, [`${dateField}.lte`]: end, sort_by: 'popularity.desc' };
-  const first = await tmdb<Page>(`discover/${kind}`, query);
-  // Only two pages per category; final enrichment is capped across both categories.
+  const readPage = async (page = 1): Promise<Page> => {
+    const pageQuery = page === 1 ? query : { ...query, page: String(page) };
+    const [localized, english] = await Promise.all([
+      tmdb<Page>(`discover/${kind}`, pageQuery),
+      locale === 'en' || !englishNames ? Promise.resolve(null) : tmdb<Page>(`discover/${kind}`, { ...pageQuery, language: 'en-US' }).catch(() => null),
+    ]);
+    const names = new Map((english?.results || []).map(item => [item.id, item.name || item.title]));
+    return { ...localized, results: localized.results.map(item => {
+      const name = names.get(item.id) || (locale === 'en' ? item.name || item.title : item.original_name || item.original_title);
+      return name ? { ...item, ...(kind === 'tv' ? { name } : { title: name }) } : item;
+    }) };
+  };
+  const first = await readPage();
   if (first.total_pages < 2) return first.results;
-  try { const second = await tmdb<Page>(`discover/${kind}`, { ...query, page: '2' }); return [...first.results, ...second.results]; } catch { return first.results; }
+  try { const second = await readPage(2); return [...first.results, ...second.results]; } catch { return first.results; }
 }
+
 async function getRatings(kind: Kind, id: number, revalidate = CACHE_SECONDS): Promise<Ratings> {
   let ratings: Ratings = {};
   try {
@@ -114,9 +126,9 @@ export async function getAnimeAvailability(titles: string[], year?: number, kind
   }
   return empty;
 }
-async function selectWeekTitles(week: ISOWeek, locale: Locale) {
+async function selectWeekTitles(week: ISOWeek, locale: Locale, englishNames = true) {
   if (!isTMDBConfigured()) return { status: 'unconfigured' as const, selected: [] };
-  const [tv, movie] = await Promise.allSettled([discover('tv', week, locale), discover('movie', week, locale)]);
+  const [tv, movie] = await Promise.allSettled([discover('tv', week, locale, englishNames), discover('movie', week, locale, englishNames)]);
   if (tv.status === 'rejected' && movie.status === 'rejected') return { status: 'error' as const, selected: [] };
   const shows = tv.status === 'fulfilled' ? tv.value : [];
   const movies = movie.status === 'fulfilled' ? movie.value : [];
@@ -147,15 +159,29 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
   return { status: selection.status, titles, partial: selection.partial };
 }
 
-// Cache the entire enrichment per week and language, avoiding repeated throttled
-// rating lookups when request-specific locale selection makes pages dynamic.
-const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+// Scores, source matches, recommendations and regional providers are shared
+// across languages. Only the overview changes when the visitor switches locale.
+const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v2-english-names'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const pendingCoreWeeks = new Map<string, Promise<WeekData>>();
 const pendingWeeks = new Map<string, Promise<WeekData>>();
+function sharedWeekData(week: ISOWeek): Promise<WeekData> {
+  const key = `${week.year}-${week.week}`;
+  const existing = pendingCoreWeeks.get(key);
+  if (existing) return existing;
+  const pending = cachedWeekData(week, 'en').finally(() => { pendingCoreWeeks.delete(key); });
+  pendingCoreWeeks.set(key, pending);
+  return pending;
+}
 export function getCachedWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  if (locale === 'en') return sharedWeekData(week);
   const key = `${week.year}-${week.week}:${locale}`;
   const existing = pendingWeeks.get(key);
   if (existing) return existing;
-  const pending = cachedWeekData(week, locale).finally(() => { pendingWeeks.delete(key); });
+  const pending = Promise.all([sharedWeekData(week), selectWeekTitles(week, locale, false)])
+    .then(([core, localized]) => {
+      const overviews = new Map(localized.selected.map(({ kind, raw }) => [`${kind}:${raw.id}`, raw.overview]));
+      return { ...core, titles: core.titles.map(anime => ({ ...anime, overview: overviews.get(`${anime.kind}:${anime.id}`) || anime.overview })) };
+    }).finally(() => { pendingWeeks.delete(key); });
   pendingWeeks.set(key, pending);
   return pending;
 }
@@ -164,14 +190,15 @@ export async function getLocalizedSynopsis(titles: string[], year: number | unde
   if (locale === 'en' || !isTMDBConfigured()) return null;
   const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))].slice(0, 3);
   const candidates: TMDBCandidate[] = [];
-  for (const title of aliases) {
+  const results = await Promise.all(aliases.map(async title => {
     try {
       const query: Record<string, string> = { query: title, include_adult: 'false' };
       if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
       const page = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, 86400);
-      if (Array.isArray(page.results)) candidates.push(...page.results);
-    } catch { /* Never guess a translation after an unavailable source. */ }
-  }
+      return Array.isArray(page.results) ? page.results : [];
+    } catch { return []; }
+  }));
+  for (const result of results) candidates.push(...result);
   const match = chooseTMDBMatch(candidates, aliases, year);
   if (!match) return null;
   try {

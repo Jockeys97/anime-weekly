@@ -102,7 +102,7 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
 }
 
 export function animeName(anime: AniListAnime): string {
-  return anime.title.english || anime.title.romaji || anime.title.native || `Anime #${anime.id}`;
+  return [anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`;
 }
 
 // Render upstream descriptions as text, never as untrusted HTML.

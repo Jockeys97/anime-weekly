@@ -1,3 +1,4 @@
+vi.mock('../lib/synopsis', () => ({ getSynopsis: async () => ({ synopsis: null, language: null, source: null }) }));
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/request-locale', () => ({ getRequestLocale: async () => 'it' }));
@@ -20,7 +21,7 @@ afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
 function textInTree(node: unknown, text: string): boolean {
   if (node === text) return true;
   if (Array.isArray(node)) return node.some(child => textInTree(child, text));
-  if (React.isValidElement<{ children?: unknown; original?: string }>(node)) return node.props.original === text || textInTree(node.props.children, text);
+  if (React.isValidElement<{ children?: unknown; original?: string; anime?: { description?: string } }>(node)) return node.props.original === text || node.props.anime?.description === text || textInTree(node.props.children, text);
   return false;
 }
 describe('progressive anime details', () => {

@@ -1,3 +1,5 @@
+import { getSynopsis } from '@/lib/synopsis';
+import type { SynopsisResult } from '@/lib/synopsis-client';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
 import { getRequestLocale } from '@/lib/request-locale';
 import Image from 'next/image';
@@ -34,6 +36,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
   const availability = getCachedDetailAvailability(anime);
+  const synopsis = getSynopsis(aliases, year, locale, anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id);
   const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
@@ -49,9 +52,10 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{name}</h1>
-        {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
-        {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
-        <LocalizedSynopsis anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
+        {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
+        <Suspense fallback={<p className="synopsis detail-synopsis" role="status">{d.language.loadingSynopsis}</p>}>
+          <DetailSynopsis synopsis={synopsis} anime={anime} aliases={aliases} year={year} locale={locale} />
+        </Suspense>
         <dl className="ratings">
           <Suspense fallback={<ImdbRatingTile ratings={{}} title={name} locale={locale} pending />}>
             <DetailImdbRating availability={availability} name={name} locale={locale} />
@@ -104,4 +108,10 @@ async function DetailAvailability({ availability, name, locale, id }: { availabi
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
     providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
   }} />;
+}
+
+async function DetailSynopsis({ synopsis, anime, aliases, year, locale }: {
+  synopsis: Promise<SynopsisResult>; anime: import('@/lib/anilist').AniListAnime; aliases: string[]; year?: number; locale: Locale;
+}) {
+  return <LocalizedSynopsis initial={await synopsis} anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />;
 }

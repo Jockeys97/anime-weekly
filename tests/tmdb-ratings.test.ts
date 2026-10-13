@@ -55,7 +55,7 @@ it('shares one cold weekly enrichment across simultaneous requests for the same 
   const { getCachedWeekData } = await import('../lib/tmdb');
   const results = await Promise.all([getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it')]);
   expect(results.every(data => data.status === 'ready')).toBe(true);
-  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock).toHaveBeenCalledTimes(4);
 });
 
 it('skips movie searches when AniList confirms a TV season', async () => {
@@ -66,4 +66,36 @@ it('skips movie searches when AniList confirms a TV season', async () => {
   expect((await getAnimeAvailability(['Example Season 3'], 2026, 'tv')).match).toBeNull();
   expect(fetchMock).toHaveBeenCalledTimes(1);
   expect(String(fetchMock.mock.calls[0][0])).toContain('/search/tv');
+});
+
+it('keeps English catalog titles and localized synopses in the weekly guide', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  vi.stubGlobal('fetch', vi.fn(async (url: URL) => Response.json({ results: url.pathname.endsWith('/discover/tv') ? [{ id: 1, name: url.searchParams.get('language') === 'en-US' ? 'Original English Title' : 'Titolo italiano', overview: 'Trama italiana.' }] : [], total_pages: 1 })));
+  const { getQuickWeekData } = await import('../lib/tmdb');
+  const data = await getQuickWeekData({ year: 2026, week: 42 }, 'it');
+  expect(data.titles[0]).toMatchObject({ name: 'Original English Title', overview: 'Trama italiana.' });
+});
+
+it('shares score and provider enrichment across different languages and overlays only the matching synopsis', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', ''); vi.stubEnv('OMDB_API_KEY', 'test');
+  const fetchMock = vi.fn(async (url: URL) => {
+    if (url.pathname.includes('/discover/')) {
+      const language = url.searchParams.get('language');
+      const tv = url.pathname.endsWith('/tv');
+      return Response.json({ results: [{ id: 12345, ...(tv ? { name: 'TV title' } : { title: 'Movie title' }), overview: `${tv ? 'tv' : 'movie'} ${language}` }], total_pages: 1 });
+    }
+    if (url.pathname.endsWith('/external_ids')) return Response.json({ imdb_id: 'tt123' });
+    if (url.hostname === 'www.omdbapi.com') return Response.json({ Response: 'True', imdbRating: '8.5' });
+    if (url.pathname.endsWith('/watch/providers')) return Response.json({ results: { IT: { link: 'https://www.themoviedb.org/tv/12345/watch?locale=IT', flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
+    return Response.json({ results: [] });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { getCachedWeekData } = await import('../lib/tmdb');
+  const [en, it, fr] = await Promise.all(['en', 'it', 'fr'].map(locale => getCachedWeekData({ year: 2026, week: 43 }, locale as 'en' | 'it' | 'fr')));
+  expect(fetchMock.mock.calls.filter(([url]) => url.pathname.endsWith('/external_ids'))).toHaveLength(2);
+  expect(fetchMock.mock.calls.filter(([url]) => url.pathname.endsWith('/watch/providers'))).toHaveLength(2);
+  expect(it.titles.map(title => title.overview)).toEqual(['tv it-IT', 'movie it-IT']);
+  expect(fr.titles.map(title => title.overview)).toEqual(['tv fr-FR', 'movie fr-FR']);
+  expect(it.titles[0].ratings).toEqual(en.titles[0].ratings);
+  expect(fr.titles[1].providers).toEqual(en.titles[1].providers);
 });
