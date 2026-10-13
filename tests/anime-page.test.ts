@@ -2,6 +2,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../lib/request-locale', () => ({ getRequestLocale: async () => 'it' }));
 vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('next/server', () => ({ connection: async () => undefined }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); } }));
 vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), animeName: () => 'Example anime', animeDescription: () => 'Example synopsis' }));
@@ -10,6 +11,8 @@ vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime } from '../lib/anilist';
 import { getAnimeRatingsById } from '../lib/anime-ratings';
 import { getAnimeAvailability } from '../lib/tmdb';
+import { AnimeRatingTile } from '../components/RatingSummary';
+import { renderToStaticMarkup } from 'react-dom/server';
 import AnimePage from '../app/anime/[id]/page';
 
 afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
@@ -29,6 +32,17 @@ describe('progressive anime details', () => {
     const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
     expect(textInTree(page, 'Example anime')).toBe(true);
     expect(textInTree(page, 'Example synopsis')).toBe(true);
+    function findFallback(node: unknown): React.ReactElement | null {
+      if (Array.isArray(node)) return node.map(findFallback).find(Boolean) || null;
+      if (!React.isValidElement<{ children?: unknown; fallback?: React.ReactElement }>(node)) return null;
+      if (node.props.fallback?.type === AnimeRatingTile) return node.props.fallback;
+      return findFallback(node.props.children);
+    }
+    const fallback = findFallback(page);
+    expect(fallback).not.toBeNull();
+    const html = renderToStaticMarkup(fallback!);
+    expect(html).toContain('81%');
+    expect(html).toContain('https://anilist.co/anime/21/');
     expect(getAnimeRatingsById).toHaveBeenCalledTimes(1);
     expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
   }, 1000);

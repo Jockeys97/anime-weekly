@@ -1,4 +1,6 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
+import { CACHE_TAG } from '@/lib/config';
 import { animeName, getAnime, type AniListAnime } from '@/lib/anilist';
 import { normalizeTitle } from '@/lib/anime-match';
 import { getAnimeAvailability, type AnimeAvailability } from '@/lib/tmdb';
@@ -44,8 +46,10 @@ export interface DetailAvailability extends AnimeAvailability {
 
 export async function getDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-  const direct = await getAnimeAvailability(titlesOf(anime), year);
-  const series = await findSeasonSeries(anime);
+  const [direct, series] = await Promise.all([
+    getAnimeAvailability(titlesOf(anime), year),
+    findSeasonSeries(anime),
+  ]);
   if (!series) return direct;
   const original = await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined);
   // Keep exact-season providers separate. The client selects a series reference only
@@ -59,4 +63,24 @@ export async function getDetailAvailability(anime: AniListAnime): Promise<Detail
       seriesWatch: { id: original.match.id, kind: 'tv' as const, name: animeName(series), providers: original.providers, providersUnavailable: original.providersUnavailable },
     } : {}),
   };
+}
+
+// Cache the completed season-to-series resolution, not just each upstream fetch.
+// Unmatched titles and upstream outages remain retryable on the next request.
+class UncachedAvailability extends Error {
+  constructor(readonly result: DetailAvailability) { super('Incomplete detail availability'); }
+}
+const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
+  const result = await getDetailAvailability(anime);
+  if ((!result.match && !result.seriesWatch) || result.providersUnavailable || result.seriesWatch?.providersUnavailable
+    || (result.ratings.imdbId && !result.ratings.imdbRating)) throw new UncachedAvailability(result);
+  return result;
+}, ['detail-availability-v1-series-watch'], { revalidate: 86400, tags: [CACHE_TAG] });
+
+export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
+  try { return await cachedDetailAvailability(anime); }
+  catch (error) {
+    if (error instanceof UncachedAvailability) return error.result;
+    throw error;
+  }
 }

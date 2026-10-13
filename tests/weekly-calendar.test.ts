@@ -41,4 +41,38 @@ describe('weekly day calendar', () => {
     const unmatched = { ...tv(), ratings: {} };
     expect(buildWeeklyCalendar([unmatched, tv()], [event(time('2026-10-14T08:00:00Z'), 0)], week).undated).toHaveLength(2);
   });
+  it('uses actual TMDB season episode dates without needing a rating match or inventing a time', () => {
+    const anime = { ...tv(), ratings: {} };
+    const result = buildWeeklyCalendar([anime], [], week, [{ seriesId: 1, season: 3, episode: 2, date: '2026-10-12' }]);
+    expect(result.days[0].releases[0]).toMatchObject({ anime, season: 3, episode: 2, source: 'tmdb' });
+    expect(result.days[0].releases[0].airingAt).toBeUndefined();
+    expect(result.undated).toEqual([]);
+  });
+  it('does not duplicate or override a timestamped broadcast with a date-only fallback', () => {
+    const result = buildWeeklyCalendar([tv()], [event(time('2026-10-14T08:00:00Z'), 13)], week,
+      [{ seriesId: 1, season: 2, episode: 1, date: '2026-10-15' }]);
+    expect(result.days.flatMap(day => day.releases)).toHaveLength(1);
+    expect(result.days[2].releases[0].episode).toBe(13);
+  });
+  it('ignores other series, out-of-week dates and duplicate season episodes', () => {
+    const episode = { seriesId: 1, season: 2, episode: 1, date: '2026-10-18' };
+    const result = buildWeeklyCalendar([tv()], [], week, [episode, episode,
+      { ...episode, seriesId: 2 }, { ...episode, date: '2026-10-19' }, { ...episode, season: -1 }]);
+    expect(result.days[6].releases).toHaveLength(1);
+  });
+
+  it('uses a dated official announcement for the exact series, with the real source and UTC time', () => {
+    const anime = { ...tv(220542), ratings: {} };
+    const result = buildWeeklyCalendar([anime], [], week);
+    expect(result.days[4].releases[0]).toMatchObject({ episode: 51, airingAt: time('2026-10-16T14:00:00Z'), source: 'official', sourceUrl: 'https://kusuriyanohitorigoto.jp/' });
+    expect(result.undated).toEqual([]);
+    expect(buildWeeklyCalendar([anime], [], { year: 2026, week: 43 }).undated).toEqual([anime]);
+  });
+  it('prioritizes a dated official announcement without duplicating a conflicting AniList entry', () => {
+    const anime = tv(220542);
+    const result = buildWeeklyCalendar([anime], [event(time('2026-10-17T14:00:00Z'), 3, 220542)], week);
+    expect(result.days.flatMap(day => day.releases)).toHaveLength(1);
+    expect(result.days[4].releases[0].source).toBe('official');
+  });
+
 });

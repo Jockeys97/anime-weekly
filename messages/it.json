@@ -143,7 +143,7 @@
     "note": "Il lettore video viene caricato solo quando premi play."
   },
   "calendar": {
-    "timezoneNote": "Giorni e orari sono in UTC. Gli orari degli episodi provengono da AniList; le uscite streaming possono variare per servizio e paese. I film usano la prima data di uscita TMDB.",
+    "timezoneNote": "Gli orari di messa in onda da AniList o da annunci ufficiali datati sono in UTC. Le date degli episodi TMDB non hanno orario né fuso e sono riportate come fornite. Le uscite streaming possono variare per servizio e paese. I film usano la prima data di uscita TMDB.",
     "navigation": "Sfoglia i giorni di uscita",
     "releases": "uscite",
     "titles": "titoli",
@@ -153,7 +153,7 @@
     "timeUnavailable": "Orario non disponibile",
     "emptyDay": "Nessuna uscita con data confermata per questo giorno tra i titoli selezionati.",
     "undated": "Data da confermare",
-    "undatedNote": "Questi titoli rientrano nella settimana su TMDB, ma la data dell’episodio non è confermata. Non vengono inventati giorni o orari.",
+    "undatedNote": "Questi titoli compaiono nella selezione settimanale TMDB, ma nelle fonti AniList e TMDB disponibili non è stata trovata una data di episodio in questa settimana. Potrebbero mancare dati, esserci una pausa o una stagione futura: la presenza qui non conferma un’uscita questa settimana.",
     "partial": "Alcuni calendari non sono disponibili. Le uscite confermate sono mostrate; gli altri titoli sono elencati sotto.",
     "loading": "Caricamento del calendario giornaliero…",
     "release": "uscita",
