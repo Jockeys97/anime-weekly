@@ -23,7 +23,7 @@ export function ImdbRatingTile({ ratings, title, locale, pending = false }: { ra
   </SourceTile>;
 }
 
-export function AnimeRatingTile({ ratings, title, locale }: { ratings: Ratings; title: string; locale?: Locale }) {
+export function AnimeRatingTile({ ratings, title, locale, pending = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean }) {
   const d = getDictionary(locale);
   const animeScore = formatAnimeScore(ratings);
   const isMal = animeScore.startsWith('MAL ');
@@ -31,14 +31,14 @@ export function AnimeRatingTile({ ratings, title, locale }: { ratings: Ratings; 
   const source = isMal ? 'myanimelist' : 'anilist';
   const members = formatMembers(ratings.malMembers);
   return <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>
-    <dd className="rating-value">{isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
-    <dd className="rating-detail">{isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
+    <dd className="rating-value">{pending ? '…' : isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className="rating-detail">{pending ? d.catalog.loadingRatings : isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
   </SourceTile>;
 }
 
-export function RatingSummary({ ratings, title, locale, pendingImdb = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean }) {
+export function RatingSummary({ ratings, title, locale, pendingImdb = false, pendingAnime = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean; pendingAnime?: boolean }) {
   return <dl className="ratings">
     <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} />
-    <AnimeRatingTile ratings={ratings} title={title} locale={locale} />
+    <AnimeRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} />
   </dl>;
 }
