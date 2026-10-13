@@ -85,6 +85,8 @@
     "watch": "Opzioni di visione",
     "votes": "Voti IMDb",
     "streamingCountry": "Paese per lo streaming",
+    "searchCountry": "Cerca paese…",
+    "noMatchingCountry": "Nessun paese trovato.",
     "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato.",
     "imdb": "IMDb",
     "liked": "Se ti è piaciuto",

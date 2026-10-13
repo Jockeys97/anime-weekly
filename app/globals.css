@@ -67,6 +67,12 @@
 .calendar-release .anime-card{border-radius:0 0 12px 12px}
 @media(max-width:600px){.calendar-days{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.calendar-days a{padding:10px 8px}.calendar-days strong{font-size:12px}.calendar-day-heading h3{font-size:20px}.calendar-day-heading h3>span{font-size:11px;margin-left:8px}.release-stamp{font-size:11px}}
 
+.country-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:100%}
+.country-controls input{font:inherit;font-size:12px;color:var(--ink);background:white;border:1px solid #c5d1ba;border-radius:7px;padding:10px 12px;width:180px;min-width:0;max-width:100%}
+.country-controls input:focus-visible{outline:3px solid #769641;outline-offset:3px}
+.country-controls .country-search-status{flex-basis:100%;margin:0}
+@media(max-width:600px){.country-controls{flex-direction:column;align-items:stretch}.country-controls input{width:100%}}
+
 .detail-loading{padding:16px;border:1px solid var(--line);border-radius:9px;background:#f0f3e9;color:var(--muted);font-size:12px;min-height:70px}
 .detail-loading-ratings{min-height:100px}
 .anime-loading{margin:32px 0;display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:start}

@@ -1,12 +1,15 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useId, useState, type ReactNode } from 'react';
 import { STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
 import { getDictionary } from '@/lib/i18n';
+import { useLocale } from '@/components/LanguageSelector';
 
 const CountryContext = createContext<{ region: StreamingRegion; setRegion: (region: StreamingRegion) => void } | null>(null);
 export function StreamingCountryProvider({ children }: { children: ReactNode }) {
-  const [region, setRegion] = useState<StreamingRegion>('US');
+  const locale = useLocale();
+  const [selectedRegion, setRegion] = useState<StreamingRegion | null>(null);
+  const region = selectedRegion ?? (locale === 'it' ? 'IT' : 'US');
   return <CountryContext.Provider value={{ region, setRegion }}>{children}</CountryContext.Provider>;
 }
 export function useStreamingCountry() {
@@ -17,12 +20,25 @@ export function useStreamingCountry() {
 export function StreamingCountrySelector({ locale = 'en' }: { locale?: string }) {
   const { region, setRegion } = useStreamingCountry();
   const d = getDictionary(locale);
-  const regions = ['US', ...STREAMING_REGIONS.filter(country => country !== 'US').sort((a, b) => d.regions[a].localeCompare(d.regions[b], locale))] as const;
+  const [search, setSearch] = useState('');
+  const selectorId = useId();
+  const searchId = useId();
+  const priority: readonly StreamingRegion[] = ['US', 'GB', 'ES', 'FR', 'DE', 'IT', 'JP'];
+  const normalize = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase(locale).trim();
+  const query = normalize(search);
+  const regions = [...priority, ...STREAMING_REGIONS.filter(country => !priority.includes(country)).sort((a, b) => d.regions[a].localeCompare(d.regions[b], locale))];
+  const matches = regions.filter(country => !query || normalize(d.regions[country]).includes(query) || country.toLowerCase().includes(query));
+  const visibleRegions = regions.filter(country => country === region || matches.includes(country));
   return <div className="country-toolbar">
-    <div><label htmlFor="streaming-country">{d.title.streamingCountry}</label><p>{d.title.streamingCountryHint}</p></div>
-    <select id="streaming-country" value={region} onChange={event => {
+    <div><label htmlFor={selectorId}>{d.title.streamingCountry}</label><p>{d.title.streamingCountryHint}</p></div>
+    <div className="country-controls">
+      <label className="sr-only" htmlFor={searchId}>{d.title.searchCountry}</label>
+      <input id={searchId} type="search" value={search} placeholder={d.title.searchCountry} onChange={event => setSearch(event.target.value)} autoComplete="off" />
+      <select id={selectorId} value={region} onChange={event => {
       const value = event.target.value as StreamingRegion;
-      if (STREAMING_REGIONS.includes(value)) setRegion(value);
-    }}>{regions.map(country => <option key={country} value={country}>{d.regions[country]}</option>)}</select>
+      if (STREAMING_REGIONS.includes(value)) { setRegion(value); setSearch(''); }
+    }}>{visibleRegions.map(country => <option key={country} value={country}>{d.regions[country]}</option>)}</select>
+      {query && !matches.length && <p className="country-search-status" role="status">{d.title.noMatchingCountry}</p>}
+    </div>
   </div>;
 }
