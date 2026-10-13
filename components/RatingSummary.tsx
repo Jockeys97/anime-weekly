@@ -14,22 +14,31 @@ function SourceTile({ source, name, href, title, children, locale }: {
   </div>;
 }
 
-export function RatingSummary({ ratings, title, locale, pendingImdb = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean }) {
+export function ImdbRatingTile({ ratings, title, locale, pending = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean }) {
+  const d = getDictionary(locale);
+  return <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={ratings.imdbSeriesTitle || title} locale={locale}>
+    <dd className="rating-value">{pending ? '…' : formatRating(ratings.imdbRating)}{!pending && formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className="rating-detail" role={pending ? 'status' : undefined}>{pending ? d.catalog.loadingRatings : <>{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</>}</dd>
+    {ratings.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {ratings.imdbSeriesTitle}</dd>}
+  </SourceTile>;
+}
+
+export function AnimeRatingTile({ ratings, title, locale }: { ratings: Ratings; title: string; locale?: Locale }) {
   const d = getDictionary(locale);
   const animeScore = formatAnimeScore(ratings);
   const isMal = animeScore.startsWith('MAL ');
   const isAnilist = animeScore.startsWith('AniList ');
   const source = isMal ? 'myanimelist' : 'anilist';
   const members = formatMembers(ratings.malMembers);
+  return <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>
+    <dd className="rating-value">{isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className="rating-detail">{isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
+  </SourceTile>;
+}
+
+export function RatingSummary({ ratings, title, locale, pendingImdb = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean }) {
   return <dl className="ratings">
-    <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={ratings.imdbSeriesTitle || title} locale={locale}>
-      <dd className="rating-value">{pendingImdb ? '…' : formatRating(ratings.imdbRating)}{!pendingImdb && formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
-      <dd className="rating-detail">{pendingImdb ? d.catalog.loadingRatings : <>{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</>}</dd>
-      {ratings.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {ratings.imdbSeriesTitle}</dd>}
-    </SourceTile>
-    <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>
-      <dd className="rating-value">{isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
-      <dd className="rating-detail">{isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
-    </SourceTile>
+    <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} />
+    <AnimeRatingTile ratings={ratings} title={title} locale={locale} />
   </dl>;
 }
