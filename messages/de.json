@@ -52,7 +52,8 @@
     "opensNewTab": "öffnet in einem neuen Tab",
     "streamingLinksNote": "Öffne den Titel beim Dienst für das angezeigte Land. Fehlt ein Direktlink, werden regionale Optionen angezeigt. Der Zugang hängt von Standort und Abonnement ab.",
     "streamingCountry": "Streaming-Land",
-    "streamingCountryHint": "Nur Dienste für das ausgewählte Land anzeigen."
+    "streamingCountryHint": "Nur Dienste für das ausgewählte Land anzeigen.",
+    "seriesRating": "Serienbewertung"
   },
   "catalog": {
     "navLabel": "Hauptnavigation",

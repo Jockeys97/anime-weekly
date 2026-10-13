@@ -52,7 +52,8 @@
     "opensNewTab": "abre num novo separador",
     "streamingLinksNote": "Abre o título no serviço do país indicado. Sem ligação direta, serão apresentadas as opções regionais. O acesso depende da tua localização e subscrição.",
     "streamingCountry": "País de streaming",
-    "streamingCountryHint": "Mostrar apenas serviços do país selecionado."
+    "streamingCountryHint": "Mostrar apenas serviços do país selecionado.",
+    "seriesRating": "Avaliação da série"
   },
   "catalog": {
     "navLabel": "Navegação principal",

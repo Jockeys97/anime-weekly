@@ -7,6 +7,7 @@ import { isSeason, type Season } from '@/lib/season';
 
 export const ANILIST_REVALIDATE = 86400;
 export interface AniListAnime {
+  relations?: { edges: { relationType: string; node: { id: number; type: string; format: string | null; title: AniListAnime['title']; startDate: { year: number | null } | null } }[] };
   trailer?: AnimeTrailer | null;
   id: number;
   idMal: number | null;
@@ -73,12 +74,12 @@ export async function searchAnime(query: string): Promise<AniListAnime[]> {
 
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
-    Media(id: $id, type: ANIME) { ${fields} trailer { id site } }
+    Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }
   }`, { id });
   // Reject transient upstream failures so they never become cached empty details.
   if (!data) throw new Error('Anime details unavailable');
   return data.Media?.id === id ? data.Media : null;
-}, ['anime-detail-v2-trailer'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v3-series-relations'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
