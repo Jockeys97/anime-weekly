@@ -10,7 +10,7 @@ interface RawTitle { id: number; name?: string; title?: string; original_name?: 
 interface Page { results: RawTitle[]; total_pages: number }
 export interface Provider { provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
-export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
+export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
@@ -64,7 +64,7 @@ async function enrich(raw: RawTitle, kind: Kind): Promise<AnimeTitle> {
   const [imdb, animeRatings, related, watch] = await Promise.all([getRatings(kind, raw.id), getAnimeRatings({ kind, originalTitle: kind === 'tv' ? raw.original_name : raw.original_title, title: (raw.name || raw.title)!, year }), recommendation(kind, raw.id), tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null)]);
   const ratings = { ...imdb, ...animeRatings };
   const providers = watchProviders(watch);
-  return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
+  return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null, releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
 }
 function watchProviders(watch: { results: Partial<Record<StreamingRegion, WatchRegion>> } | null): AnimeTitle['providers'] {
   const providers: AnimeTitle['providers'] = {};

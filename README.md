@@ -94,6 +94,12 @@ The watch-page fetch is cached for seven days with the existing revalidation tag
 
 The guide has one country selector, defaulting to United States. Every title displays only the selected country's streaming providers and uses that same country in its provider links. The selector supports 36 countries, including Spain, Portugal, Canada, Australia, Brazil and Mexico. United States stays first; the other countries are sorted alphabetically in the page language. Selecting a country updates all cards immediately without refetching title data. The root layout keeps the selection during client-side week navigation; a full reload starts with United States. Titles without providers in that country keep the existing unavailable message.
 
+## Weekly calendar by day
+
+The weekly guide groups confirmed releases into Monday–Sunday sections, with jump links and counts. TV episodes use AniList `airingSchedules` for the conservatively matched AniList IDs; an exact timestamp and episode number are shown when supplied. Multiple episodes can put one series on several days. Both grouping and displayed times use UTC, consistent with the existing ISO-week range. These are broadcast schedules, not promises of a Netflix/Crunchyroll release in a particular country. Movies use the actual TMDB primary release date, without an estimated time.
+
+Titles without a confirmed date stay visible under “Date to be confirmed”; missing schedules never invent a weekday or time. GraphQL failures preserve already fetched events and show a partial-schedule notice. Schedule requests reuse the shared AniList throttle, cache hourly with the existing revalidation tag, and read at most four pages of 50 events for the selected titles. The calendar streams inside a Suspense boundary so its additional lookup does not hold back the guide header or country selector.
+
 ## Progressive anime details
 
 Anime detail pages render the title, synopsis, cover and facts as soon as AniList resolves. Optional ratings and streaming availability load in separate Suspense boundaries, with explicit loading states instead of delaying the whole page. Both sections share one availability lookup per request. Alternate TMDB title searches run in parallel within each media type; all candidates are still considered for conservative matching.

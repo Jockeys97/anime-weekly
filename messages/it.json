@@ -121,5 +121,22 @@
     "external": "Apri sulla piattaforma video",
     "unavailable": "Trailer non disponibile per questa specifica stagione o cour.",
     "note": "Il lettore video viene caricato solo quando premi play."
+  },
+  "calendar": {
+    "timezoneNote": "Giorni e orari sono in UTC. Gli orari degli episodi provengono dal calendario di messa in onda AniList; le uscite streaming possono variare per servizio e paese. Per i film usiamo la data di uscita principale TMDB.",
+    "navigation": "Vai al giorno di uscita",
+    "releases": "uscite",
+    "titles": "titoli",
+    "episode": "Episodio",
+    "airing": "Messa in onda · AniList",
+    "movieRelease": "Uscita del film",
+    "timeUnavailable": "Orario non disponibile",
+    "emptyDay": "Nessuna data di uscita confermata per questo giorno tra i titoli selezionati.",
+    "undated": "Data da confermare",
+    "undatedNote": "Questi titoli corrispondono alla settimana su TMDB, ma il calendario disponibile non conferma la data dell’episodio. Non stimiamo giorni o orari.",
+    "partial": "Alcuni calendari non sono disponibili. Mostriamo le uscite confermate e gli altri titoli sotto.",
+    "loading": "Caricamento del calendario giornaliero…",
+    "release": "uscita",
+    "title": "titolo"
   }
 }
