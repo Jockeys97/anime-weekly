@@ -1,3 +1,5 @@
+import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
+import { getRequestLocale } from '@/lib/request-locale';
 import Image from 'next/image';
 import { Suspense } from 'react';
 import Link from 'next/link';
@@ -9,9 +11,10 @@ import { StreamingAvailability } from '@/components/StreamingAvailability';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
-import { getDictionary } from '@/lib/i18n';
+import { getDictionary, type Locale } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
-import { getAnimeAvailability, type AnimeAvailability } from '@/lib/tmdb';
+import type { AnimeAvailability } from '@/lib/tmdb';
+import { getDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 
 export const revalidate = 86400;
@@ -22,14 +25,15 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const anime = await getAnime(Number(id));
   if (!anime) notFound();
-  const d = getDictionary('it');
+  const locale = await getRequestLocale();
+  const d = getDictionary(locale);
   const c = d.catalog;
   const name = animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
-  const availability = getAnimeAvailability(aliases, year);
+  const availability = getDetailAvailability(anime);
   const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
@@ -37,7 +41,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
   const date = anime.startDate;
   const startDate = date?.year ? [date.day && String(date.day).padStart(2, '0'), date.month && String(date.month).padStart(2, '0'), date.year].filter(Boolean).join('/') : c.unknown;
-  return <main className="catalog-page" lang="it">
+  return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
     {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
     <article className="anime-card anime-detail">
@@ -47,9 +51,9 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         <h1>{name}</h1>
         {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
         {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
-        <p className="synopsis detail-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
+        <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
         <Suspense fallback={<p className="detail-loading detail-loading-ratings" role="status">{c.loadingRatings}</p>}>
-          <DetailRatings animeRatings={animeRatings} availability={availability} id={anime.id} name={name} />
+          <DetailRatings animeRatings={animeRatings} availability={availability} id={anime.id} name={name} locale={locale} />
         </Suspense>
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
@@ -63,28 +67,28 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         <a className="catalog-details" href={`https://anilist.co/anime/${anime.id}`} target="_blank" rel="noopener noreferrer">{c.source} ↗</a>
       </div>
     </article>
-    <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} locale="it" />
+    <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} locale={locale} />
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
-      <StreamingCountrySelector locale="it" />
+      <StreamingCountrySelector locale={locale} />
       <Suspense fallback={<p className="detail-loading" role="status">{c.loadingAvailability}</p>}>
-        <DetailAvailability availability={availability} name={name} />
+        <DetailAvailability availability={availability} name={name} locale={locale} />
       </Suspense>
       <p className="catalog-intro">{c.availabilityNote}</p>
     </section>
   </main>;
 }
 
-async function DetailRatings({ animeRatings, availability, id, name }: {
-  animeRatings: Promise<Ratings>; availability: Promise<AnimeAvailability>; id: number; name: string;
+async function DetailRatings({ animeRatings, availability, id, name, locale }: {
+  animeRatings: Promise<Ratings>; availability: Promise<AnimeAvailability>; id: number; name: string; locale: Locale;
 }) {
   const [scores, watch] = await Promise.all([animeRatings, availability]);
-  return <RatingSummary ratings={{ ...watch.ratings, ...scores, anilistId: id }} title={name} locale="it" />;
+  return <RatingSummary ratings={{ ...watch.ratings, ...scores, anilistId: id }} title={name} locale={locale} />;
 }
 
-async function DetailAvailability({ availability, name }: { availability: Promise<AnimeAvailability>; name: string }) {
+async function DetailAvailability({ availability, name, locale }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale }) {
   const watch = await availability;
-  return <StreamingAvailability locale="it" collapsible={false} anime={{
+  return <StreamingAvailability locale={locale} collapsible={false} anime={{
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
     providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
   }} />;

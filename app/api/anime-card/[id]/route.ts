@@ -1,5 +1,5 @@
 import { getAnime } from '@/lib/anilist';
-import { getAnimeAvailability } from '@/lib/tmdb';
+import { getDetailAvailability } from '@/lib/detail-availability';
 import type { CatalogCardSummary } from '@/lib/catalog-card-summary';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -10,8 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const anime = await getAnime(Number(id));
     if (!anime) return Response.json({ error: 'Anime unavailable' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
-    const titles = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
-    const watch = await getAnimeAvailability(titles, anime.startDate?.year ?? anime.seasonYear ?? undefined);
+    const watch = await getDetailAvailability(anime);
     const summary: CatalogCardSummary = {
       ratings: { ...watch.ratings, anilistScore: anime.averageScore, anilistId: anime.id },
       availability: { match: watch.match, providers: watch.providers, providersUnavailable: watch.providersUnavailable },

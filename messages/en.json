@@ -57,7 +57,8 @@
     "opensNewTab": "opens in a new tab",
     "streamingLinksNote": "Open this title on a service for the country shown. If a direct link is unavailable, view the regional watch options. Access depends on your location and subscription.",
     "streamingCountry": "Streaming country",
-    "streamingCountryHint": "Show watch options for your selected country."
+    "streamingCountryHint": "Show watch options for your selected country.",
+    "seriesRating": "Series rating"
   },
   "regions": {
     "IT": "Italy",
@@ -215,5 +216,11 @@
     "loading": "Loading the daily release calendar…",
     "release": "release",
     "title": "title"
+  },
+  "language": {
+    "label": "Language",
+    "error": "The language could not be changed. Please try again.",
+    "originalSynopsis": "Translation unavailable; showing the English synopsis.",
+    "loadingSynopsis": "Loading translated synopsis…"
   }
 }

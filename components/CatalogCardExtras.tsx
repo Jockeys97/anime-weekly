@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { RatingSummary } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
-import { getDictionary } from '@/lib/i18n';
+import { getDictionary, type Locale } from '@/lib/i18n';
 import { loadCatalogCard } from '@/lib/catalog-card-client';
 import type { CatalogCardSummary } from '@/lib/catalog-card-summary';
 
-export function CatalogCardExtras({ id, name, score }: { id: number; name: string; score: number | null }) {
+export function CatalogCardExtras({ id, name, score, locale = 'en' }: { id: number; name: string; score: number | null; locale?: Locale }) {
   const container = useRef<HTMLDivElement>(null);
   const [summary, setSummary] = useState<CatalogCardSummary | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const d = getDictionary('it');
+  const d = getDictionary(locale);
   useEffect(() => {
     let mounted = true;
     let observer: IntersectionObserver | undefined;
@@ -31,9 +31,9 @@ export function CatalogCardExtras({ id, name, score }: { id: number; name: strin
   }, [id, attempt]);
   const pending = !summary && !failed;
   return <div ref={container} className="catalog-card-extras" aria-busy={pending}>
-    <RatingSummary ratings={summary?.ratings ?? { anilistId: id, anilistScore: score }} title={name} locale="it" pendingImdb={pending} />
+    <RatingSummary ratings={summary?.ratings ?? { anilistId: id, anilistScore: score }} title={name} locale={locale} pendingImdb={pending} />
     {failed && <p className="catalog-enrichment-error" role="status">{d.catalog.enrichmentUnavailable} <button type="button" onClick={() => { setFailed(false); setAttempt(value => value + 1); }}>{d.error.retry}</button></p>}
-    <StreamingAvailability locale="it" loading={pending} anime={{
+    <StreamingAvailability locale={locale} loading={pending} anime={{
       id: summary?.availability.match?.id ?? 0, kind: summary?.availability.match?.kind ?? 'tv', name,
       providers: summary?.availability.match ? summary.availability.providers : {},
       providersUnavailable: failed || summary?.availability.providersUnavailable === true,

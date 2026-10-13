@@ -1,6 +1,6 @@
 # Anime Weekly
 
-An English, mobile-first weekly anime guide built with Next.js App Router, TypeScript, Tailwind CSS and ESLint. No sample releases or estimated ratings are displayed.
+A multilingual, mobile-first weekly anime guide built with Next.js App Router, TypeScript, Tailwind CSS and ESLint. No sample releases or estimated ratings are displayed.
 
 ## Run locally
 
@@ -32,7 +32,7 @@ Optionally get a free OMDb key at [omdbapi.com/apikey.aspx](https://www.omdbapi.
 
 ## Caching and Vercel Hobby
 
-Both weekly pages export `revalidate = 604800`. All API fetches cache for seven days with the `anime-week` tag, including OMDb, AniList and Jikan. AniList POST requests explicitly use `cache: 'force-cache'` with the same revalidation interval and tag. Historical week pages are generated on demand and use ISR. The home page is refreshed by the Monday cron so it changes to the new week; without a cron it can remain cached until the seven-day interval expires.
+Weekly enrichment is cached for seven days per week and language with `getCachedWeekData`; page output is rendered per request because locale selection reads headers and a preference cookie. All API fetches cache for seven days with the `anime-week` tag, including OMDb, AniList and Jikan. AniList POST requests explicitly use `cache: 'force-cache'` with the same revalidation interval and tag. Historical weeks are loaded on demand; enriched results remain in the shared data cache keyed by language. The home page is refreshed by the Monday cron so it changes to the new week; without a cron it can remain cached until the seven-day interval expires.
 
 Import this repository into Vercel: the Next.js defaults require no custom build configuration. Set credentials and a long random `CRON_SECRET` in **Vercel Project Settings > Environment Variables**, or with:
 
@@ -64,7 +64,7 @@ Vitest covers ISO week ranges, year boundaries, strict week parsing/formatting, 
 
 ## Extending
 
-All UI copy is in `messages/en.json`; `lib/i18n.ts` exposes `getDictionary(locale)`, `defaultLocale` and `locales`. Add an Italian dictionary, locale entry and lookup to extend the content system; locale-specific URLs are not implemented in this MVP. Data titles and provider names remain upstream source content.
+UI dictionaries live in `messages/` for English, Italian, Spanish, French, German and Portuguese. `lib/i18n.ts` exposes `getDictionary(locale)`, `defaultLocale` and `locales`. Data titles and provider names remain upstream source content.
 
 `components/SponsorSlot.tsx` is an unobtrusive placeholder. `components/ProviderLink.tsx` calls `lib/affiliate.ts`; no affiliate is enabled, but an explicit optional query parameter can be passed later.
 
@@ -94,6 +94,13 @@ The watch-page fetch is cached for seven days with the existing revalidation tag
 
 The guide has one country selector, defaulting to United States. Every title displays only the selected country's streaming providers and uses that same country in its provider links. The selector supports 36 countries, including Spain, Portugal, Canada, Australia, Brazil and Mexico. United States stays first; the other countries are sorted alphabetically in the page language. Selecting a country updates all cards immediately without refetching title data. The root layout keeps the selection during client-side week navigation; a full reload starts with United States. Titles without providers in that country keep the existing unavailable message.
 
+## Visitor language and localized synopses
+
+The site resolves the visitor language in this order: a supported `anime-language` preference cookie, weighted browser `Accept-Language` (including regional variants such as `it-IT` and `pt-BR`), then English. A header selector offers six languages and saves a manual choice for one year. Streaming country remains an independent preference, defaulting to US. Request-specific HTML is private/non-cacheable; shared upstream responses and complete weekly enrichment are cached with explicit locale keys to avoid mixing languages between visitors.
+
+Weekly discovery asks TMDB for the selected language. AniList descriptions are English; catalog and detail pages fetch matching TMDB translations lazily as synopsis blocks enter the viewport. Matching requires exact normalized title aliases, Japanese animation metadata when available, and a release year within one year. Uncertain matches, distinct seasons, missing translations and unavailable upstreams keep the original English synopsis with an explicit translated notice. The lookup never calls the English text a translation, does not guess an adaptation, and needs no new API credentials beyond existing TMDB configuration. Country names use localized ISO display names.
+
+This uses existing source translations, not machine translation. It does not guarantee translated text for every AniList entry or season. A machine-translation provider would be needed for complete coverage of English-only source descriptions. The local validation used mocked TMDB translation responses; live authenticated TMDB availability still requires credentials.
 ## Weekly calendar by day
 
 The weekly guide groups confirmed releases into Monday–Sunday sections, with jump links and counts. TV episodes use AniList `airingSchedules` for the conservatively matched AniList IDs; an exact timestamp and episode number are shown when supplied. Multiple episodes can put one series on several days. Both grouping and displayed times use UTC, consistent with the existing ISO-week range. These are broadcast schedules, not promises of a Netflix/Crunchyroll release in a particular country. Movies use the actual TMDB primary release date, without an estimated time.
@@ -113,3 +120,8 @@ Season and search cards use the same branded IMDb and AniList rating tiles as th
 A card near the viewport loads its summary through `/api/anime-card/[id]`. Browser requests are deduplicated and limited to two concurrent lookups; successful summaries are briefly cached, while failures permit an explicit retry. Titles and synopses render without waiting for enrichment. The same country selector and streaming-link resolver work across weekly, seasonal and search views.
 
 Weekly cards now offer internal detail navigation. Confirmed AniList IDs open `/anime/[id]`; titles without a confirmed ID open a title search rather than a guessed detail page.
+## IMDb scores for separate anime seasons
+
+AniList may publish a separate entry for each season while TMDB/IMDb represent the complete TV series. If a season detail has no direct IMDb ID, follow up to eight confirmed AniList PREQUEL relations only for TV/TV_SHORT/ONA entries whose normalized base titles match after removing explicit season/cour suffixes. Use the confirmed original entry's titles and original release year with the existing conservative TMDB matcher. Ambiguity, cycles, films, different named sequels and unavailable parent data keep the score unavailable.
+
+Inherited IMDb ratings and links are labelled as the original series rating. MAL/AniList scores still belong to the selected season. Series-wide streaming providers are not inherited, because they do not establish availability of that season.

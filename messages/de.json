@@ -1,0 +1,182 @@
+{
+  "nav": {
+    "guide": "Der Wochenguide",
+    "current": "Diese Woche",
+    "previous": "Vorherige Woche",
+    "next": "Nächste Woche",
+    "label": "Wochen durchsehen"
+  },
+  "hero": {
+    "eyebrow": "Weniger suchen. Mehr Anime.",
+    "title": "Deine nächste Geschichte,",
+    "accent": "Woche für Woche.",
+    "description": "Anime im japanischen Fernsehen und neue Kinofilme. Finde deine nächste Geschichte und erfahre, wo du sie ansehen kannst."
+  },
+  "week": {
+    "label": "Woche",
+    "releases": "Veröffentlichungen der Woche",
+    "subtitle": "Japanische Animation · Serien und Filme",
+    "range": "Montag bis Sonntag",
+    "cap": "Bis zu 40 Titel pro Woche.",
+    "scope": "Serien werden nach ihren Ausstrahlungsterminen und Filme nach dem Kinostart ausgewählt. Die Verfügbarkeit ist aktuell und kann je nach Land abweichen.",
+    "tv": "TV-Serie",
+    "movie": "Film",
+    "browse": "Kalender durchsehen",
+    "currentBadge": "Aktuelle Woche"
+  },
+  "state": {
+    "unconfigured": "Datenquelle nicht eingerichtet",
+    "setup": "Verbinde TMDB über TMDB_API_KEY oder TMDB_READ_TOKEN und veröffentliche die Website erneut.",
+    "setupLink": "TMDB-API-Schlüssel anfordern",
+    "empty": "Eine ruhige Woche",
+    "emptyBody": "TMDB hat keine passenden Veröffentlichungen. Versuche eine andere Woche.",
+    "error": "Der Guide ist vorübergehend nicht verfügbar",
+    "errorBody": "Die Veröffentlichungen konnten nicht geladen werden. Versuche es später erneut.",
+    "partial": "Einige Daten fehlen. Die verfügbaren Ergebnisse werden angezeigt.",
+    "omdb": "IMDb-Bewertungen benötigen einen optionalen OMDb-Schlüssel.",
+    "noPoster": "Poster nicht verfügbar",
+    "noSynopsis": "Inhaltsangabe nicht verfügbar.",
+    "noProviders": "Keine Abo-, kostenlosen oder werbefinanzierten Dienste gefunden.",
+    "providersError": "Streaming-Verfügbarkeit konnte nicht geladen werden."
+  },
+  "title": {
+    "imdb": "IMDb",
+    "animeScore": "Anime-Bewertung",
+    "votes": "IMDb-Stimmen",
+    "liked": "Wenn dir das gefallen hat",
+    "streaming": "Wo ansehen",
+    "watch": "Streaming-Optionen",
+    "tmdb": "Auf TMDB ansehen",
+    "voteCount": "Stimmen",
+    "members": "Mitglieder",
+    "opensNewTab": "öffnet in einem neuen Tab",
+    "streamingLinksNote": "Öffne den Titel beim Dienst für das angezeigte Land. Fehlt ein Direktlink, werden regionale Optionen angezeigt. Der Zugang hängt von Standort und Abonnement ab.",
+    "streamingCountry": "Streaming-Land",
+    "streamingCountryHint": "Nur Dienste für das ausgewählte Land anzeigen.",
+    "seriesRating": "Serienbewertung"
+  },
+  "catalog": {
+    "navLabel": "Hauptnavigation",
+    "weekly": "Woche",
+    "seasons": "Staffeln",
+    "search": "Suchen",
+    "searchLabel": "Anime suchen",
+    "searchPlaceholder": "Anime-Titel…",
+    "searchTitle": "Anime suchen",
+    "searchPrompt": "Gib einen Titel ein, um den Katalog zu durchsuchen.",
+    "searchResults": "Ergebnisse für",
+    "noResults": "Keine Ergebnisse. Versuche einen anderen Titel oder später erneut.",
+    "seasonTitle": "Anime der Saison",
+    "seasonDescription": "Entdecke Anime nach Saison, sortiert nach Beliebtheit.",
+    "seasonEmpty": "Keine Anime verfügbar. Versuche eine andere Saison.",
+    "previousSeason": "Vorherige Saison",
+    "nextSeason": "Nächste Saison",
+    "currentSeason": "Aktuelle Saison",
+    "yearLabel": "Jahr auswählen",
+    "seasonLabel": "Saison auswählen",
+    "pagination": "Ergebnisseiten",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "page": "Seite",
+    "unknown": "Nicht verfügbar",
+    "episodes": "Folgen",
+    "format": "Format",
+    "status": "Status",
+    "startDate": "Veröffentlichungsdatum",
+    "studios": "Studios",
+    "genres": "Genres",
+    "season": "Saison",
+    "details": "Details ansehen",
+    "source": "Auf AniList ansehen",
+    "noPlatforms": "Keine Plattformen gefunden",
+    "availabilityNote": "Die aktuelle Verfügbarkeit kann je nach Land abweichen.",
+    "notFoundTitle": "Anime oder Saison nicht gefunden",
+    "notFoundBody": "Prüfe die Adresse oder entdecke den Saisonkatalog.",
+    "back": "Zurück zu den Saisons",
+    "seasonNames": {
+      "winter": "Winter",
+      "spring": "Frühling",
+      "summer": "Sommer",
+      "fall": "Herbst"
+    },
+    "formats": {
+      "TV": "TV-Serie",
+      "TV_SHORT": "Kurze TV-Serie",
+      "MOVIE": "Film",
+      "ONA": "ONA",
+      "OVA": "OVA",
+      "SPECIAL": "Special",
+      "MUSIC": "Musik"
+    },
+    "statuses": {
+      "FINISHED": "Abgeschlossen",
+      "RELEASING": "Laufend",
+      "NOT_YET_RELEASED": "Demnächst",
+      "CANCELLED": "Abgebrochen",
+      "HIATUS": "Pausiert"
+    },
+    "loadingAnime": "Details werden geladen…",
+    "loadingRatings": "Bewertungen werden geladen…",
+    "loadingAvailability": "Verfügbarkeit wird geladen…",
+    "enrichmentUnavailable": "Bewertungen und Streamingdienste sind vorübergehend nicht verfügbar."
+  },
+  "footer": {
+    "tagline": "Eine neue Woche. Eine neue Geschichte.",
+    "tmdbBadge": "TMDB",
+    "tmdb": "Dieses Produkt verwendet die TMDB-API, wird jedoch nicht von TMDB unterstützt oder zertifiziert.",
+    "justwatch": "Streaming-Daten von JustWatch",
+    "omdb": "IMDb-Bewertungen von OMDb",
+    "anilist": "Anime-Zuordnung und alternative Bewertungen von AniList",
+    "mal": "MyAnimeList-Bewertungen über Jikan",
+    "note": "Termine und Verfügbarkeit stammen aus den genannten Quellen. Bewertungen werden nicht geschätzt."
+  },
+  "language": {
+    "label": "Sprache",
+    "error": "Die Sprache konnte nicht geändert werden. Versuche es erneut.",
+    "originalSynopsis": "Keine Übersetzung verfügbar; die englische Inhaltsangabe wird angezeigt.",
+    "loadingSynopsis": "Übersetzte Inhaltsangabe wird geladen…"
+  },
+  "loading": "Wochenguide wird geladen…",
+  "notFound": {
+    "title": "Diese Woche steht nicht im Kalender",
+    "body": "Verwende das ISO-Format jjjj-ww, zum Beispiel 2026-42.",
+    "back": "Zur aktuellen Woche"
+  },
+  "error": {
+    "title": "Der Guide hat ein Problem festgestellt",
+    "body": "Lade den Guide erneut.",
+    "retry": "Erneut versuchen"
+  },
+  "sponsor": {
+    "label": "Partnerbereich",
+    "body": "Ein kleiner Platz für Anime-Fans."
+  },
+  "metadata": {
+    "title": "Anime Weekly · Der Wochenguide",
+    "description": "Anime im japanischen Fernsehen und neue Kinofilme. Finde deine nächste Geschichte und erfahre, wo du sie ansehen kannst."
+  },
+  "calendar": {
+    "timezoneNote": "Tage und Zeiten sind in UTC. Die Episodentermine stammen von AniList; Streaming-Starts können je nach Dienst und Land abweichen. Filme verwenden ihr TMDB-Veröffentlichungsdatum.",
+    "navigation": "Veröffentlichungstage durchsehen",
+    "releases": "Veröffentlichungen",
+    "titles": "Titel",
+    "episode": "Folge",
+    "airing": "Ausstrahlung · AniList",
+    "movieRelease": "Filmveröffentlichung",
+    "timeUnavailable": "Uhrzeit nicht verfügbar",
+    "emptyDay": "Für diesen Tag gibt es bei den ausgewählten Titeln kein bestätigtes Veröffentlichungsdatum.",
+    "undated": "Datum noch offen",
+    "undatedNote": "Diese Titel gehören laut TMDB zur Woche, aber das Episodendatum ist nicht bestätigt. Tage und Zeiten werden nicht geschätzt.",
+    "partial": "Einige Termine konnten nicht geladen werden. Bestätigte Veröffentlichungen werden angezeigt; andere Titel stehen unten.",
+    "loading": "Tageskalender wird geladen…",
+    "release": "Veröffentlichung",
+    "title": "Titel"
+  },
+  "trailer": {
+    "heading": "Trailer",
+    "play": "Trailer abspielen",
+    "external": "Auf der Videoplattform ansehen",
+    "unavailable": "Für diese Staffel oder diesen Teil ist kein Trailer verfügbar.",
+    "note": "Der Videoplayer lädt erst beim Abspielen."
+  }
+}
