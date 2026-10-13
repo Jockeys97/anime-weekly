@@ -169,7 +169,8 @@
     "partial": "Einige Termine konnten nicht geladen werden. Bestätigte Veröffentlichungen werden angezeigt; andere Titel stehen unten.",
     "loading": "Tageskalender wird geladen…",
     "release": "Veröffentlichung",
-    "title": "Titel"
+    "title": "Titel",
+    "enrichmentLoading": "Bewertungen und Streamingdienste werden geladen…"
   },
   "trailer": {
     "heading": "Trailer",

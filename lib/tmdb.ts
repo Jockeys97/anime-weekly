@@ -113,10 +113,10 @@ export async function getAnimeAvailability(titles: string[], year?: number): Pro
   }
   return empty;
 }
-export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
-  if (!isTMDBConfigured()) return { status: 'unconfigured', titles: [] };
+async function selectWeekTitles(week: ISOWeek, locale: Locale) {
+  if (!isTMDBConfigured()) return { status: 'unconfigured' as const, selected: [] };
   const [tv, movie] = await Promise.allSettled([discover('tv', week, locale), discover('movie', week, locale)]);
-  if (tv.status === 'rejected' && movie.status === 'rejected') return { status: 'error', titles: [] };
+  if (tv.status === 'rejected' && movie.status === 'rejected') return { status: 'error' as const, selected: [] };
   const shows = tv.status === 'fulfilled' ? tv.value : [];
   const movies = movie.status === 'fulfilled' ? movie.value : [];
   const selected: { raw: RawTitle; kind: Kind }[] = [];
@@ -127,10 +127,23 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
       selected.push({ raw, kind }); seen.add(`${kind}:${raw.id}`);
     }
   }
+  return { status: 'ready' as const, selected, partial: tv.status === 'rejected' || movie.status === 'rejected' };
+}
+
+export async function getQuickWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  const selection = await selectWeekTitles(week, locale);
+  return { status: selection.status, partial: selection.partial, titles: selection.selected.map(({ raw, kind }) => ({
+    id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null,
+    releaseDate: kind === 'movie' ? raw.release_date || null : null,
+    ratings: {}, recommendation: null, providers: {}, providersUnavailable: false,
+  })) };
+}
+
+export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  const selection = await selectWeekTitles(week, locale);
   const titles: AnimeTitle[] = [];
-  // Bound concurrent fan-out and OMDb calls (at most 40 per uncached week).
-  for (let i = 0; i < selected.length; i += 5) titles.push(...await Promise.all(selected.slice(i, i + 5).map(({ raw, kind }) => enrich(raw, kind))));
-  return { status: 'ready', titles, partial: tv.status === 'rejected' || movie.status === 'rejected' };
+  for (let i = 0; i < selection.selected.length; i += 5) titles.push(...await Promise.all(selection.selected.slice(i, i + 5).map(({ raw, kind }) => enrich(raw, kind))));
+  return { status: selection.status, titles, partial: selection.partial };
 }
 
 // Cache the entire enrichment per week and language, avoiding repeated throttled
