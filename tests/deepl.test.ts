@@ -81,3 +81,13 @@ describe('DeepL Free synopsis fallback', () => {
     expect(await next).toBe('Trama tradotta.');
   });
 });
+
+it('supports an explicit Japanese source, including English targets and distinct source cache keys', async () => {
+  const fetchMock = vi.fn().mockImplementation(translated); vi.stubGlobal('fetch', fetchMock);
+  const { translateText } = await import('../lib/deepl');
+  await translateText('日本語', 'en', 'JA');
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ source_lang: 'JA', target_lang: 'EN-GB' });
+  await translateText('same text', 'it', 'EN');
+  await translateText('same text', 'it', 'JA');
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});

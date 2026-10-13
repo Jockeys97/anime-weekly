@@ -197,3 +197,11 @@ export async function getTMDBWeekEpisodes(id: number, week: ISOWeek): Promise<{ 
     return { episodes: [...unique.values()], unavailable: results.some(result => result.status === 'rejected') };
   } catch { return { episodes: [], unavailable: true }; }
 }
+
+export interface TMDBTextTranslation { iso_639_1: string; iso_3166_1?: string; name?: string; overview?: string }
+export async function getTMDBTextTranslations(id: number, kind: Kind): Promise<TMDBTextTranslation[]> {
+  try {
+    const result = await tmdb<{ translations?: { iso_639_1: string; iso_3166_1?: string; data?: { name?: string; title?: string; overview?: string } }[] }>(`${kind}/${id}/translations`, {}, 86400);
+    return (result.translations || []).map(entry => ({ iso_639_1: entry.iso_639_1, iso_3166_1: entry.iso_3166_1, name: entry.data?.name || entry.data?.title, overview: entry.data?.overview }));
+  } catch { return []; }
+}
