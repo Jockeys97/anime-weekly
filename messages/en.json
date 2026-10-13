@@ -186,6 +186,9 @@
     "availabilityNote": "Streaming availability is current and may vary by country.",
     "notFoundTitle": "Anime or season not found",
     "notFoundBody": "Check the address or explore the seasonal catalog.",
-    "back": "Back to seasons"
+    "back": "Back to seasons",
+    "loadingAnime": "Loading anime details…",
+    "loadingRatings": "Loading ratings…",
+    "loadingAvailability": "Loading streaming availability…"
   }
 }

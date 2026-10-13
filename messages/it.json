@@ -58,7 +58,10 @@
     "availabilityNote": "La disponibilità è attuale e può variare in base al paese.",
     "notFoundTitle": "Anime o stagione non trovati",
     "notFoundBody": "Controlla l’indirizzo o esplora il catalogo delle stagioni.",
-    "back": "Torna alle stagioni"
+    "back": "Torna alle stagioni",
+    "loadingAnime": "Caricamento della scheda anime…",
+    "loadingRatings": "Caricamento dei voti…",
+    "loadingAvailability": "Caricamento delle piattaforme streaming…"
   },
   "state": {
     "noPoster": "Locandina non disponibile",

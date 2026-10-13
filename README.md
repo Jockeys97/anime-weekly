@@ -93,3 +93,9 @@ The watch-page fetch is cached for seven days with the existing revalidation tag
 ## Streaming country selector
 
 The guide has one country selector, defaulting to United States. Every title displays only the selected country's streaming providers and uses that same country in its provider links. The selector supports 36 countries, including Spain, Portugal, Canada, Australia, Brazil and Mexico. United States stays first; the other countries are sorted alphabetically in the page language. Selecting a country updates all cards immediately without refetching title data. The root layout keeps the selection during client-side week navigation; a full reload starts with United States. Titles without providers in that country keep the existing unavailable message.
+
+## Progressive anime details
+
+Anime detail pages render the title, synopsis, cover and facts as soon as AniList resolves. Optional ratings and streaming availability load in separate Suspense boundaries, with explicit loading states instead of delaying the whole page. Both sections share one availability lookup per request. Alternate TMDB title searches run in parallel within each media type; all candidates are still considered for conservative matching.
+
+Exact AniList detail results use Next's persistent data cache for 24 hours, tagged for the existing revalidation endpoint. Cache hits bypass the process-wide upstream queue. Transient upstream errors are not cached as missing anime. A route-specific skeleton replaces the generic weekly loading screen.
