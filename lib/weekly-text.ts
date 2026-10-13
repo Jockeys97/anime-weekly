@@ -11,19 +11,13 @@ export async function getWeeklyText(id: number, kind: 'tv' | 'movie', locale: Lo
     const matches = entries.filter(entry => entry.iso_639_1 === language && entry[field]?.trim());
     return (matches.find(entry => entry.iso_3166_1 === country) || matches[0])?.[field]?.trim() || '';
   };
-  // Official localized/English names take priority over a literal machine title.
-  let name = select(locale, 'name') || select('en', 'name');
+  // Names are independent of the interface language. Never machine-translate
+  // a title: use its published English name or an existing romanized name.
+  const readable = (value: string) => /[\u3040-\u30ff\u3400-\u9fff]/.test(value) ? '' : value;
+  const name = readable(select('en', 'name')) || readable(select('ja', 'name'));
   let overview = animeDescription(select(locale, 'overview'));
   let machine = false;
   let overviewLanguage: string | null = overview ? locale : null;
-  if (!name) {
-    const japanese = select('ja', 'name');
-    if (japanese) {
-      const translated = await translateText(japanese, locale, 'JA');
-      name = translated || japanese;
-      machine ||= Boolean(translated);
-    }
-  }
   if (!overview) {
     const english = animeDescription(select('en', 'overview'));
     const japanese = animeDescription(select('ja', 'overview'));

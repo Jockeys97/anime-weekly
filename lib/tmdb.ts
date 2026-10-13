@@ -31,11 +31,23 @@ async function discover(kind: Kind, week: ISOWeek, locale: Locale): Promise<RawT
   const { start, end } = weekRange(week);
   const dateField = kind === 'tv' ? 'air_date' : 'primary_release_date';
   const query = { language: tmdbLanguages[locale], with_genres: '16', with_origin_country: 'JP', include_adult: 'false', [`${dateField}.gte`]: start, [`${dateField}.lte`]: end, sort_by: 'popularity.desc' };
-  const first = await tmdb<Page>(`discover/${kind}`, query);
-  // Only two pages per category; final enrichment is capped across both categories.
+  const readPage = async (page = 1): Promise<Page> => {
+    const pageQuery = page === 1 ? query : { ...query, page: String(page) };
+    const [localized, english] = await Promise.all([
+      tmdb<Page>(`discover/${kind}`, pageQuery),
+      locale === 'en' ? Promise.resolve(null) : tmdb<Page>(`discover/${kind}`, { ...pageQuery, language: 'en-US' }).catch(() => null),
+    ]);
+    const names = new Map((english?.results || []).map(item => [item.id, item.name || item.title]));
+    return { ...localized, results: localized.results.map(item => {
+      const name = names.get(item.id) || (locale === 'en' ? item.name || item.title : item.original_name || item.original_title);
+      return name ? { ...item, ...(kind === 'tv' ? { name } : { title: name }) } : item;
+    }) };
+  };
+  const first = await readPage();
   if (first.total_pages < 2) return first.results;
-  try { const second = await tmdb<Page>(`discover/${kind}`, { ...query, page: '2' }); return [...first.results, ...second.results]; } catch { return first.results; }
+  try { const second = await readPage(2); return [...first.results, ...second.results]; } catch { return first.results; }
 }
+
 async function getRatings(kind: Kind, id: number, revalidate = CACHE_SECONDS): Promise<Ratings> {
   let ratings: Ratings = {};
   try {
@@ -149,7 +161,7 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
 
 // Cache the entire enrichment per week and language, avoiding repeated throttled
 // rating lookups when request-specific locale selection makes pages dynamic.
-const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v2-english-names'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
 const pendingWeeks = new Map<string, Promise<WeekData>>();
 export function getCachedWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
   const key = `${week.year}-${week.week}:${locale}`;

@@ -7,14 +7,14 @@ export function WeeklyText({ id, kind, name, overview, locale }: { id: number; k
   const ref = useRef<HTMLDivElement>(null);
   const [text, setText] = useState<TextResult | null>(null);
   const d = getDictionary(locale);
-  const needsLookup = !overview.trim() || japanese.test(name) || japanese.test(overview);
+  const needsLookup = locale !== 'en' || !overview.trim() || japanese.test(name) || japanese.test(overview);
   useEffect(() => {
     if (!needsLookup || !ref.current) return;
     const controller = new AbortController();
     const observer = new IntersectionObserver(entries => {
       if (!entries.some(entry => entry.isIntersecting)) return;
       observer.disconnect();
-      const query = new URLSearchParams({ id: String(id), kind, locale });
+      const query = new URLSearchParams({ id: String(id), kind, locale, names: 'original' });
       fetch(`/api/weekly-text?${query}`, { signal: controller.signal }).then(async response => {
         if (!response.ok) return;
         const data = await response.json();
@@ -26,7 +26,7 @@ export function WeeklyText({ id, kind, name, overview, locale }: { id: number; k
   }, [id, kind, locale, needsLookup]);
   const synopsis = text?.overview || overview;
   return <div ref={ref}>
-    <h3><a href={`https://www.themoviedb.org/${kind}/${id}`} target="_blank" rel="noopener noreferrer">{text?.name || name}</a></h3>
+    <h3><a href={`https://www.themoviedb.org/${kind}/${id}`} target="_blank" rel="noopener noreferrer">{text?.name || (japanese.test(name) ? `Anime #${id}` : name)}</a></h3>
     <p className="synopsis" lang={text?.overviewLanguage || (japanese.test(synopsis) ? 'ja' : undefined)}>{synopsis || d.state.noSynopsis}</p>
     {text?.machine && <p className="synopsis-fallback">{d.language.machineTranslation} · DeepL</p>}
     {text?.overview && text.overviewLanguage !== locale && <p className="synopsis-fallback">{d.language.sourceSynopsis}</p>}
