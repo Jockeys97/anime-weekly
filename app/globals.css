@@ -46,3 +46,8 @@
 
 .detail-streaming .region-list{display:block}
 .streaming-static{border-top:0;padding-top:0}
+
+.language-control select{font:inherit;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);max-width:140px}
+.language-control select:focus-visible{outline:3px solid #769641;outline-offset:3px}
+.language-control [role=alert]{display:block;font-size:11px;color:#843c30;max-width:180px}
+.synopsis-fallback{font-size:10px;color:var(--muted);margin-top:-8px;margin-bottom:14px;line-height:1.5}

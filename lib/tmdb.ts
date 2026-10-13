@@ -1,4 +1,6 @@
 import 'server-only';
+import { unstable_cache } from 'next/cache';
+import { tmdbLanguages, type Locale } from '@/lib/locales';
 import { CACHE_SECONDS, CACHE_TAG, MAX_TITLES_PER_WEEK, STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
 import type { Ratings } from '@/lib/ratings';
 import { getAnimeRatings } from '@/lib/anime-ratings';
@@ -24,10 +26,10 @@ async function tmdb<T>(path: string, query: Record<string, string> = {}, revalid
   if (!response.ok) throw new Error('TMDB request failed');
   return response.json() as Promise<T>;
 }
-async function discover(kind: Kind, week: ISOWeek): Promise<RawTitle[]> {
+async function discover(kind: Kind, week: ISOWeek, locale: Locale): Promise<RawTitle[]> {
   const { start, end } = weekRange(week);
   const dateField = kind === 'tv' ? 'air_date' : 'primary_release_date';
-  const query = { with_genres: '16', with_origin_country: 'JP', include_adult: 'false', [`${dateField}.gte`]: start, [`${dateField}.lte`]: end, sort_by: 'popularity.desc' };
+  const query = { language: tmdbLanguages[locale], with_genres: '16', with_origin_country: 'JP', include_adult: 'false', [`${dateField}.gte`]: start, [`${dateField}.lte`]: end, sort_by: 'popularity.desc' };
   const first = await tmdb<Page>(`discover/${kind}`, query);
   // Only two pages per category; final enrichment is capped across both categories.
   if (first.total_pages < 2) return first.results;
@@ -110,9 +112,9 @@ export async function getAnimeAvailability(titles: string[], year?: number): Pro
   }
   return empty;
 }
-export async function getWeekData(week: ISOWeek): Promise<WeekData> {
+export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
   if (!isTMDBConfigured()) return { status: 'unconfigured', titles: [] };
-  const [tv, movie] = await Promise.allSettled([discover('tv', week), discover('movie', week)]);
+  const [tv, movie] = await Promise.allSettled([discover('tv', week, locale), discover('movie', week, locale)]);
   if (tv.status === 'rejected' && movie.status === 'rejected') return { status: 'error', titles: [] };
   const shows = tv.status === 'fulfilled' ? tv.value : [];
   const movies = movie.status === 'fulfilled' ? movie.value : [];
@@ -128,4 +130,30 @@ export async function getWeekData(week: ISOWeek): Promise<WeekData> {
   // Bound concurrent fan-out and OMDb calls (at most 40 per uncached week).
   for (let i = 0; i < selected.length; i += 5) titles.push(...await Promise.all(selected.slice(i, i + 5).map(({ raw, kind }) => enrich(raw, kind))));
   return { status: 'ready', titles, partial: tv.status === 'rejected' || movie.status === 'rejected' };
+}
+
+// Cache the entire enrichment per week and language, avoiding repeated throttled
+// rating lookups when request-specific locale selection makes pages dynamic.
+export const getCachedWeekData = unstable_cache(getWeekData, ['localized-week-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+
+export async function getLocalizedSynopsis(titles: string[], year: number | undefined, locale: Locale, kind: Kind): Promise<string | null> {
+  if (locale === 'en' || !isTMDBConfigured()) return null;
+  const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))].slice(0, 3);
+  const candidates: TMDBCandidate[] = [];
+  for (const title of aliases) {
+    try {
+      const query: Record<string, string> = { query: title, include_adult: 'false' };
+      if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
+      const page = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, 86400);
+      if (Array.isArray(page.results)) candidates.push(...page.results);
+    } catch { /* Never guess a translation after an unavailable source. */ }
+  }
+  const match = chooseTMDBMatch(candidates, aliases, year);
+  if (!match) return null;
+  try {
+    const result = await tmdb<{ translations?: { iso_639_1?: string; iso_3166_1?: string; data?: { overview?: string } }[] }>(`${kind}/${match.id}/translations`, {}, 86400);
+    const country = tmdbLanguages[locale].split('-')[1];
+    const translations = result.translations?.filter(item => item.iso_639_1 === locale && item.data?.overview?.trim()) || [];
+    return (translations.find(item => item.iso_3166_1 === country) || translations[0])?.data?.overview?.trim() || null;
+  } catch { return null; }
 }

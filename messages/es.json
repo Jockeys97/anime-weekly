@@ -1,0 +1,153 @@
+{
+  "nav": {
+    "guide": "La guía semanal",
+    "current": "Esta semana",
+    "previous": "Semana anterior",
+    "next": "Semana siguiente",
+    "label": "Explorar semanas"
+  },
+  "hero": {
+    "eyebrow": "Menos búsquedas. Más anime.",
+    "title": "Tu próxima historia,",
+    "accent": "semana a semana.",
+    "description": "Anime en emisión en Japón y nuevos estrenos de cine. Encuentra tu próxima historia y descubre dónde verla."
+  },
+  "week": {
+    "label": "Semana",
+    "releases": "Estrenos de la semana",
+    "subtitle": "Animación japonesa · Series y películas",
+    "range": "De lunes a domingo",
+    "cap": "Hasta 40 títulos por semana.",
+    "scope": "Las series se seleccionan por sus fechas de emisión; las películas por su estreno inicial. La disponibilidad es actual y varía según el país.",
+    "tv": "Serie de TV",
+    "movie": "Película",
+    "browse": "Explorar el calendario",
+    "currentBadge": "Semana actual"
+  },
+  "state": {
+    "unconfigured": "Fuente de datos sin configurar",
+    "setup": "Conecta TMDB añadiendo TMDB_API_KEY o TMDB_READ_TOKEN a la configuración y vuelve a publicar.",
+    "setupLink": "Obtener una clave de TMDB",
+    "empty": "Una semana tranquila",
+    "emptyBody": "TMDB no tiene estrenos coincidentes. Prueba otra semana.",
+    "error": "La guía no está disponible temporalmente",
+    "errorBody": "No pudimos cargar los estrenos. Inténtalo más tarde.",
+    "partial": "Algunos datos no están disponibles. Se muestran los resultados cargados.",
+    "omdb": "Las valoraciones IMDb necesitan una clave OMDb opcional.",
+    "noPoster": "Póster no disponible",
+    "noSynopsis": "Sinopsis no disponible.",
+    "noProviders": "No se han encontrado servicios de suscripción, gratuitos o con anuncios.",
+    "providersError": "No se pudo cargar la disponibilidad."
+  },
+  "title": {
+    "imdb": "IMDb",
+    "animeScore": "Puntuación anime",
+    "votes": "Votos IMDb",
+    "liked": "Si te gustó",
+    "streaming": "Dónde verlo",
+    "watch": "Opciones de visualización",
+    "tmdb": "Ver en TMDB",
+    "voteCount": "votos",
+    "members": "usuarios",
+    "opensNewTab": "se abre en otra pestaña",
+    "streamingLinksNote": "Abre el título en el servicio del país indicado. Si no hay enlace directo, verás las opciones regionales. El acceso depende de tu ubicación y suscripción.",
+    "streamingCountry": "País de streaming",
+    "streamingCountryHint": "Muestra solo los servicios del país seleccionado."
+  },
+  "catalog": {
+    "navLabel": "Navegación principal",
+    "weekly": "Semana",
+    "seasons": "Temporadas",
+    "search": "Buscar",
+    "searchLabel": "Buscar anime",
+    "searchPlaceholder": "Título del anime…",
+    "searchTitle": "Busca un anime",
+    "searchPrompt": "Introduce un título para explorar el catálogo.",
+    "searchResults": "Resultados de",
+    "noResults": "No hay resultados. Prueba otro título o vuelve más tarde.",
+    "seasonTitle": "Anime de temporada",
+    "seasonDescription": "Explora anime por temporada, ordenado por popularidad.",
+    "seasonEmpty": "No hay anime disponible. Prueba otra temporada.",
+    "previousSeason": "Temporada anterior",
+    "nextSeason": "Temporada siguiente",
+    "currentSeason": "Temporada actual",
+    "yearLabel": "Elige un año",
+    "seasonLabel": "Elige una temporada",
+    "pagination": "Páginas de resultados",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "page": "Página",
+    "unknown": "No disponible",
+    "episodes": "Episodios",
+    "format": "Formato",
+    "status": "Estado",
+    "startDate": "Fecha de estreno",
+    "studios": "Estudios",
+    "genres": "Géneros",
+    "season": "Temporada",
+    "details": "Ver detalles",
+    "source": "Ver en AniList",
+    "noPlatforms": "No se encontraron plataformas",
+    "availabilityNote": "La disponibilidad es actual y puede variar según el país.",
+    "notFoundTitle": "Anime o temporada no encontrados",
+    "notFoundBody": "Comprueba la dirección o explora las temporadas.",
+    "back": "Volver a temporadas",
+    "seasonNames": {
+      "winter": "Invierno",
+      "spring": "Primavera",
+      "summer": "Verano",
+      "fall": "Otoño"
+    },
+    "formats": {
+      "TV": "Serie de TV",
+      "TV_SHORT": "Serie corta de TV",
+      "MOVIE": "Película",
+      "ONA": "ONA",
+      "OVA": "OVA",
+      "SPECIAL": "Especial",
+      "MUSIC": "Música"
+    },
+    "statuses": {
+      "FINISHED": "Finalizado",
+      "RELEASING": "En emisión",
+      "NOT_YET_RELEASED": "Próximamente",
+      "CANCELLED": "Cancelado",
+      "HIATUS": "En pausa"
+    }
+  },
+  "footer": {
+    "tagline": "Una nueva semana. Una nueva historia.",
+    "tmdbBadge": "TMDB",
+    "tmdb": "Este producto utiliza la API de TMDB, pero TMDB no lo avala ni certifica.",
+    "justwatch": "Datos de streaming de JustWatch",
+    "omdb": "Valoraciones IMDb de OMDb",
+    "anilist": "Identificación de anime y puntuaciones alternativas de AniList",
+    "mal": "Puntuaciones MyAnimeList mediante Jikan",
+    "note": "Las fechas y la disponibilidad proceden de las fuentes indicadas. No se estiman valoraciones."
+  },
+  "language": {
+    "label": "Idioma",
+    "error": "No se pudo cambiar el idioma. Inténtalo de nuevo.",
+    "originalSynopsis": "Traducción no disponible; se muestra la sinopsis en inglés.",
+    "loadingSynopsis": "Cargando la sinopsis traducida…"
+  },
+  "loading": "Cargando la guía semanal…",
+  "notFound": {
+    "title": "Esta semana no está en el calendario",
+    "body": "Usa el formato ISO aaaa-ss, por ejemplo 2026-42.",
+    "back": "Volver a esta semana"
+  },
+  "error": {
+    "title": "La guía encontró un problema",
+    "body": "Intenta cargar la guía de nuevo.",
+    "retry": "Reintentar"
+  },
+  "sponsor": {
+    "label": "Espacio para patrocinadores",
+    "body": "Un pequeño espacio para quienes aman el anime."
+  },
+  "metadata": {
+    "title": "Anime Weekly · La guía semanal",
+    "description": "Anime en emisión en Japón y nuevos estrenos de cine. Encuentra tu próxima historia y descubre dónde verla."
+  }
+}

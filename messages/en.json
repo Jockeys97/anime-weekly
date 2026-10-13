@@ -187,5 +187,11 @@
     "notFoundTitle": "Anime or season not found",
     "notFoundBody": "Check the address or explore the seasonal catalog.",
     "back": "Back to seasons"
+  },
+  "language": {
+    "label": "Language",
+    "error": "The language could not be changed. Please try again.",
+    "originalSynopsis": "Translation unavailable; showing the English synopsis.",
+    "loadingSynopsis": "Loading translated synopsis…"
   }
 }

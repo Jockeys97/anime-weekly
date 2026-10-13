@@ -1,4 +1,59 @@
 {
+  "nav": {
+    "guide": "La guida settimanale",
+    "current": "Questa settimana",
+    "previous": "Settimana precedente",
+    "next": "Settimana successiva",
+    "label": "Sfoglia le settimane"
+  },
+  "hero": {
+    "eyebrow": "Meno ricerche. Più anime.",
+    "title": "La tua prossima visione,",
+    "accent": "una settimana alla volta.",
+    "description": "Gli anime in onda in Giappone e le nuove uscite al cinema. Trova la tua prossima storia e scopri dove guardarla."
+  },
+  "week": {
+    "label": "Settimana",
+    "releases": "Uscite della settimana",
+    "subtitle": "Animazione giapponese · Serie TV e film",
+    "range": "Da lunedì a domenica",
+    "cap": "Fino a 40 titoli per settimana.",
+    "scope": "Le serie sono selezionate per le date di trasmissione della settimana; i film per la prima uscita. La disponibilità streaming è attuale e varia per paese.",
+    "tv": "Serie TV",
+    "movie": "Film",
+    "browse": "Sfoglia il calendario",
+    "currentBadge": "Settimana attuale"
+  },
+  "state": {
+    "unconfigured": "Fonte dati non configurata",
+    "setup": "Collega TMDB aggiungendo TMDB_API_KEY o TMDB_READ_TOKEN alla configurazione, poi riavvia o pubblica di nuovo.",
+    "setupLink": "Ottieni una chiave API TMDB",
+    "empty": "Una settimana tranquilla",
+    "emptyBody": "TMDB non ha uscite corrispondenti. Prova la settimana precedente o successiva.",
+    "error": "Guida temporaneamente non disponibile",
+    "errorBody": "Non è stato possibile caricare le uscite. Riprova più tardi.",
+    "partial": "Alcuni dati non sono disponibili. Mostriamo i risultati caricati.",
+    "omdb": "I voti IMDb richiedono una chiave OMDb facoltativa.",
+    "noPoster": "Locandina non disponibile",
+    "noSynopsis": "Trama non disponibile.",
+    "noProviders": "Nessun servizio in abbonamento, gratuito o con pubblicità disponibile.",
+    "providersError": "Disponibilità streaming temporaneamente non disponibile."
+  },
+  "title": {
+    "imdb": "IMDb",
+    "animeScore": "Voto anime",
+    "votes": "Voti IMDb",
+    "liked": "Se ti è piaciuto",
+    "streaming": "Dove guardarlo",
+    "watch": "Opzioni di visione",
+    "tmdb": "Vedi su TMDB",
+    "voteCount": "voti",
+    "members": "utenti",
+    "opensNewTab": "si apre in una nuova scheda",
+    "streamingLinksNote": "Apri il titolo sul servizio per il paese indicato. Se manca il link diretto, vedrai le opzioni regionali. L’accesso dipende dalla tua posizione e dall’abbonamento.",
+    "streamingCountry": "Paese per lo streaming",
+    "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato."
+  },
   "catalog": {
     "navLabel": "Navigazione principale",
     "weekly": "Settimana",
@@ -60,56 +115,39 @@
     "notFoundBody": "Controlla l’indirizzo o esplora il catalogo delle stagioni.",
     "back": "Torna alle stagioni"
   },
-  "state": {
-    "noPoster": "Locandina non disponibile",
-    "noSynopsis": "Trama non disponibile.",
-    "noProviders": "Nessuna piattaforma trovata",
-    "providersError": "Disponibilità streaming temporaneamente non disponibile."
+  "footer": {
+    "tagline": "Una nuova settimana. Una nuova storia.",
+    "tmdbBadge": "TMDB",
+    "tmdb": "Questo prodotto utilizza l’API TMDB ma non è approvato né certificato da TMDB.",
+    "justwatch": "Dati streaming forniti da JustWatch",
+    "omdb": "Voti IMDb forniti da OMDb",
+    "anilist": "Abbinamenti anime e voti alternativi di AniList",
+    "mal": "Voti MyAnimeList tramite Jikan",
+    "note": "Date e disponibilità provengono dalle fonti indicate. Nessun voto è stimato."
   },
-  "title": {
-    "animeScore": "Voto anime",
-    "streaming": "Dove guardarlo",
-    "watch": "Opzioni di visione",
-    "votes": "Voti IMDb",
-    "streamingCountry": "Paese per lo streaming",
-    "streamingCountryHint": "Mostra solo i servizi disponibili nel paese selezionato."
+  "language": {
+    "label": "Lingua",
+    "error": "Impossibile cambiare lingua. Riprova.",
+    "originalSynopsis": "Traduzione non disponibile: viene mostrata la trama inglese.",
+    "loadingSynopsis": "Caricamento della trama tradotta…"
   },
-  "regions": {
-    "IT": "Italia",
-    "US": "Stati Uniti",
-    "GB": "Regno Unito",
-    "FR": "Francia",
-    "DE": "Germania",
-    "JP": "Giappone",
-    "ES": "Spagna",
-    "PT": "Portogallo",
-    "CA": "Canada",
-    "AU": "Australia",
-    "NZ": "Nuova Zelanda",
-    "IE": "Irlanda",
-    "AT": "Austria",
-    "CH": "Svizzera",
-    "BE": "Belgio",
-    "NL": "Paesi Bassi",
-    "PL": "Polonia",
-    "CZ": "Cechia",
-    "HU": "Ungheria",
-    "RO": "Romania",
-    "GR": "Grecia",
-    "DK": "Danimarca",
-    "SE": "Svezia",
-    "NO": "Norvegia",
-    "FI": "Finlandia",
-    "BR": "Brasile",
-    "MX": "Messico",
-    "AR": "Argentina",
-    "CL": "Cile",
-    "CO": "Colombia",
-    "IN": "India",
-    "KR": "Corea del Sud",
-    "TW": "Taiwan",
-    "HK": "Hong Kong",
-    "SG": "Singapore",
-    "ZA": "Sudafrica"
+  "loading": "Caricamento della guida settimanale…",
+  "notFound": {
+    "title": "Questa settimana non è nel calendario",
+    "body": "Usa una settimana ISO nel formato aaaa-ss, ad esempio 2026-42.",
+    "back": "Torna a questa settimana"
+  },
+  "error": {
+    "title": "La guida ha incontrato un problema",
+    "body": "Riprova a caricare la guida.",
+    "retry": "Riprova"
+  },
+  "sponsor": {
+    "label": "Spazio sponsor",
+    "body": "Un piccolo spazio per chi ama gli anime."
+  },
+  "metadata": {
+    "title": "Anime Weekly · La guida settimanale",
+    "description": "Gli anime in onda in Giappone e le nuove uscite al cinema. Trova la tua prossima storia e scopri dove guardarla."
   }
 }

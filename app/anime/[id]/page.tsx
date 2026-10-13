@@ -1,3 +1,5 @@
+import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
+import { getRequestLocale } from '@/lib/request-locale';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -19,7 +21,8 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const anime = await getAnime(Number(id));
   if (!anime) notFound();
-  const d = getDictionary('it');
+  const locale = await getRequestLocale();
+  const d = getDictionary(locale);
   const c = d.catalog;
   const name = animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
@@ -36,7 +39,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
   const date = anime.startDate;
   const startDate = date?.year ? [date.day && String(date.day).padStart(2, '0'), date.month && String(date.month).padStart(2, '0'), date.year].filter(Boolean).join('/') : c.unknown;
-  return <main className="catalog-page" lang="it">
+  return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
     {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
     <article className="anime-card anime-detail">
@@ -46,8 +49,8 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         <h1>{name}</h1>
         {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
         {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
-        <p className="synopsis detail-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
-        <RatingSummary ratings={ratings} title={name} locale="it" />
+        <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
+        <RatingSummary ratings={ratings} title={name} locale={locale} />
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
           <div><dt>{c.status}</dt><dd>{status}</dd></div>
@@ -62,8 +65,8 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
     </article>
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
-      <StreamingCountrySelector locale="it" />
-      <StreamingAvailability locale="it" collapsible={false} anime={{
+      <StreamingCountrySelector locale={locale} />
+      <StreamingAvailability locale={locale} collapsible={false} anime={{
         id: availability.match?.id ?? 0, kind: availability.match?.kind ?? 'tv', name,
         providers: availability.match ? availability.providers : {}, providersUnavailable: availability.providersUnavailable,
       }} />
