@@ -1,10 +1,11 @@
 import 'server-only';
 import { CACHE_SECONDS, CACHE_TAG, MAX_TITLES_PER_WEEK, STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
 import type { Ratings } from '@/lib/ratings';
+import { getAnimeRatings } from '@/lib/anime-ratings';
 import { weekRange, type ISOWeek } from '@/lib/week';
 
 type Kind = 'tv' | 'movie';
-interface RawTitle { id: number; name?: string; title?: string; overview?: string; poster_path?: string | null }
+interface RawTitle { id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
 interface Page { results: RawTitle[]; total_pages: number }
 export interface Provider { provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
@@ -41,7 +42,7 @@ async function getRatings(kind: Kind, id: number): Promise<Ratings> {
     const response = await fetch(url, { next: { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(10000) });
     if (!response.ok) return {};
     const data = await response.json() as Ratings & { Response?: string };
-    return data.Response === 'True' ? { imdbRating: data.imdbRating, Metascore: data.Metascore, imdbVotes: data.imdbVotes } : {};
+    return data.Response === 'True' ? { imdbRating: data.imdbRating, imdbVotes: data.imdbVotes } : {};
   } catch { return {}; }
 }
 async function recommendation(kind: Kind, id: number): Promise<string | null> {
@@ -55,7 +56,10 @@ async function recommendation(kind: Kind, id: number): Promise<string | null> {
   return null;
 }
 async function enrich(raw: RawTitle, kind: Kind): Promise<AnimeTitle> {
-  const [ratings, related, watch] = await Promise.all([getRatings(kind, raw.id), recommendation(kind, raw.id), tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null)]);
+  const date = kind === 'tv' ? raw.first_air_date : raw.release_date;
+  const year = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.slice(0, 4)) : undefined;
+  const [imdb, animeRatings, related, watch] = await Promise.all([getRatings(kind, raw.id), getAnimeRatings({ kind, originalTitle: kind === 'tv' ? raw.original_name : raw.original_title, title: (raw.name || raw.title)!, year }), recommendation(kind, raw.id), tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null)]);
+  const ratings = { ...imdb, ...animeRatings };
   const providers: AnimeTitle['providers'] = {};
   for (const region of STREAMING_REGIONS) {
     const entry = watch?.results[region];

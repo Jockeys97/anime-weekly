@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { WeeklyGuide } from '@/components/WeeklyGuide';
 import { parseWeek } from '@/lib/week';
+export const maxDuration = 300;
 export const revalidate = 604800;
 // All valid week routes are generated on first request, then cached by ISR.
 export function generateStaticParams() { return []; }

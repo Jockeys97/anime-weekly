@@ -1,4 +1,17 @@
-export interface Ratings { imdbRating?: string; Metascore?: string; imdbVotes?: string }
+export interface Ratings { imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
+export function formatMembers(value: number | null | undefined): string {
+  if (value == null || !Number.isSafeInteger(value) || value < 0) return 'n/a';
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+export function formatAnimeScore(ratings: Ratings): string {
+  const score = ratings.malScore;
+  if (typeof score === 'number' && Number.isFinite(score) && score >= 0 && score <= 10) {
+    const members = formatMembers(ratings.malMembers);
+    return `MAL ${score.toFixed(2)}${members === 'n/a' ? '' : ` · ${members} members`}`;
+  }
+  const average = ratings.anilistScore;
+  return typeof average === 'number' && Number.isFinite(average) && average >= 0 && average <= 100 ? `AniList ${average}%` : 'n/a';
+}
 export function formatRating(value: string | number | null | undefined, maximum = 10): string {
   if (value == null || String(value).trim() === '') return 'n/a';
   const numeric = Number(value);
