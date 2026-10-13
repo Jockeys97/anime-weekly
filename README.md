@@ -77,3 +77,9 @@ API references: [TMDB TV discovery](https://developer.themoviedb.org/reference/d
 All 95 Vitest tests pass, including the existing calendar tests and new offline anime matching, formatting and mocked API tests. ESLint and `tsc --noEmit` also pass with the existing installed dependencies; no dependency installation was needed.
 
 Production build verification remains incomplete in this restricted workspace: the default Turbopack build fails when its CSS worker tries to bind a local port (`Operation not permitted`), and the webpack fallback fails while parsing TypeScript `--showConfig` output. No live upstream calls were made. Run the production build and live API checks in an environment that permits them.
+
+## Rating source links and logos
+
+Rating cards link directly to the matched IMDb, MyAnimeList or AniList title in a new tab. The displayed anime score retains the existing MAL-first/AniList-fallback policy. IMDb links remain available when TMDB supplies an ID even without an OMDb key; unknown IDs render non-clickable cards. Vote counts and MAL members appear beneath their scores.
+
+Brand marks in `public/logos` are bundled from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. Brand names and logos remain the property of their respective owners.

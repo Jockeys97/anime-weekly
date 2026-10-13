@@ -20,7 +20,7 @@ describe('anime rating lookups (offline)', () => {
     const { getAnimeRatings } = await import('../lib/anime-ratings');
     const pending = getAnimeRatings(search);
     await vi.runAllTimersAsync();
-    expect(await pending).toEqual({ malScore: 8.12, malMembers: 1200000, anilistScore: 81 });
+    expect(await pending).toEqual({ malScore: 8.12, malMembers: 1200000, anilistScore: 81, anilistId: 1, malId: 123 });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.search).toBe('Original');
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.search).toBe('Display');
     expect(fetchMock.mock.calls[2][0]).toBe('https://api.jikan.moe/v4/anime/123');
@@ -42,13 +42,13 @@ describe('anime rating lookups (offline)', () => {
     const fetchMock = vi.fn().mockResolvedValue(matchResponse({ idMal }));
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeRatings } = await import('../lib/anime-ratings');
-    expect(await getAnimeRatings(search)).toEqual({ anilistScore: 81 });
+    expect(await getAnimeRatings(search)).toEqual({ anilistScore: 81, anilistId: 1 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('degrades to the AniList fallback on Jikan failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(matchResponse()).mockRejectedValueOnce(new Error('offline')));
     const { getAnimeRatings } = await import('../lib/anime-ratings');
-    expect(await getAnimeRatings(search)).toEqual({ anilistScore: 81 });
+    expect(await getAnimeRatings(search)).toEqual({ anilistScore: 81, anilistId: 1, malId: 123 });
   });
   it('contains failures and lets later requests continue through the queue', async () => {
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(Response.json({ errors: [{ message: 'unavailable' }] })).mockResolvedValueOnce(matchResponse({ idMal: null }));
@@ -59,7 +59,7 @@ describe('anime rating lookups (offline)', () => {
     expect(await failed).toEqual({});
     const recovered = getAnimeRatings(search);
     await vi.runAllTimersAsync();
-    expect(await recovered).toEqual({ anilistScore: 81 });
+    expect(await recovered).toEqual({ anilistScore: 81, anilistId: 1 });
   });
   it('spaces concurrent requests and serializes each service', async () => {
     const starts: Record<string, number[]> = { anilist: [], jikan: [] };
@@ -88,7 +88,7 @@ describe('anime rating lookups (offline)', () => {
     const { getAnimeRatings } = await import('../lib/anime-ratings');
     const pending = getAnimeRatings(search);
     await vi.runAllTimersAsync();
-    expect(await pending).toEqual({ anilistScore: 81 });
+    expect(await pending).toEqual({ anilistScore: 81, anilistId: 1 });
     expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(2000);
   });
   it('limits retries to three attempts with exponential backoff and no score', async () => {
@@ -113,7 +113,7 @@ describe('anime rating lookups (offline)', () => {
     const { getAnimeRatings } = await import('../lib/anime-ratings');
     const pending = getAnimeRatings(search);
     await vi.runAllTimersAsync();
-    expect(await pending).toEqual({ anilistScore: 81 });
+    expect(await pending).toEqual({ anilistScore: 81, anilistId: 1, malId: 123 });
     expect(starts).toHaveLength(3);
     expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(400);
     expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(800);

@@ -63,8 +63,9 @@ export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
       } catch { /* Try the display title if the original title lookup failed. */ }
     }
     if (!match) return {};
-    const fallback: Ratings = { anilistScore: match.averageScore };
+    const fallback: Ratings = { anilistId: match.id, anilistScore: match.averageScore };
     if (!Number.isSafeInteger(match.idMal) || match.idMal! <= 0) return fallback;
+    fallback.malId = match.idMal!;
     if (jikanFailures >= 3 || overBudget()) return fallback;
     try {
       const response = await jikan(`https://api.jikan.moe/v4/anime/${match.idMal}`);

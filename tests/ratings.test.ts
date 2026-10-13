@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAnimeScore, formatMembers, formatRating, formatVotes } from '../lib/ratings';
+import { formatAnimeScore, formatMembers, formatRating, formatVotes, ratingSourceLink } from '../lib/ratings';
 describe('source ratings', () => {
   it.each([undefined, null, '', ' ', 'N/A', 'bad', -1, 11, NaN])('formats missing or invalid %s as n/a', value => expect(formatRating(value)).toBe('n/a'));
   it('preserves real IMDb values', () => { expect(formatRating('8.4')).toBe('8.4'); expect(formatRating('0')).toBe('0'); });
@@ -29,5 +29,21 @@ describe('anime score formatting', () => {
   });
   it.each([undefined, null, -1, 1.2, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('rejects invalid member count %s', value => {
     expect(formatMembers(value)).toBe('n/a');
+  });
+});
+
+describe('rating source links', () => {
+  it('links to exact title IDs', () => {
+    expect(ratingSourceLink('imdb', { imdbId: 'tt1234567' })).toBe('https://www.imdb.com/title/tt1234567/');
+    expect(ratingSourceLink('anilist', { anilistId: 21 })).toBe('https://anilist.co/anime/21/');
+    expect(ratingSourceLink('myanimelist', { malId: 121 })).toBe('https://myanimelist.net/anime/121');
+  });
+  it('does not invent links or accept invalid IDs', () => {
+    for (const source of ['imdb', 'anilist', 'myanimelist'] as const) expect(ratingSourceLink(source, {})).toBeUndefined();
+    expect(ratingSourceLink('imdb', { imdbId: 'tt123/other' })).toBeUndefined();
+    for (const id of [0, -1, 1.5, NaN, Infinity]) {
+      expect(ratingSourceLink('anilist', { anilistId: id })).toBeUndefined();
+      expect(ratingSourceLink('myanimelist', { malId: id })).toBeUndefined();
+    }
   });
 });

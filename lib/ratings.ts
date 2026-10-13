@@ -1,4 +1,4 @@
-export interface Ratings { imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
+export interface Ratings { imdbId?: string; anilistId?: number; malId?: number; imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
 export function formatMembers(value: number | null | undefined): string {
   if (value == null || !Number.isSafeInteger(value) || value < 0) return 'n/a';
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
@@ -21,4 +21,11 @@ export function formatVotes(value: string | null | undefined): string {
   if (!value || !/^\d+(,\d{3})*$/.test(value)) return 'n/a';
   const numeric = Number(value.replaceAll(',', ''));
   return Number.isSafeInteger(numeric) ? new Intl.NumberFormat('en').format(numeric) : 'n/a';
+}
+
+export function ratingSourceLink(source: 'imdb' | 'anilist' | 'myanimelist', ratings: Ratings): string | undefined {
+  if (source === 'imdb') return ratings.imdbId && /^tt\d+$/.test(ratings.imdbId) ? `https://www.imdb.com/title/${ratings.imdbId}/` : undefined;
+  const id = source === 'anilist' ? ratings.anilistId : ratings.malId;
+  if (!Number.isSafeInteger(id) || id! <= 0) return undefined;
+  return source === 'anilist' ? `https://anilist.co/anime/${id}/` : `https://myanimelist.net/anime/${id}`;
 }
