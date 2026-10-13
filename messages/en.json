@@ -190,7 +190,8 @@
     "back": "Back to seasons",
     "loadingAnime": "Loading anime details…",
     "loadingRatings": "Loading ratings…",
-    "loadingAvailability": "Loading streaming availability…"
+    "loadingAvailability": "Loading streaming availability…",
+    "enrichmentUnavailable": "Ratings and streaming services are temporarily unavailable."
   },
   "trailer": {
     "heading": "Trailer",

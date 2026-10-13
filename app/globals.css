@@ -75,3 +75,8 @@
 .anime-loading-line{height:16px;border-radius:5px;background:#e8eddf;margin:16px 0;max-width:90%}
 .anime-loading-line:first-child{height:32px;max-width:65%}
 @media(max-width:600px){.anime-loading{grid-template-columns:95px 1fr;gap:16px}}
+
+.card-details{margin:0 0 14px;font-size:12px}
+.catalog-card-extras{margin-bottom:14px}
+.catalog-enrichment-error{font-size:11px;color:var(--muted)}
+.catalog-enrichment-error button{font:inherit;text-decoration:underline;color:var(--ink);cursor:pointer;background:none;border:0;padding:0}

@@ -117,7 +117,8 @@
     },
     "loadingAnime": "A carregar os detalhes…",
     "loadingRatings": "A carregar as avaliações…",
-    "loadingAvailability": "A carregar a disponibilidade…"
+    "loadingAvailability": "A carregar a disponibilidade…",
+    "enrichmentUnavailable": "As avaliações e as plataformas estão temporariamente indisponíveis."
   },
   "footer": {
     "tagline": "Uma nova semana. Uma nova história.",

@@ -117,7 +117,8 @@
     },
     "loadingAnime": "Chargement des détails…",
     "loadingRatings": "Chargement des notes…",
-    "loadingAvailability": "Chargement de la disponibilité…"
+    "loadingAvailability": "Chargement de la disponibilité…",
+    "enrichmentUnavailable": "Les notes et les plateformes sont temporairement indisponibles."
   },
   "footer": {
     "tagline": "Une nouvelle semaine. Une nouvelle histoire.",
