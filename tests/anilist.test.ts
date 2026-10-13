@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: (...args: unknown[]) => unknown) => fn }));
 
 const anime = {
   id: 21, idMal: 123, title: { english: 'Example', romaji: 'Example', native: null },
@@ -52,6 +53,7 @@ describe('AniList catalog (offline)', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.variables).toEqual({ id: 21 });
     expect(body.query).toContain('Media(id: $id, type: ANIME)');
+    expect(body.query).toContain('trailer { id site }');
     expect(await getAnime(-1)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

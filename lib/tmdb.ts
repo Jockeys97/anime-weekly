@@ -12,7 +12,7 @@ interface RawTitle { id: number; name?: string; title?: string; original_name?: 
 interface Page { results: RawTitle[]; total_pages: number }
 export interface Provider { provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
-export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
+export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
@@ -66,7 +66,7 @@ async function enrich(raw: RawTitle, kind: Kind): Promise<AnimeTitle> {
   const [imdb, animeRatings, related, watch] = await Promise.all([getRatings(kind, raw.id), getAnimeRatings({ kind, originalTitle: kind === 'tv' ? raw.original_name : raw.original_title, title: (raw.name || raw.title)!, year }), recommendation(kind, raw.id), tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null)]);
   const ratings = { ...imdb, ...animeRatings };
   const providers = watchProviders(watch);
-  return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
+  return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null, releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
 }
 function watchProviders(watch: { results: Partial<Record<StreamingRegion, WatchRegion>> } | null): AnimeTitle['providers'] {
   const providers: AnimeTitle['providers'] = {};
@@ -94,14 +94,15 @@ export async function getAnimeAvailability(titles: string[], year?: number): Pro
   const revalidate = 86400;
   for (const kind of ['tv', 'movie'] as const) {
     const candidates: TMDBCandidate[] = [];
-    for (const title of aliases) {
+    const results = await Promise.all(aliases.map(async title => {
       try {
         const query: Record<string, string> = { query: title, include_adult: 'false' };
         if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
         const data = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, revalidate);
-        if (Array.isArray(data.results)) candidates.push(...data.results);
-      } catch { /* Continue with the other alias or media type. */ }
-    }
+        return Array.isArray(data.results) ? data.results : [];
+      } catch { return []; }
+    }));
+    for (const result of results) candidates.push(...result);
     const match = chooseTMDBMatch(candidates, aliases, year);
     if (!match) continue;
     const [ratings, watch] = await Promise.all([

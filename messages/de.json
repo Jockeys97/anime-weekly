@@ -113,7 +113,10 @@
       "NOT_YET_RELEASED": "Demnächst",
       "CANCELLED": "Abgebrochen",
       "HIATUS": "Pausiert"
-    }
+    },
+    "loadingAnime": "Details werden geladen…",
+    "loadingRatings": "Bewertungen werden geladen…",
+    "loadingAvailability": "Verfügbarkeit wird geladen…"
   },
   "footer": {
     "tagline": "Eine neue Woche. Eine neue Geschichte.",
@@ -149,5 +152,29 @@
   "metadata": {
     "title": "Anime Weekly · Der Wochenguide",
     "description": "Anime im japanischen Fernsehen und neue Kinofilme. Finde deine nächste Geschichte und erfahre, wo du sie ansehen kannst."
+  },
+  "calendar": {
+    "timezoneNote": "Tage und Zeiten sind in UTC. Die Episodentermine stammen von AniList; Streaming-Starts können je nach Dienst und Land abweichen. Filme verwenden ihr TMDB-Veröffentlichungsdatum.",
+    "navigation": "Veröffentlichungstage durchsehen",
+    "releases": "Veröffentlichungen",
+    "titles": "Titel",
+    "episode": "Folge",
+    "airing": "Ausstrahlung · AniList",
+    "movieRelease": "Filmveröffentlichung",
+    "timeUnavailable": "Uhrzeit nicht verfügbar",
+    "emptyDay": "Für diesen Tag gibt es bei den ausgewählten Titeln kein bestätigtes Veröffentlichungsdatum.",
+    "undated": "Datum noch offen",
+    "undatedNote": "Diese Titel gehören laut TMDB zur Woche, aber das Episodendatum ist nicht bestätigt. Tage und Zeiten werden nicht geschätzt.",
+    "partial": "Einige Termine konnten nicht geladen werden. Bestätigte Veröffentlichungen werden angezeigt; andere Titel stehen unten.",
+    "loading": "Tageskalender wird geladen…",
+    "release": "Veröffentlichung",
+    "title": "Titel"
+  },
+  "trailer": {
+    "heading": "Trailer",
+    "play": "Trailer abspielen",
+    "external": "Auf der Videoplattform ansehen",
+    "unavailable": "Für diese Staffel oder diesen Teil ist kein Trailer verfügbar.",
+    "note": "Der Videoplayer lädt erst beim Abspielen."
   }
 }
