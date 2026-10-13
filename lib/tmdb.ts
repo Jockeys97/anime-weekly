@@ -27,7 +27,7 @@ async function tmdb<T>(path: string, query: Record<string, string> = {}, revalid
   if (!response.ok) throw new Error('TMDB request failed');
   return response.json() as Promise<T>;
 }
-async function discover(kind: Kind, week: ISOWeek, locale: Locale): Promise<RawTitle[]> {
+async function discover(kind: Kind, week: ISOWeek, locale: Locale, englishNames = true): Promise<RawTitle[]> {
   const { start, end } = weekRange(week);
   const dateField = kind === 'tv' ? 'air_date' : 'primary_release_date';
   const query = { language: tmdbLanguages[locale], with_genres: '16', with_origin_country: 'JP', include_adult: 'false', [`${dateField}.gte`]: start, [`${dateField}.lte`]: end, sort_by: 'popularity.desc' };
@@ -35,7 +35,7 @@ async function discover(kind: Kind, week: ISOWeek, locale: Locale): Promise<RawT
     const pageQuery = page === 1 ? query : { ...query, page: String(page) };
     const [localized, english] = await Promise.all([
       tmdb<Page>(`discover/${kind}`, pageQuery),
-      locale === 'en' ? Promise.resolve(null) : tmdb<Page>(`discover/${kind}`, { ...pageQuery, language: 'en-US' }).catch(() => null),
+      locale === 'en' || !englishNames ? Promise.resolve(null) : tmdb<Page>(`discover/${kind}`, { ...pageQuery, language: 'en-US' }).catch(() => null),
     ]);
     const names = new Map((english?.results || []).map(item => [item.id, item.name || item.title]));
     return { ...localized, results: localized.results.map(item => {
@@ -126,9 +126,9 @@ export async function getAnimeAvailability(titles: string[], year?: number, kind
   }
   return empty;
 }
-async function selectWeekTitles(week: ISOWeek, locale: Locale) {
+async function selectWeekTitles(week: ISOWeek, locale: Locale, englishNames = true) {
   if (!isTMDBConfigured()) return { status: 'unconfigured' as const, selected: [] };
-  const [tv, movie] = await Promise.allSettled([discover('tv', week, locale), discover('movie', week, locale)]);
+  const [tv, movie] = await Promise.allSettled([discover('tv', week, locale, englishNames), discover('movie', week, locale, englishNames)]);
   if (tv.status === 'rejected' && movie.status === 'rejected') return { status: 'error' as const, selected: [] };
   const shows = tv.status === 'fulfilled' ? tv.value : [];
   const movies = movie.status === 'fulfilled' ? movie.value : [];
@@ -159,15 +159,29 @@ export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise
   return { status: selection.status, titles, partial: selection.partial };
 }
 
-// Cache the entire enrichment per week and language, avoiding repeated throttled
-// rating lookups when request-specific locale selection makes pages dynamic.
+// Scores, source matches, recommendations and regional providers are shared
+// across languages. Only the overview changes when the visitor switches locale.
 const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v2-english-names'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const pendingCoreWeeks = new Map<string, Promise<WeekData>>();
 const pendingWeeks = new Map<string, Promise<WeekData>>();
+function sharedWeekData(week: ISOWeek): Promise<WeekData> {
+  const key = `${week.year}-${week.week}`;
+  const existing = pendingCoreWeeks.get(key);
+  if (existing) return existing;
+  const pending = cachedWeekData(week, 'en').finally(() => { pendingCoreWeeks.delete(key); });
+  pendingCoreWeeks.set(key, pending);
+  return pending;
+}
 export function getCachedWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  if (locale === 'en') return sharedWeekData(week);
   const key = `${week.year}-${week.week}:${locale}`;
   const existing = pendingWeeks.get(key);
   if (existing) return existing;
-  const pending = cachedWeekData(week, locale).finally(() => { pendingWeeks.delete(key); });
+  const pending = Promise.all([sharedWeekData(week), selectWeekTitles(week, locale, false)])
+    .then(([core, localized]) => {
+      const overviews = new Map(localized.selected.map(({ kind, raw }) => [`${kind}:${raw.id}`, raw.overview]));
+      return { ...core, titles: core.titles.map(anime => ({ ...anime, overview: overviews.get(`${anime.kind}:${anime.id}`) || anime.overview })) };
+    }).finally(() => { pendingWeeks.delete(key); });
   pendingWeeks.set(key, pending);
   return pending;
 }

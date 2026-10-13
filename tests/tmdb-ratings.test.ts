@@ -75,3 +75,27 @@ it('keeps English catalog titles and localized synopses in the weekly guide', as
   const data = await getQuickWeekData({ year: 2026, week: 42 }, 'it');
   expect(data.titles[0]).toMatchObject({ name: 'Original English Title', overview: 'Trama italiana.' });
 });
+
+it('shares score and provider enrichment across different languages and overlays only the matching synopsis', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', ''); vi.stubEnv('OMDB_API_KEY', 'test');
+  const fetchMock = vi.fn(async (url: URL) => {
+    if (url.pathname.includes('/discover/')) {
+      const language = url.searchParams.get('language');
+      const tv = url.pathname.endsWith('/tv');
+      return Response.json({ results: [{ id: 12345, ...(tv ? { name: 'TV title' } : { title: 'Movie title' }), overview: `${tv ? 'tv' : 'movie'} ${language}` }], total_pages: 1 });
+    }
+    if (url.pathname.endsWith('/external_ids')) return Response.json({ imdb_id: 'tt123' });
+    if (url.hostname === 'www.omdbapi.com') return Response.json({ Response: 'True', imdbRating: '8.5' });
+    if (url.pathname.endsWith('/watch/providers')) return Response.json({ results: { IT: { link: 'https://www.themoviedb.org/tv/12345/watch?locale=IT', flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
+    return Response.json({ results: [] });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { getCachedWeekData } = await import('../lib/tmdb');
+  const [en, it, fr] = await Promise.all(['en', 'it', 'fr'].map(locale => getCachedWeekData({ year: 2026, week: 43 }, locale as 'en' | 'it' | 'fr')));
+  expect(fetchMock.mock.calls.filter(([url]) => url.pathname.endsWith('/external_ids'))).toHaveLength(2);
+  expect(fetchMock.mock.calls.filter(([url]) => url.pathname.endsWith('/watch/providers'))).toHaveLength(2);
+  expect(it.titles.map(title => title.overview)).toEqual(['tv it-IT', 'movie it-IT']);
+  expect(fr.titles.map(title => title.overview)).toEqual(['tv fr-FR', 'movie fr-FR']);
+  expect(it.titles[0].ratings).toEqual(en.titles[0].ratings);
+  expect(fr.titles[1].providers).toEqual(en.titles[1].providers);
+});
