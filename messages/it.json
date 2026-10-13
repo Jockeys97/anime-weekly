@@ -199,7 +199,8 @@
     "label": "Lingua",
     "error": "Impossibile cambiare lingua. Riprova.",
     "originalSynopsis": "Traduzione non disponibile: viene mostrata la trama inglese.",
-    "loadingSynopsis": "Caricamento della trama tradotta…"
+    "loadingSynopsis": "Caricamento della trama tradotta…",
+    "machineTranslation": "Traduzione automatica"
   },
   "loading": "Caricamento della guida settimanale…",
   "notFound": {

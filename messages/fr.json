@@ -136,7 +136,8 @@
     "label": "Langue",
     "error": "Impossible de changer la langue. Réessayez.",
     "originalSynopsis": "Traduction indisponible ; le synopsis anglais est affiché.",
-    "loadingSynopsis": "Chargement du synopsis traduit…"
+    "loadingSynopsis": "Chargement du synopsis traduit…",
+    "machineTranslation": "Traduction automatique"
   },
   "loading": "Chargement du guide hebdomadaire…",
   "notFound": {

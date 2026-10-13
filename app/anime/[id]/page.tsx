@@ -51,7 +51,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         <h1>{name}</h1>
         {anime.title.romaji && anime.title.romaji !== name && <p className="catalog-intro">{anime.title.romaji}</p>}
         {anime.title.native && anime.title.native !== name && <p className="catalog-intro">{anime.title.native}</p>}
-        <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
+        <LocalizedSynopsis anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />
         <Suspense fallback={<p className="detail-loading detail-loading-ratings" role="status">{c.loadingRatings}</p>}>
           <DetailRatings animeRatings={animeRatings} availability={availability} id={anime.id} name={name} locale={locale} />
         </Suspense>

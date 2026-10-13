@@ -100,7 +100,7 @@ The site resolves the visitor language in this order: a supported `anime-languag
 
 Weekly discovery asks TMDB for the selected language. AniList descriptions are English; catalog and detail pages fetch matching TMDB translations lazily as synopsis blocks enter the viewport. Matching requires exact normalized title aliases, Japanese animation metadata when available, and a release year within one year. Uncertain matches, distinct seasons, missing translations and unavailable upstreams keep the original English synopsis with an explicit translated notice. The lookup never calls the English text a translation, does not guess an adaptation, and needs no new API credentials beyond existing TMDB configuration. Country names use localized ISO display names.
 
-This uses existing source translations, not machine translation. It does not guarantee translated text for every AniList entry or season. A machine-translation provider would be needed for complete coverage of English-only source descriptions. The local validation used mocked TMDB translation responses; live authenticated TMDB availability still requires credentials.
+Existing TMDB translations are preferred. The optional DeepL fallback below can translate English-only AniList synopses. Live authenticated lookups still require the appropriate source credentials.
 ## Weekly calendar by day
 
 The weekly guide groups confirmed releases into Monday–Sunday sections, with jump links and counts. TV episodes use AniList `airingSchedules` for the conservatively matched AniList IDs; an exact timestamp and episode number are shown when supplied. Multiple episodes can put one series on several days. Both grouping and displayed times use UTC, consistent with the existing ISO-week range. These are broadcast schedules, not promises of a Netflix/Crunchyroll release in a particular country. Movies use the actual TMDB primary release date, without an estimated time.
@@ -133,3 +133,13 @@ Request-specific language selection keeps the home route dynamic, so the localiz
 If an upstream 429 asks for a cooldown longer than ten seconds, the lookup returns the unavailable response without retrying early or holding the optional section for minutes.
 
 Concurrent requests for the same week/language share one in-flight cache fill per server process. Weekly AniList/Jikan enrichment has a ten-second budget per title, including queue time; expired optional requests are skipped when their queue slot arrives rather than consuming upstream quota later. The separate catalog detail requests keep their existing queue behavior.
+
+## Optional DeepL API Free fallback
+
+Set the server-only `DEEPL_AUTH_KEY` variable to a DeepL **API Free** key (ending in `:fx`) and redeploy. This integration uses only `https://api-free.deepl.com`; paid API keys are ignored. No key is sent to the browser. Missing keys, exhausted quotas, timeouts and errors preserve the English source and its existing notice.
+
+When TMDB has no confirmed translation, the synopsis route uses the canonical AniList ID to retrieve and sanitize its actual English description, then translates it to the selected language. It never translates client-submitted prose or replaces a season with a parent-series synopsis. Machine translations carry an explicit localized “Automatic translation · DeepL” notice.
+
+Successful translations are cached for 30 days by source text and language, independently of weekly data revalidation. Identical concurrent requests within one server process share one call; cold calls across separate server processes can still duplicate before the shared cache fills. Source text is capped at 12,000 characters and each process allows at most four concurrent translation requests. Translation POSTs are not automatically retried, and failed/empty results never enter the persistent translation cache. AniList and DeepL remain external dependencies, so this increases coverage without guaranteeing a translation for every title.
+
+Create an API Free account at [DeepL for Developers](https://www.deepl.com/en/developers), add the key directly in Vercel Project Settings → Environment Variables as `DEEPL_AUTH_KEY`, then redeploy. Do not paste the key into chat, source control or a public environment variable.
