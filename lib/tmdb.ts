@@ -33,17 +33,19 @@ async function discover(kind: Kind, week: ISOWeek): Promise<RawTitle[]> {
   try { const second = await tmdb<Page>(`discover/${kind}`, { ...query, page: '2' }); return [...first.results, ...second.results]; } catch { return first.results; }
 }
 async function getRatings(kind: Kind, id: number): Promise<Ratings> {
-  if (!isOMDBConfigured()) return {};
+  let ratings: Ratings = {};
   try {
     const external = await tmdb<{ imdb_id?: string | null }>(`${kind}/${id}/external_ids`);
-    if (!external.imdb_id || !/^tt\d+$/.test(external.imdb_id)) return {};
+    if (!external.imdb_id || !/^tt\d+$/.test(external.imdb_id)) return ratings;
+    ratings = { imdbId: external.imdb_id };
+    if (!isOMDBConfigured()) return ratings;
     const url = new URL('https://www.omdbapi.com/');
     url.searchParams.set('i', external.imdb_id); url.searchParams.set('apikey', process.env.OMDB_API_KEY!.trim());
     const response = await fetch(url, { next: { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) return {};
+    if (!response.ok) return ratings;
     const data = await response.json() as Ratings & { Response?: string };
-    return data.Response === 'True' ? { imdbRating: data.imdbRating, imdbVotes: data.imdbVotes } : {};
-  } catch { return {}; }
+    return data.Response === 'True' ? { ...ratings, imdbRating: data.imdbRating, imdbVotes: data.imdbVotes } : ratings;
+  } catch { return ratings; }
 }
 async function recommendation(kind: Kind, id: number): Promise<string | null> {
   for (const endpoint of ['recommendations', 'similar']) {
