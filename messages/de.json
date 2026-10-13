@@ -53,6 +53,8 @@
     "streamingLinksNote": "Öffne den Titel beim Dienst für das angezeigte Land. Fehlt ein Direktlink, werden regionale Optionen angezeigt. Der Zugang hängt von Standort und Abonnement ab.",
     "streamingCountry": "Streaming-Land",
     "streamingCountryHint": "Nur Dienste für das ausgewählte Land anzeigen.",
+    "seriesWatch": "Streamingdienste der Serie",
+    "seriesWatchNote": "Diese Dienste führen die Serie in diesem Land. Prüfe vor dem Abonnieren, ob die ausgewählte Staffel enthalten ist.",
     "seriesRating": "Serienbewertung"
   },
   "catalog": {
@@ -117,7 +119,8 @@
     },
     "loadingAnime": "Details werden geladen…",
     "loadingRatings": "Bewertungen werden geladen…",
-    "loadingAvailability": "Verfügbarkeit wird geladen…"
+    "loadingAvailability": "Verfügbarkeit wird geladen…",
+    "enrichmentUnavailable": "Bewertungen und Streamingdienste sind vorübergehend nicht verfügbar."
   },
   "footer": {
     "tagline": "Eine neue Woche. Eine neue Geschichte.",

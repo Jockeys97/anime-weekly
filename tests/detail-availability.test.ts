@@ -23,7 +23,7 @@ describe('season IMDb series fallback', () => {
     prequel(third, second); prequel(second, first);
     vi.mocked(getAnime).mockImplementation(async id => id === second.id ? second : id === first.id ? first : null);
     vi.mocked(getAnimeAvailability).mockResolvedValueOnce(empty).mockResolvedValueOnce({ ...empty, match: { id: 220542, kind: 'tv' }, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453' }, providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
-    expect(await getDetailAvailability(third)).toEqual({ ...empty, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' } });
+    expect(await getDetailAvailability(third)).toEqual({ ...empty, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' }, seriesWatch: { id: 220542, kind: 'tv', name: 'The Apothecary Diaries', providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } });
     expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026);
     expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023);
   });
@@ -32,6 +32,22 @@ describe('season IMDb series fallback', () => {
     vi.mocked(getAnimeAvailability).mockResolvedValue(data);
     expect(await getDetailAvailability(anime(3, 'Example Season 3', 2026))).toEqual(data);
     expect(getAnime).not.toHaveBeenCalled();
+  });
+  it('also finds series watch options when the season already has IMDb and preserves direct regional offers', async () => {
+    const first = anime(1, 'Attack on Titan', 2013);
+    const middle = anime(2, 'Attack on Titan Season 3 Part 2', 2019);
+    const final = anime(3, 'Attack on Titan Final Season', 2020);
+    middle.title.native = '進撃の巨人 Season３ Part.2';
+    prequel(final, middle); prequel(middle, first);
+    vi.mocked(getAnime).mockImplementation(async id => id === 2 ? middle : first);
+    const providers = { US: { link: 'https://example.com', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } };
+    vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, match: { id: 99, kind: 'tv' }, ratings: { imdbId: 'tt123' }, providers })
+      .mockResolvedValueOnce({ ...empty, match: { id: 1429, kind: 'tv' }, providers });
+    const result = await getDetailAvailability(final);
+    expect(result.match?.id).toBe(99);
+    expect(result.ratings).toEqual({ imdbId: 'tt123' });
+    expect(result.providers).toEqual(providers);
+    expect(result.seriesWatch).toEqual({ id: 1429, kind: 'tv', name: 'Attack on Titan', providers, providersUnavailable: false });
   });
   it('does not attach a different named series through a franchise prequel', async () => {
     const current = anime(3, 'Boruto', 2026); prequel(current, anime(1, 'Naruto', 2002));
@@ -67,5 +83,7 @@ describe('season IMDb series fallback', () => {
     expect(seriesBaseTitle('86 Part 2')).toBe('86');
     expect(seriesBaseTitle('Mob Psycho 100')).toBe('Mob Psycho 100');
     expect(seriesBaseTitle('Example 3')).toBe('Example 3');
+    expect(seriesBaseTitle('Shingeki no Kyojin: The Final Season Part 2')).toBe('Shingeki no Kyojin');
+    expect(seriesBaseTitle('進撃の巨人 Season３ Part.2')).toBe('進撃の巨人');
   });
 });

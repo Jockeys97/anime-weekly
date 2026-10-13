@@ -14,7 +14,7 @@ function SourceTile({ source, name, href, title, children, locale }: {
   </div>;
 }
 
-export function RatingSummary({ ratings, title, locale }: { ratings: Ratings; title: string; locale?: Locale }) {
+export function RatingSummary({ ratings, title, locale, pendingImdb = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean }) {
   const d = getDictionary(locale);
   const animeScore = formatAnimeScore(ratings);
   const isMal = animeScore.startsWith('MAL ');
@@ -23,8 +23,8 @@ export function RatingSummary({ ratings, title, locale }: { ratings: Ratings; ti
   const members = formatMembers(ratings.malMembers);
   return <dl className="ratings">
     <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={ratings.imdbSeriesTitle || title} locale={locale}>
-      <dd className="rating-value">{formatRating(ratings.imdbRating)}{formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
-      <dd className="rating-detail">{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</dd>
+      <dd className="rating-value">{pendingImdb ? '…' : formatRating(ratings.imdbRating)}{!pendingImdb && formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
+      <dd className="rating-detail">{pendingImdb ? d.catalog.loadingRatings : <>{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</>}</dd>
       {ratings.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {ratings.imdbSeriesTitle}</dd>}
     </SourceTile>
     <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>

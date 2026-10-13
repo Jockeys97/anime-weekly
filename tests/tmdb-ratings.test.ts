@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: (...args: unknown[]) => unknown) => fn }));
 vi.mock('../lib/anime-ratings', () => ({ getAnimeRatings: async () => ({}) }));
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
@@ -39,5 +40,20 @@ it('returns the quick title catalog without waiting for rating or provider enric
   const { getQuickWeekData } = await import('../lib/tmdb');
   const data = await getQuickWeekData({ year: 2026, week: 42 });
   expect(data.titles[0]).toMatchObject({ id: 1, name: 'Quick title', overview: 'Real synopsis', poster: '/poster.jpg', ratings: {}, providers: {} });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it('shares one cold weekly enrichment across simultaneous requests for the same language', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  const fetchMock = vi.fn(async (input: URL | string) => {
+    const url = String(input);
+    if (url.includes('discover/tv')) return Response.json({ results: [], total_pages: 1 });
+    if (url.includes('discover/movie')) return Response.json({ results: [], total_pages: 1 });
+    throw new Error('Unexpected enrichment');
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { getCachedWeekData } = await import('../lib/tmdb');
+  const results = await Promise.all([getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it'), getCachedWeekData({ year: 2026, week: 42 }, 'it')]);
+  expect(results.every(data => data.status === 'ready')).toBe(true);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
