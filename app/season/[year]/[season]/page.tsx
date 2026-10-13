@@ -1,3 +1,4 @@
+import { getRequestLocale } from '@/lib/request-locale';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -22,12 +23,13 @@ export default async function SeasonPage({ params, searchParams }: {
   if (!Number.isSafeInteger(page) || page > 2147483647) notFound();
   const data = await getSeason(value.year, value.season, page);
   // Cards use AniList averageScore: per-item Jikan requests would stall a 50-title page.
-  const d = getDictionary('it').catalog;
+  const locale = await getRequestLocale();
+  const d = getDictionary(locale).catalog;
   const previous = shiftSeason(value, -1);
   const next = shiftSeason(value, 1);
   const years = Array.from({ length: 9 }, (_, index) => value.year + index - 4).filter(item => item >= 1 && item <= 9999);
   const path = seasonPath(value);
-  return <main className="catalog-page" lang="it">
+  return <main className="catalog-page" lang={locale}>
     <div className="week-toolbar">
       <div><p className="eyebrow">{d.seasonTitle}</p><h1>{d.seasonNames[value.season]} {value.year}</h1><p>{d.seasonDescription}</p></div>
       <nav className="week-nav" aria-label={d.seasonLabel}>
@@ -38,7 +40,7 @@ export default async function SeasonPage({ params, searchParams }: {
     </div>
     <nav className="catalog-filters" aria-label={d.yearLabel}>{years.map(item => <Link key={item} prefetch={false} href={seasonPath({ ...value, year: item })} aria-current={item === value.year ? 'page' : undefined}>{item}</Link>)}</nav>
     <nav className="catalog-filters" aria-label={d.seasonLabel}>{SEASONS.map(item => <Link key={item} prefetch={false} href={seasonPath({ ...value, season: item })} aria-current={item === value.season ? 'page' : undefined}>{d.seasonNames[item]}</Link>)}</nav>
-    {data.media.length ? <div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} locale={locale} />)}</div> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

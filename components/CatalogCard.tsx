@@ -1,11 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { animeDescription, animeName, type AniListAnime } from '@/lib/anilist';
-import { getDictionary } from '@/lib/i18n';
+import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
+import { getDictionary, type Locale } from '@/lib/i18n';
 import { formatAnimeScore } from '@/lib/ratings';
 
-export function CatalogCard({ anime }: { anime: AniListAnime }) {
-  const d = getDictionary('it');
+export function CatalogCard({ anime, locale = 'en' }: { anime: AniListAnime; locale?: Locale }) {
+  const d = getDictionary(locale);
   const name = animeName(anime);
   const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
   const format = d.catalog.formats[anime.format as keyof typeof d.catalog.formats] || anime.format || d.catalog.unknown;
@@ -16,7 +17,7 @@ export function CatalogCard({ anime }: { anime: AniListAnime }) {
     <div className="card-body">
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={`/anime/${anime.id}`} prefetch={false}>{name}</Link></h3>
-      <p className="synopsis catalog-synopsis">{animeDescription(anime.description) || d.state.noSynopsis}</p>
+      <LocalizedSynopsis key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />
       <dl className="catalog-ratings"><div><dt>{d.title.animeScore}</dt><dd>{formatAnimeScore({ anilistScore: anime.averageScore })}</dd></div></dl>
       <Link href={`/anime/${anime.id}`} prefetch={false} className="catalog-details">{d.catalog.details} →</Link>
     </div>
