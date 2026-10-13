@@ -215,7 +215,8 @@
     "partial": "Some episode schedules could not be loaded. Confirmed releases are shown; other titles are listed below.",
     "loading": "Loading the daily release calendar…",
     "release": "release",
-    "title": "title"
+    "title": "title",
+    "enrichmentLoading": "Loading ratings and watch options…"
   },
   "language": {
     "label": "Language",

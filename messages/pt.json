@@ -170,7 +170,8 @@
     "partial": "Alguns horários não foram carregados. As estreias confirmadas são apresentadas; os outros títulos aparecem abaixo.",
     "loading": "A carregar o calendário diário…",
     "release": "estreia",
-    "title": "título"
+    "title": "título",
+    "enrichmentLoading": "A carregar avaliações e plataformas…"
   },
   "trailer": {
     "heading": "Trailer",

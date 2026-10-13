@@ -170,7 +170,8 @@
     "partial": "Certains horaires sont indisponibles. Les sorties confirmées sont affichées ; les autres titres figurent ci-dessous.",
     "loading": "Chargement du calendrier quotidien…",
     "release": "sortie",
-    "title": "titre"
+    "title": "titre",
+    "enrichmentLoading": "Chargement des notes et plateformes…"
   },
   "trailer": {
     "heading": "Bande-annonce",
