@@ -1,7 +1,9 @@
+import { getRequestLocale } from '@/lib/request-locale';
 import Link from 'next/link';
 import { getDictionary } from '@/lib/i18n';
 
-export default function CatalogNotFound() {
-  const d = getDictionary('it').catalog;
-  return <main className="empty-state" lang="it"><h1>{d.notFoundTitle}</h1><p>{d.notFoundBody}</p><Link href="/season" prefetch={false} className="button">{d.back}</Link></main>;
+export default async function CatalogNotFound() {
+  const locale = await getRequestLocale();
+  const d = getDictionary(locale).catalog;
+  return <main className="empty-state" lang={locale}><h1>{d.notFoundTitle}</h1><p>{d.notFoundBody}</p><Link href="/season" prefetch={false} className="button">{d.back}</Link></main>;
 }

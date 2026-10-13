@@ -1,3 +1,4 @@
+import { getRequestLocale } from '@/lib/request-locale';
 import { connection } from 'next/server';
 import { CatalogCard } from '@/components/CatalogCard';
 import { SearchBox } from '@/components/SearchBox';
@@ -10,14 +11,15 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   await connection();
   const { q } = await searchParams;
   const query = (typeof q === 'string' ? q : '').trim().slice(0, 200);
-  const d = getDictionary('it').catalog;
+  const locale = await getRequestLocale();
+  const d = getDictionary(locale).catalog;
   const results = query ? await searchAnime(query) : [];
-  return <main className="catalog-page" lang="it">
+  return <main className="catalog-page" lang={locale}>
     <h1>{d.searchTitle}</h1>
-    <SearchBox query={query} id="catalog-search" />
+    <SearchBox locale={locale} query={query} id="catalog-search" />
     {query ? <>
       <h2 className="search-results-heading">{d.searchResults} «{query}»</h2>
-      {results.length ? <div className="anime-grid">{results.map(anime => <CatalogCard key={anime.id} anime={anime} />)}</div> : <div className="empty-state" role="status"><p>{d.noResults}</p></div>}
+      {results.length ? <div className="anime-grid">{results.map(anime => <CatalogCard key={anime.id} anime={anime} locale={locale} />)}</div> : <div className="empty-state" role="status"><p>{d.noResults}</p></div>}
     </> : <p className="catalog-intro">{d.searchPrompt}</p>}
   </main>;
 }

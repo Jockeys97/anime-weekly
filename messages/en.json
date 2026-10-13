@@ -215,5 +215,11 @@
     "loading": "Loading the daily release calendar…",
     "release": "release",
     "title": "title"
+  },
+  "language": {
+    "label": "Language",
+    "error": "The language could not be changed. Please try again.",
+    "originalSynopsis": "Translation unavailable; showing the English synopsis.",
+    "loadingSynopsis": "Loading translated synopsis…"
   }
 }
