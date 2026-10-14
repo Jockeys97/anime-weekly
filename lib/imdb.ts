@@ -1,6 +1,8 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { CACHE_TAG } from '@/lib/config';
+import { CACHE_SECONDS } from '@/lib/config';
+import { formatWeek, isoWeek } from '@/lib/week';
+export const IMDB_CACHE_TAG = 'weekly-imdb-scores';
 import type { Ratings } from '@/lib/ratings';
 export function hasImdbScore(ratings: Ratings): boolean {
   const text = ratings.imdbRating?.trim();
@@ -10,7 +12,16 @@ export function hasImdbScore(ratings: Ratings): boolean {
 class UncachedImdb extends Error {
   constructor(readonly ratings: Ratings) { super('IMDb score unavailable'); }
 }
-const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
+// Reader and cron writer use the SAME function source, arguments and key parts.
+// On a reader cache miss, throwing prevents an empty/error value from being
+// persisted and, crucially, never makes an OMDb request. Only the cron can fill it.
+function scoreCache(week: string, canPopulate: boolean) {
+  return unstable_cache(async (id: string): Promise<Ratings> => {
+    if (!canPopulate) throw new UncachedImdb({ imdbId: id, imdbStatus: 'unavailable' });
+    return fetchScore(id);
+  }, ['imdb-weekly-valid-v2', week], { revalidate: CACHE_SECONDS, tags: [IMDB_CACHE_TAG, `${IMDB_CACHE_TAG}:${week}`] });
+}
+async function fetchScore(id: string): Promise<Ratings> {
   const key = process.env.OMDB_API_KEY?.trim();
   const base: Ratings = { imdbId: id };
   if (!key) throw new UncachedImdb({ ...base, imdbStatus: 'unconfigured' });
@@ -47,15 +58,25 @@ const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
     }
   }
   throw new UncachedImdb({ ...base, imdbStatus: 'error' });
-}, ['imdb-valid-score-v1'], { revalidate: 86400, tags: [CACHE_TAG] });
+}
 const pending = new Map<string, Promise<Ratings>>();
-export function getImdbScore(id: string): Promise<Ratings> {
+const scoreWeek = () => formatWeek(isoWeek(new Date()));
+function accessScore(id: string, week: string, canPopulate: boolean): Promise<Ratings> {
   if (!/^tt\d+$/.test(id)) return Promise.resolve({ imdbStatus: 'unmatched' });
-  if (!process.env.OMDB_API_KEY?.trim()) return Promise.resolve({ imdbId: id, imdbStatus: 'unconfigured' });
-  const existing = pending.get(id);
+  const key = `${week}:${id}:${canPopulate}`;
+  const existing = pending.get(key);
   if (existing) return existing;
-  const promise = cachedScore(id).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
-    .finally(() => { pending.delete(id); });
-  pending.set(id, promise);
+  const promise = scoreCache(week, canPopulate)(id).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
+    .finally(() => { pending.delete(key); });
+  pending.set(key, promise);
   return promise;
+}
+// All visitor paths are read-only, including retries and catalog/detail lookups.
+export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
+  return accessScore(id, week, false);
+}
+// Called only by the authenticated weekly cron. Successful values dedupe across
+// the week's titles; errors throw inside unstable_cache and are never persisted.
+export function primeImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
+  return accessScore(id, week, true);
 }

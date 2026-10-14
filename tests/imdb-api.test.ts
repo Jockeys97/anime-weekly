@@ -15,10 +15,10 @@ it('never CDN-caches upstream errors or an unavailable score', async () => {
     expect((await response.json()).imdbStatus).toBe(status);
   }
 });
-it('rechecks the TMDB mapping on an explicit retry', async () => {
+it('reads the cached TMDB mapping on an explicit retry', async () => {
   vi.mocked(getRatings).mockResolvedValue({ imdbId: 'tt123', imdbRating: '8', imdbStatus: 'ready' });
   const response = await GET(new Request('https://example.com/api/imdb?tmdb=12&kind=tv'));
-  expect(getRatings).toHaveBeenCalledWith('tv', 12, 3600, true);
+  expect(getRatings).toHaveBeenCalledWith('tv', 12, 604800);
   expect((await response.json()).imdbRating).toBe('8');
 });
 it.each(['', 'imdb=bad', 'anilist=-1', 'tmdb=12&kind=unknown', 'imdb=tt123&anilist=1'])('rejects ambiguous or invalid lookups: %s', async query => {

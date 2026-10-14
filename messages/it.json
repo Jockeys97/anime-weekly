@@ -153,7 +153,7 @@
     "note": "Il lettore video viene caricato solo quando premi play."
   },
   "calendar": {
-    "timezoneNote": "Gli orari di messa in onda da AniList o da annunci ufficiali datati sono in UTC. Le date degli episodi TMDB non hanno orario né fuso e sono riportate come fornite. Le uscite streaming possono variare per servizio e paese. I film usano la prima data di uscita TMDB.",
+    "timezoneNote": "Gli orari sono mostrati nel tuo fuso locale (Europe/Rome predefinito). Le date degli episodi TMDB non hanno orario né fuso e sono riportate come fornite. Le uscite streaming possono variare per servizio e paese. I film usano la prima data di uscita TMDB.",
     "navigation": "Sfoglia i giorni di uscita",
     "releases": "uscite",
     "titles": "titoli",

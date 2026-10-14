@@ -8,3 +8,8 @@ export async function POST(request: Request) {
   (await cookies()).set('anime-language', locale, { httpOnly: true, sameSite: 'lax', secure: new URL(request.url).protocol === 'https:', path: '/', maxAge: 31536000 });
   return Response.json({ locale }, { headers: { 'Cache-Control': 'no-store' } });
 }
+
+export async function GET() {
+  const value = (await cookies()).get('anime-language')?.value;
+  return Response.json({ locale: isLocale(value) ? value : null }, { headers: { 'Cache-Control': 'private, no-store' } });
+}

@@ -12,10 +12,10 @@ export async function GET(request: Request) {
   try {
     let ratings;
     if (imdb) ratings = await getImdbScore(imdb);
-    else if (tmdb) ratings = await getRatings(kind as 'tv' | 'movie', Number(tmdb), 3600, true);
+    else if (tmdb) ratings = await getRatings(kind as 'tv' | 'movie', Number(tmdb), 604800);
     else {
       const anime = await getAnime(Number(anilist));
-      ratings = anime ? (await getDetailAvailability(anime, true)).ratings : { imdbStatus: 'error' as const };
+      ratings = anime ? (await getDetailAvailability(anime)).ratings : { imdbStatus: 'error' as const };
     }
     return Response.json(ratings, { headers: { 'Cache-Control': ratings.imdbStatus === 'ready' ? 'public, max-age=60, s-maxage=3600' : 'no-store' } });
   } catch { return Response.json({ imdbStatus: 'error' }, { headers: { 'Cache-Control': 'no-store' } }); }

@@ -1,3 +1,4 @@
-import { getRequestLocale } from '@/lib/request-locale';
+'use client';
+import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
-export default async function Loading() { const locale = await getRequestLocale(); return <main className="empty-state" role="status"><p>{getDictionary(locale).loading}</p></main>; }
+export default function Loading() { return <main className="empty-state" role="status"><p>{getDictionary(useLocale()).loading}</p></main>; }

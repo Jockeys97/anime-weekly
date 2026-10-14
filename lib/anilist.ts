@@ -1,4 +1,5 @@
 import 'server-only';
+import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { AnimeFilters } from '@/lib/anime-search';
 import { unstable_cache } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
@@ -149,12 +150,12 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
 }
 
 export function animeName(anime: AniListAnime): string {
-  return [anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`;
+  return displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
 }
 
 // Render upstream descriptions as text, never as untrusted HTML.
 export function animeDescription(description: string | null): string {
-  return (description || '').replace(/<\/?(?:script|style)\b[^>]*>[\s\S]*?<\/(?:script|style)>/gi, '')
+  return cleanSynopsis((description || '').replace(/<\/?(?:script|style)\b[^>]*>[\s\S]*?<\/(?:script|style)>/gi, '')
     .replace(/<br\s*\/?\s*>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]*>/g, '')
-    .replace(/&(?:amp|quot|apos|lt|gt|nbsp);/g, entity => ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' })[entity] || entity).trim();
+    .replace(/&(?:amp|quot|apos|lt|gt|nbsp);/g, entity => ({ '&amp;': '&', '&quot;': '"', '&apos;': "'", '&lt;': '<', '&gt;': '>', '&nbsp;': ' ' })[entity] || entity).trim());
 }

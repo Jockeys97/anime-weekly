@@ -1,6 +1,7 @@
 'use client';
 import type { CatalogCardSummary } from '@/lib/catalog-card-summary';
 import { formatRating } from '@/lib/ratings';
+import { withTimeout } from '@/lib/async-timeout';
 interface Entry {
   expires: number; promise: Promise<CatalogCardSummary>; controller: AbortController;
   subscribers: number; pinned: boolean; settled: boolean; reject: (reason: unknown) => void;
@@ -46,11 +47,22 @@ export function loadCatalogCard(id: number, signal?: AbortSignal): Promise<Catal
   const promise = new Promise<CatalogCardSummary>((yes, no) => { resolve = yes; reject = no; });
   entry = { expires: Infinity, promise, controller: new AbortController(), subscribers: 0, pinned: false, settled: false, reject };
   const current = entry;
+  // Include time spent waiting for a slot and parsing the response body. Abort
+  // alone cannot settle a queued request or a stalled body reader.
+  const timer = setTimeout(() => {
+    current.settled = true; current.controller.abort();
+    if (requests.get(id) === current) requests.delete(id);
+    reject(new Error('Catalog card timed out'));
+  }, 60000);
+  void promise.finally(() => clearTimeout(timer)).catch(() => {});
   queue.push({ entry: current, run: async () => {
     try {
-      const response = await fetch(`/api/anime-card/${id}?ratings=v2`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
-      if (!response.ok) throw new Error('Catalog card unavailable');
-      const result = await response.json() as CatalogCardSummary;
+      const result = await withTimeout((async () => {
+        const response = await fetch(`/api/anime-card/${id}?ratings=v2`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
+        if (!response.ok) throw new Error('Catalog card unavailable');
+        return await response.json() as CatalogCardSummary;
+      })(), 45000);
+      if (current.controller.signal.aborted) throw aborted();
       if (result.ratings?.anilistId !== id || !result.availability?.providers) throw new Error('Invalid catalog card');
       current.settled = true;
       // Missing scores may be transient. Do not retain them as a successful lookup.
@@ -59,6 +71,7 @@ export function loadCatalogCard(id: number, signal?: AbortSignal): Promise<Catal
       } else current.expires = Date.now() + 600000;
       resolve(result);
     } catch (error) {
+      current.controller.abort();
       current.settled = true;
       if (requests.get(id) === current) requests.delete(id);
       reject(error);

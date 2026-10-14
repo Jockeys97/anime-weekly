@@ -170,7 +170,7 @@
     "description": "Anime im japanischen Fernsehen und neue Kinofilme. Finde deine nächste Geschichte und erfahre, wo du sie ansehen kannst."
   },
   "calendar": {
-    "timezoneNote": "Sendezeiten von AniList oder datierten offiziellen Ankündigungen werden in UTC angezeigt. TMDB-Episodendaten enthalten keine Uhrzeit oder Zeitzone und werden unverändert angezeigt. Streaming-Starts können je nach Dienst und Land variieren. Filme verwenden ihr erstes TMDB-Veröffentlichungsdatum.",
+    "timezoneNote": "Sendezeiten werden in deiner lokalen Zeitzone angezeigt (standardmäßig Europe/Rome). TMDB-Episodendaten werden unverändert angezeigt. Streaming-Starts können je nach Dienst und Land variieren.",
     "navigation": "Veröffentlichungstage durchsehen",
     "releases": "Veröffentlichungen",
     "titles": "Titel",

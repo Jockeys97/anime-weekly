@@ -11,7 +11,7 @@ describe('weekly day calendar', () => {
     expect(buildWeeklyCalendar([], [], { year: 2026, week: 1 }).days.map(day => day.date)).toEqual(['2025-12-29', '2025-12-30', '2025-12-31', '2026-01-01', '2026-01-02', '2026-01-03', '2026-01-04']);
   });
   it('includes midnight Monday and excludes midnight next Monday', () => {
-    const result = buildWeeklyCalendar([tv()], [event(time('2026-10-12T00:00:00Z')), event(time('2026-10-18T23:59:59Z'), 2), event(time('2026-10-19T00:00:00Z'), 3)], week);
+    const result = buildWeeklyCalendar([tv()], [event(time('2026-10-11T22:00:00Z')), event(time('2026-10-18T21:59:59Z'), 2), event(time('2026-10-18T22:00:00Z'), 3)], week);
     expect(result.days[0].releases[0].episode).toBe(1);
     expect(result.days[6].releases[0].episode).toBe(2);
     expect(result.days.flatMap(day => day.releases)).toHaveLength(2);
@@ -75,4 +75,12 @@ describe('weekly day calendar', () => {
     expect(result.days[4].releases[0].source).toBe('official');
   });
 
+});
+
+it('groups late-night broadcasts by the visitor timezone while keeping date-only episodes unchanged', () => {
+  const result = buildWeeklyCalendar([tv(), tv(2)], [event(time('2026-10-12T23:30:00Z')), event(time('2026-10-11T23:30:00Z'), 2)], week,
+    [{ seriesId: 2, season: 1, episode: 3, date: '2026-10-14' }], 'Europe/Rome');
+  expect(result.days[0].releases[0].episode).toBe(2);
+  expect(result.days[1].releases[0].episode).toBe(1);
+  expect(result.days[2].releases[0].episode).toBe(3);
 });

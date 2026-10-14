@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { tmdbLanguages, type Locale } from '@/lib/locales';
 import { CACHE_SECONDS, CACHE_TAG, MAX_TITLES_PER_WEEK, STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
 import { getImdbScore } from '@/lib/imdb';
+import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { Ratings } from '@/lib/ratings';
 import { getAnimeRatings } from '@/lib/anime-ratings';
 import { chooseTMDBMatch, type TMDBCandidate } from '@/lib/anime-match';
@@ -73,7 +74,7 @@ async function enrich(raw: RawTitle, kind: Kind): Promise<AnimeTitle> {
   const [imdb, animeRatings, related, watch] = await Promise.all([getRatings(kind, raw.id), getAnimeRatings({ kind, originalTitle: kind === 'tv' ? raw.original_name : raw.original_title, title: (raw.name || raw.title)!, year }), recommendation(kind, raw.id), tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null)]);
   const ratings = { ...imdb, ...animeRatings };
   const providers = watchProviders(watch);
-  return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null, releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
+  return { id: raw.id, kind, name: displayTitle((raw.name || raw.title)!), overview: cleanSynopsis(raw.overview), poster: raw.poster_path || null, releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: related, providers, providersUnavailable: watch === null };
 }
 function watchProviders(watch: { results: Partial<Record<StreamingRegion, WatchRegion>> } | null): AnimeTitle['providers'] {
   const providers: AnimeTitle['providers'] = {};
@@ -139,13 +140,22 @@ async function selectWeekTitles(week: ISOWeek, locale: Locale, englishNames = tr
   return { status: 'ready' as const, selected, partial: tv.status === 'rejected' || movie.status === 'rejected' };
 }
 
-export async function getQuickWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+async function quickWeekData(week: ISOWeek, locale: Locale): Promise<WeekData> {
   const selection = await selectWeekTitles(week, locale);
   return { status: selection.status, partial: selection.partial, titles: selection.selected.map(({ raw, kind }) => ({
-    id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null,
+    id: raw.id, kind, name: displayTitle((raw.name || raw.title)!), overview: cleanSynopsis(raw.overview).slice(0, 900), poster: raw.poster_path || null,
     releaseDate: kind === 'movie' ? raw.release_date || null : null,
     ratings: {}, recommendation: null, providers: {}, providersUnavailable: false,
   })) };
+}
+
+const cachedQuickWeek = unstable_cache(async (week: ISOWeek, locale: Locale) => {
+  const data = await quickWeekData(week, locale);
+  if (data.status === 'error' || data.partial) throw new UncachedWeek(data);
+  return data;
+}, ['weekly-discovery-v4-clean-text'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+export async function getQuickWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
+  return cachedQuickWeek(week, locale).catch(recoverWeek);
 }
 
 export async function getWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
@@ -164,7 +174,7 @@ async function getPrimaryWeekData(week: ISOWeek): Promise<WeekData> {
         getRatings(kind, raw.id),
         tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${raw.id}/watch/providers`).catch(() => null),
       ]);
-      return { id: raw.id, kind, name: (raw.name || raw.title)!, overview: raw.overview || '', poster: raw.poster_path || null,
+      return { id: raw.id, kind, name: displayTitle((raw.name || raw.title)!), overview: cleanSynopsis(raw.overview), poster: raw.poster_path || null,
         releaseDate: kind === 'movie' ? raw.release_date || null : null, ratings, recommendation: null,
         providers: watchProviders(watch), providersUnavailable: watch === null };
     })));
@@ -262,4 +272,26 @@ export async function getTMDBTextTranslations(id: number, kind: Kind): Promise<T
     const result = await tmdb<{ translations?: { iso_639_1: string; iso_3166_1?: string; data?: { name?: string; title?: string; overview?: string } }[] }>(`${kind}/${id}/translations`, {}, 86400);
     return (result.translations || []).map(entry => ({ iso_639_1: entry.iso_639_1, iso_3166_1: entry.iso_3166_1, name: entry.data?.name || entry.data?.title, overview: entry.data?.overview }));
   } catch { return []; }
+}
+
+export async function getWeeklySource(week: ISOWeek, kind: Kind, id: number): Promise<RawTitle | null> {
+  const selection = await selectWeekTitles(week, 'en');
+  if (selection.status === 'error' || selection.status === 'unconfigured') throw new Error('Weekly source unavailable');
+  const raw = selection.selected.find(item => item.kind === kind && item.raw.id === id)?.raw;
+  if (!raw && selection.partial) throw new Error('Weekly source incomplete');
+  return raw ?? null;
+}
+export async function getWeeklyRatingSources(week: ISOWeek) {
+  const selection = await selectWeekTitles(week, 'en');
+  if (selection.status !== 'ready' || selection.partial) throw new Error('Weekly source unavailable');
+  return selection.selected.map(({ raw, kind }) => {
+    const date = kind === 'tv' ? raw.first_air_date : raw.release_date;
+    return { id: raw.id, kind, title: (raw.name || raw.title)!, originalTitle: kind === 'tv' ? raw.original_name : raw.original_title,
+      year: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.slice(0, 4)) : undefined };
+  });
+}
+export async function getWeeklyRelated(kind: Kind, id: number) { return recommendation(kind, id); }
+export async function getWeeklyProviders(kind: Kind, id: number) {
+  const watch = await tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${id}/watch/providers`).catch(() => null);
+  return { providers: watchProviders(watch), providersUnavailable: watch === null };
 }

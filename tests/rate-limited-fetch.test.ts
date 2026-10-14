@@ -27,3 +27,26 @@ it('expires a queued optional request without fetching it later', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
   vi.useRealTimers();
 });
+
+it('applies long Retry-After cooldowns to later lookups without extra upstream calls', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 429, headers: { 'Retry-After': '600' } }));
+  vi.stubGlobal('fetch', fetchMock);
+  const request = throttle(1);
+  expect((await request('https://example.com/first')).status).toBe(429);
+  expect((await request('https://example.com/second')).status).toBe(429);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+it('retries transient cron responses with backoff without caching the error bodies', async () => {
+  vi.useFakeTimers();
+  try {
+    const starts: number[] = [];
+    const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => { starts.push(Date.now()); return starts.length < 3 ? new Response(null, { status: 503 }) : Response.json({ ok: true }); });
+    vi.stubGlobal('fetch', fetchMock);
+    const pending = throttle(1100)('https://example.com', { cache: 'no-store', next: undefined }, 12000);
+    await vi.runAllTimersAsync();
+    expect((await pending).status).toBe(200);
+    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(1100);
+    expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(2200);
+    expect(fetchMock.mock.calls.every(([, init]) => (init as RequestInit).cache === 'no-store')).toBe(true);
+  } finally { vi.useRealTimers(); }
+});

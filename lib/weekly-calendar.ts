@@ -1,13 +1,14 @@
 import type { AnimeTitle } from '@/lib/tmdb';
+import { calendarDate, DEFAULT_TIME_ZONE } from '@/lib/visitor-time';
 import { officialAirings } from '@/lib/official-airings';
 import type { EpisodeDate } from '@/lib/episode-dates';
 import type { AiringEvent } from '@/lib/airing-schedule';
 import { weekRange, type ISOWeek } from '@/lib/week';
 export interface CalendarRelease { anime: AnimeTitle; date: string; airingAt?: number; episode?: number; season?: number; source?: 'tmdb' | 'official'; sourceUrl?: string }
 export interface CalendarDay { date: string; releases: CalendarRelease[] }
-export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[], week: ISOWeek, episodeDates: EpisodeDate[] = []) {
+export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[], week: ISOWeek, episodeDates: EpisodeDate[] = [], timeZone = DEFAULT_TIME_ZONE) {
   const { monday } = weekRange(week);
-  const start = monday.getTime(), until = start + 7 * 86400000;
+  const start = monday.getTime();
   const days: CalendarDay[] = Array.from({ length: 7 }, (_, index) => ({ date: new Date(start + index * 86400000).toISOString().slice(0, 10), releases: [] }));
   const undated: AnimeTitle[] = [];
   for (const anime of titles) {
@@ -20,21 +21,22 @@ export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[],
     const seen = new Set<string>();
     let found = false;
     for (const event of officialAirings) {
-      const ms = event.airingAt * 1000;
-      if (event.seriesId !== anime.id || ms < start || ms >= until) continue;
-      const day = days[Math.floor((ms - start) / 86400000)];
+      if (event.seriesId !== anime.id) continue;
+      const date = calendarDate(event.airingAt * 1000, timeZone);
+      const day = days.find(day => day.date === date);
+      if (!day) continue;
       day.releases.push({ anime, date: day.date, airingAt: event.airingAt, episode: event.episode, source: 'official', sourceUrl: event.sourceUrl });
       found = true;
     }
     if (found) continue;
     for (const event of events) {
-      const ms = event.airingAt * 1000;
-      if (!Number.isSafeInteger(anime.ratings.anilistId) || anime.ratings.anilistId! <= 0 || event.mediaId !== anime.ratings.anilistId || !Number.isSafeInteger(event.airingAt) || ms < start || ms >= until
+      if (!Number.isSafeInteger(anime.ratings.anilistId) || anime.ratings.anilistId! <= 0 || event.mediaId !== anime.ratings.anilistId || !Number.isSafeInteger(event.airingAt)
         || !Number.isSafeInteger(event.episode) || event.episode <= 0) continue;
+      const day = days.find(day => day.date === calendarDate(event.airingAt * 1000, timeZone));
+      if (!day) continue;
       const key = `${event.episode}:${event.airingAt}`;
       if (seen.has(key)) continue;
       seen.add(key); found = true;
-      const day = days[Math.floor((ms - start) / 86400000)];
       day.releases.push({ anime, date: day.date, airingAt: event.airingAt, episode: event.episode });
     }
     if (!found) for (const episode of episodeDates) {

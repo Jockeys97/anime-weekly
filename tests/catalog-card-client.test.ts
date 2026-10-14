@@ -86,3 +86,19 @@ it('allows a subsequent load to recover from a 200 response containing an IMDb e
   expect((await loadCatalogCard(21)).ratings.imdbRating).toBe('8');
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it('settles hung fetch/body readers and queued cards, then allows a retry', async () => {
+  vi.useFakeTimers();
+  try {
+    const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {})); vi.stubGlobal('fetch', fetchMock);
+    const { loadCatalogCard } = await import('../lib/catalog-card-client');
+    const requests = [1, 2, 3, 4, 5].map(id => loadCatalogCard(id).catch(error => error));
+    await vi.advanceTimersByTimeAsync(60001);
+    const results = await Promise.all(requests);
+    expect(results.every(result => result instanceof Error)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(4); // The fifth expired in the queue.
+    fetchMock.mockImplementation(async () => summary(5));
+    await vi.advanceTimersByTimeAsync(30000); // Existing slots finish their deadlines.
+    expect((await loadCatalogCard(5)).ratings.anilistId).toBe(5);
+  } finally { vi.useRealTimers(); }
+});

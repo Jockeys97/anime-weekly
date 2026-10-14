@@ -1,3 +1,4 @@
+import { VisitorDate } from '@/components/VisitorTime';
 import { getSynopsis } from '@/lib/synopsis';
 import type { SynopsisResult } from '@/lib/synopsis-client';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
@@ -43,7 +44,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const season = anime.season?.toLowerCase();
   const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
   const date = anime.startDate;
-  const startDate = date?.year ? [date.day && String(date.day).padStart(2, '0'), date.month && String(date.month).padStart(2, '0'), date.year].filter(Boolean).join('/') : c.unknown;
+  const startDate = date?.year && date.month && date.day ? <VisitorDate value={`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`} /> : date?.year ?? c.unknown;
   return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
     {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}

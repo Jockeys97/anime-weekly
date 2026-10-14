@@ -23,8 +23,9 @@ describe('IMDb title link enrichment', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { getWeekData } = await import('../lib/tmdb');
     const result = await getWeekData({ year: 2026, week: 42 });
-    expect(result.titles[0].ratings).toEqual(scenario === 'invalid-id' ? { imdbStatus: 'unmatched' } : scenario === 'success' ? { imdbId: 'tt123', imdbRating: '8', imdbVotes: '763', imdbStatus: 'ready' } : { imdbId: 'tt123', imdbStatus: scenario === 'no-key' ? 'unconfigured' : 'error', ...(scenario === 'failure' ? { imdbErrorReason: 'network' } : {}) });
-    if (scenario === 'no-key' || scenario === 'invalid-id') expect(fetchMock.mock.calls.some(([url]) => String(url).includes('omdbapi'))).toBe(false);
+    expect(result.titles[0].ratings).toEqual(scenario === 'invalid-id' ? { imdbStatus: 'unmatched' } : { imdbId: 'tt123', imdbStatus: 'unavailable' });
+    // Visits cannot spend OMDb quota, even when a key is configured.
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('omdbapi'))).toBe(false);
   });
 });
 
@@ -112,7 +113,7 @@ it('returns IMDb and watch providers without starting optional AniList enrichmen
   const { getCachedPrimaryWeekData } = await import('../lib/tmdb');
   const { getAnimeRatings } = await import('../lib/anime-ratings');
   const data = await getCachedPrimaryWeekData({ year: 2026, week: 44 });
-  expect(data.titles[0].ratings).toMatchObject({ imdbRating: '8.2' });
+  expect(data.titles[0].ratings).toMatchObject({ imdbId: 'tt77', imdbStatus: 'unavailable' });
   expect(data.titles[0].providers.US?.providers[0].provider_id).toBe(8);
   expect(getAnimeRatings).not.toHaveBeenCalled();
 });

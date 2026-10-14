@@ -1,0 +1,71 @@
+'use client';
+import { withTimeout } from '@/lib/async-timeout';
+import type { WeeklyTitleDetails, WeeklySchedule } from '@/lib/weekly-details';
+interface Entry { promise: Promise<unknown>; controller: AbortController; settled: boolean; subscribers: number; expires: number }
+const entries = new Map<string, Entry>();
+const queue: { entry: Entry; run: () => Promise<void> }[] = [];
+let active = 0;
+function pump() {
+  while (active < 2 && queue.length) {
+    const task = queue.shift()!;
+    if (task.entry.controller.signal.aborted) continue;
+    active++;
+    void task.run().finally(() => { active--; pump(); });
+  }
+}
+export function invalidateWeeklyLookup(url: string) { entries.delete(url); }
+export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule>(url: string, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(new DOMException('Cancelled', 'AbortError'));
+  let entry = entries.get(url);
+  if (!entry || entry.expires <= Date.now()) {
+    const controller = new AbortController();
+    let resolve!: (value: unknown) => void, reject!: (error: unknown) => void;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    entry = { promise, controller, settled: false, subscribers: 0, expires: Infinity };
+    const current = entry;
+    // A queue deadline also covers cards that never get a network slot.
+    const timer = setTimeout(() => {
+      controller.abort();
+      if (entries.get(url) === current) entries.delete(url);
+      reject(new Error('Lookup timed out'));
+    }, 60000);
+    void promise.finally(() => { clearTimeout(timer); current.settled = true; }).catch(() => {});
+    queue.push({ entry: current, run: async () => {
+      try {
+        const result = await withTimeout((async () => {
+          const response = await fetch(url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(28000)]) });
+          if (!response.ok) throw new Error('Weekly lookup unavailable');
+          const data = await response.json();
+          const valid = url.startsWith('/api/weekly-title?')
+            ? Number.isSafeInteger(data.id) && data.providers && typeof data.providersUnavailable === 'boolean' && !('ratings' in data)
+            : Array.isArray(data.events) && Array.isArray(data.episodeDates) && typeof data.unavailable === 'boolean';
+          if (!valid) throw new Error('Invalid weekly lookup');
+          return data;
+        })(), 28000);
+        if (result.providersUnavailable || result.unavailable) entries.delete(url);
+        else current.expires = Date.now() + 600000;
+        resolve(result);
+      } catch (error) { controller.abort(); if (entries.get(url) === current) entries.delete(url); reject(error); }
+    } });
+    if (entries.size >= 200) entries.delete(entries.keys().next().value!);
+    entries.set(url, current);
+  }
+  const current = entry;
+  current.subscribers++;
+  const subscribed = new Promise<T>((resolve, reject) => {
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true; signal.removeEventListener('abort', cancel); current.subscribers--;
+      if (!current.settled && current.subscribers === 0) {
+        current.controller.abort();
+        if (entries.get(url) === current) entries.delete(url);
+      }
+    };
+    const cancel = () => { release(); reject(new DOMException('Cancelled', 'AbortError')); };
+    signal.addEventListener('abort', cancel, { once: true });
+    current.promise.then(value => { release(); resolve(value as T); }, error => { release(); reject(error); });
+  });
+  pump();
+  return subscribed;
+}

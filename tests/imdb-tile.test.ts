@@ -12,3 +12,11 @@ it('distinguishes loading, an outage, an unmatched title and a genuinely absent 
   expect(render({ imdbStatus: 'error' })).not.toContain('n/a');
   expect(render({ imdbRating: '8.6', imdbStatus: 'ready' })).toContain('8.6');
 });
+
+it('weekly cached tiles render neutral missing scores without rating retries or loading states', () => {
+  const html = renderToStaticMarkup(React.createElement(ImdbRatingTile, { ratings: { imdbId: 'tt123' }, title: 'Ranma ½', locale: 'en', allowRetry: false }));
+  expect(html).toContain('n/a');
+  expect(html).not.toContain('Try again');
+  expect(html).not.toContain('Loading ratings');
+  expect(html).toContain('https://www.imdb.com/title/tt123/');
+});

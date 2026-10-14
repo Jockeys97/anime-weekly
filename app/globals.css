@@ -5,8 +5,8 @@
 
 /* Rating sources: compact, linked cards with locally hosted brand marks. */
 .ratings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 16px}
-.rating-tile{position:relative;padding:10px;min-width:0;border:1px solid var(--line);border-radius:9px;background:#f8faf5;overflow:hidden}
-.rating-source>a{display:flex;align-items:center;gap:6px;width:100%}.rating-source>a:after{content:"";position:absolute;inset:0;border-radius:9px}
+.rating-tile{isolation:isolate;position:relative;padding:10px;min-width:0;border:1px solid var(--line);border-radius:9px;background:#f8faf5;overflow:hidden}
+.rating-source>a{display:flex;align-items:center;gap:6px;width:100%}.rating-source>a:after{content:"";position:absolute;z-index:0;inset:0;border-radius:9px}
 .rating-tile-linked{transition:background .15s,border-color .15s}
 .rating-tile-linked:hover{background:#eff4e7;border-color:#a4b692}
 .rating-source>a:hover{text-decoration:none}
@@ -115,5 +115,7 @@
 @media(max-width:600px){.anime-search-filters{padding:20px}.explore-query>div{flex-direction:column}.explore-query .button{width:100%}.explore-actions,.explore-results-heading{align-items:flex-start;flex-direction:column}.explore-results-heading>span{white-space:normal}}
 
 .ratings .rating-value-state{font-size:14px;line-height:1.4;letter-spacing:0;overflow-wrap:anywhere}
-.rating-detail button{font:inherit;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer}
+.rating-detail button{position:relative;z-index:1;pointer-events:auto;font:inherit;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer}
 .rating-detail button:focus-visible{outline:3px solid #769641;outline-offset:3px}
+
+.card-details button.catalog-details{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}.card-details button:disabled{cursor:wait}

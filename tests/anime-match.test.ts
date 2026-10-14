@@ -56,3 +56,43 @@ describe('conservative anime matching', () => {
     expect(chooseAnimeMatch([{ ...candidate, title: { english: '!!!' } }], { kind: 'tv', title: '???' })).toBeNull();
   });
 });
+
+// Representative upstream aliases; fixtures exercise title matching rather
+// than hard-coding an AniList ID or depending on a live service.
+describe('weekly title matching regressions', () => {
+  const make = (title: AnimeCandidate['title'], year: number, synonyms: string[] = []): AnimeCandidate => ({ id: 100, type: 'ANIME', format: 'TV', title, synonyms, startDate: { year }, idMal: 200, averageScore: 80 });
+  it.each([
+    ['Nia Liston', 'Nia Liston: The Merciless Maiden', 2026],
+    ['Pokémon Horizons', 'Pokemon Horizons: The Series', 2023],
+    ['Magical Explorer', 'Magical Explorer: Reborn as a Side Character in a Fantasy Dating Sim', 2026],
+    ['Ranma1/2', 'Ranma ½', 2024],
+    ['Ranma ½', 'Ranma 1/2', 2024],
+  ])('resolves %s to its unique English alias', (title, english, year) => {
+    expect(chooseAnimeMatch([make({ english }, year)], { kind: 'tv', title, year })?.id).toBe(100);
+  });
+  it('resolves Ave Mujica using a synonym even when the English title has a brand prefix', () => {
+    const anime = make({ english: 'BanG Dream! Ave Mujica', romaji: 'BanG Dream! Ave Mujica' }, 2025, ['Ave Mujica']);
+    expect(chooseAnimeMatch([anime], { kind: 'tv', title: 'Ave Mujica', year: 2025 })?.id).toBe(100);
+  });
+  it('resolves JoJo using TMDB original_name and Japanese native title', () => {
+    const anime = make({ english: "JoJo’s Bizarre Adventure", romaji: 'JoJo no Kimyou na Bouken', native: 'ジョジョの奇妙な冒険' }, 2012);
+    expect(chooseAnimeMatch([anime], { kind: 'tv', title: 'JoJo', originalTitle: 'ジョジョの奇妙な冒険', year: 2013 })?.id).toBe(100);
+  });
+  it('matches Rascal Does Not Dream of a Dear Friend without inheriting another adaptation', () => {
+    const movie = { ...make({ english: 'Rascal Does Not Dream of a Dear Friend', romaji: 'Seishun Buta Yarou wa Dear Friend no Yume wo Minai' }, 2026), format: 'MOVIE' };
+    expect(chooseAnimeMatch([movie], { kind: 'movie', title: 'Rascal Does Not Dream of a Dear Friend', year: 2026 })?.id).toBe(100);
+    expect(chooseAnimeMatch([movie], { kind: 'tv', title: 'Rascal Does Not Dream of a Dear Friend', year: 2026 })).toBeNull();
+  });
+  it('canonicalizes season wording and allows an explicit suffix against the same-year base title', () => {
+    const anime = make({ english: 'Magical Explorer Season 2' }, 2026);
+    expect(chooseAnimeMatch([anime], { kind: 'tv', title: 'Magical Explorer 2nd Season', year: 2026 })?.id).toBe(100);
+    expect(chooseAnimeMatch([make({ english: 'Nia Liston' }, 2026)], { kind: 'tv', title: 'Nia Liston Season 1', year: 2026 })?.id).toBe(100);
+  });
+  it('does not conflate different subtitles, numbered seasons, distant remakes, or tied base matches', () => {
+    const a = make({ english: 'Nia Liston: The Merciless Maiden' }, 2026);
+    const b = { ...a, id: 101 };
+    expect(chooseAnimeMatch([a, b], { kind: 'tv', title: 'Nia Liston', year: 2026 })).toBeNull();
+    expect(chooseAnimeMatch([a], { kind: 'tv', title: 'Nia Liston', year: 2020 })).toBeNull();
+    expect(chooseAnimeMatch([make({ english: 'Example Season 3' }, 2026)], { kind: 'tv', title: 'Example Season 2', year: 2026 })).toBeNull();
+  });
+});
