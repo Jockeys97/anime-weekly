@@ -87,3 +87,12 @@ it('saves discovery failure as a daily attempt rather than throwing and repeated
   expect(getQuickWeekData).toHaveBeenCalledTimes(1);
   expect(primeImdbEpisode).not.toHaveBeenCalled();
 });
+
+it('keeps a quota failure visible even when another in-flight lookup reports a source error', async () => {
+  const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
+  vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: [...catalog.titles, { ...catalog.titles[0], id: 2 }] });
+  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: `tt${date.seriesId}`, seriesImdbId: 'tt100' }));
+  vi.mocked(getTMDBWeekEpisodes).mockImplementation(async id => ({ episodes: [{ seriesId: id, season: 1, episode: 1, date: '2026-10-13' }], unavailable: false }));
+  vi.mocked(primeImdbEpisode).mockRejectedValueOnce(new EpisodeLookupError('quota')).mockRejectedValueOnce(new EpisodeLookupError('source'));
+  expect(await primeWeeklyEpisodes('2026-42')).toMatchObject({ status: 'unavailable', reason: 'quota' });
+});
