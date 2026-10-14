@@ -248,22 +248,41 @@ La Top 5 usa esclusivamente voti IMDb di episodi verificati nello snapshot giorn
 
 ## Daily episode ranking
 
-The weekly Top 5 uses confirmed episodes released by the current Japan calendar
-date, with their own IMDb score and vote count. TMDB resolves an exact episode
-IMDb ID and parent-series IMDb ID. OMDb is queried by episode ID, with at most
-one fallback through the parent and TMDB season/episode coordinates when the
-direct lookup fails. The fallback is accepted only if **both IMDb IDs match**;
-season numbering, series ratings and future episodes cannot substitute for an
-episode rating. OMDb can return `Error getting data.` or `not found` even when
-IMDb itself already has votes. That is a source coverage limitation, not proof
-that the API quota has been exhausted.
+The weekly Top 5 uses confirmed episodes already released in Japan during the
+selected week. TMDB supplies exact episode and parent-series IMDb IDs, episode
+release dates, English episode names where available and posters. A daily job
+streams IMDb's official `title.ratings.tsv.gz` and `title.episode.tsv.gz` files,
+retaining only rows for up to 60 selected episode IDs. An episode rating requires
+an exact matching parent in `title.episode`, a valid score and positive vote
+count. IMDb's season/episode numbering is used; series ratings, movies, future
+episodes and unverified identities cannot fill missing positions.
 
-The authenticated job runs daily at `0 6 * * *`. It allows at most 30 distinct
-episode lookups (up to 60 HTTP requests including fallbacks), within 110 seconds.
-Successful, unrated and failed attempts are cached for the date; manual repeats
-reuse the completed daily snapshot, and a new date permits another attempt.
-Previously confirmed ratings survive partial failures. Public page reads,
-language changes and filters never call OMDb. Safe coverage counts and failure
-categories accompany the snapshot; the interface distinguishes quota,
-authentication, metadata and rating-service failures. A pre-fix episode snapshot
-can be repaired once without warming series scores again.
+The authenticated job runs daily at `0 6 * * *`. Metadata collection is bounded
+to 60 seconds, 60 matched targets and 120 identity attempts. The two parallel gzip
+streams have a 45-second deadline and a 1 GiB decompressed limit per file; the
+complete IMDb database is never loaded into memory or stored in Next's cache.
+Header changes, duplicate target rows and corrupt/truncated gzip data fail the
+attempt instead of publishing a partially parsed dataset.
+
+A separate data-cache entry keyed solely by date retains the small daily result
+or failed attempt. Changing the candidate list, repeating the job or redeploying
+does not fetch the datasets again on a cache hit. Process-local in-flight calls
+are also deduplicated. Newly identified episodes wait until the next day. The
+weekly snapshot exposes only its best five confirmed episodes. Collection time
+and the rating file's Last-Modified timestamp identify the cache and data dates.
+Previously confirmed values survive incomplete metadata or dataset outages;
+a complete daily file removes a matched candidate whose rating cannot be verified.
+
+Episode ranking consumes **zero OMDb requests**. Public pages, language changes
+and filters read the weekly snapshot and never download either IMDb file.
+Series IMDb scores continue using the existing independent OMDb/cross-week
+cache. A same-day snapshot from the previous collector can be migrated once
+without warming series scores again.
+
+Official data source and conditions:
+[IMDb Non-Commercial Datasets](https://data.imdb.com/non-commercial-datasets/),
+[IMDb non-commercial terms](https://help.imdb.com/article/imdb/general-information/can-i-use-imdb-data-in-my-software/G5JTRESSHJBBHTGX).
+The project owner requested this dataset configuration after review of those
+conditions. No separate written IMDb authorization was obtained by this change.
+Required IMDb attribution is shown in the footer; the ranking links to the
+source and shows the file date. Full TSV files are not redistributed.

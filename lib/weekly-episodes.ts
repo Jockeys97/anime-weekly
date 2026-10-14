@@ -2,6 +2,7 @@ import { parseWeek, weekRange } from '@/lib/week';
 
 export interface WeeklyEpisode {
   imdbId: string;
+  source?: 'imdb-datasets' | 'omdb';
   seriesId: number;
   seriesName: string;
   poster: string | null;
@@ -17,6 +18,8 @@ export interface WeeklyEpisodes {
   status: 'pending' | 'ready' | 'partial' | 'unavailable';
   updatedAt?: string;
   collectorVersion?: number;
+  source?: 'imdb-datasets' | 'omdb';
+  dataUpdatedAt?: string;
   reason?: 'quota' | 'authentication' | 'source' | 'metadata';
   coverage?: { eligible: number; matched: number; rated: number; unrated: number; failed: number };
 }
@@ -38,7 +41,7 @@ export function topWeeklyEpisodes(entries: readonly WeeklyEpisode[], slug: strin
   return [...unique.values()].sort((a, b) => b.score - a.score || b.votes - a.votes || a.imdbId.localeCompare(b.imdbId)).slice(0, 5);
 }
 
-export const EPISODE_COLLECTOR_VERSION = 2;
+export const EPISODE_COLLECTOR_VERSION = 3;
 export function needsEpisodeRepair(previous?: WeeklyEpisodes, today = japanDate()): boolean {
   return Boolean(previous?.updatedAt && Number.isFinite(Date.parse(previous.updatedAt)) && japanDate(new Date(previous.updatedAt)) === today && previous.collectorVersion !== EPISODE_COLLECTOR_VERSION);
 }

@@ -137,7 +137,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.",
     "justwatch": "Données de streaming fournies par JustWatch",
-    "omdb": "Notes IMDb fournies par OMDb",
+    "omdb": "Notes IMDb des séries fournies par OMDb",
     "anilist": "Identification des anime et notes alternatives par AniList",
     "mal": "Notes MyAnimeList via Jikan",
     "note": "Les dates et la disponibilité proviennent des sources citées. Aucune note n’est estimée."
@@ -364,6 +364,10 @@
     "episodesSourceUnavailable": "OMDb ne peut pas encore récupérer les notes des nouveaux épisodes. Nouvel essai lors de la prochaine mise à jour quotidienne.",
     "episodesQuotaUnavailable": "Le quota quotidien OMDb est atteint. Les notes obtenues restent en cache ; nouvel essai lors de la prochaine mise à jour quotidienne.",
     "episodesAuthenticationUnavailable": "La clé OMDb est absente ou refusée par le service.",
-    "episodesMetadataUnavailable": "Certaines dates ou certains identifiants des épisodes ne sont pas encore disponibles. Nouvelle vérification lors de la prochaine mise à jour quotidienne."
+    "episodesMetadataUnavailable": "Certaines dates ou certains identifiants des épisodes ne sont pas encore disponibles. Nouvelle vérification lors de la prochaine mise à jour quotidienne.",
+    "episodesDatasetEmpty": "Aucun épisode sorti cette semaine ne dispose encore d’une note dans les jeux de données IMDb. Nouvelle vérification lors de la prochaine mise à jour quotidienne.",
+    "episodesDatasetUnavailable": "Les jeux de données IMDb sont temporairement indisponibles. Les notes obtenues restent en cache ; nouvel essai lors de la prochaine mise à jour quotidienne.",
+    "datasetAttribution": "Notes des épisodes issues des jeux de données IMDb · mise à jour quotidienne",
+    "datasetDate": "Données du"
   }
 }

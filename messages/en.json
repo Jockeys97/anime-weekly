@@ -118,7 +118,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "This product uses the TMDB API but is not endorsed or certified by TMDB",
     "justwatch": "Streaming data provided by JustWatch",
-    "omdb": "IMDb ratings provided by OMDb",
+    "omdb": "Series IMDb ratings provided by OMDb",
     "anilist": "Anime matching and fallback scores by AniList",
     "mal": "MyAnimeList scores via Jikan",
     "note": "Release dates and availability come from the credited sources. No ratings are estimated."
@@ -370,6 +370,10 @@
     "episodesSourceUnavailable": "OMDb cannot retrieve ratings for the new episodes yet. We will try again at the next daily update.",
     "episodesQuotaUnavailable": "The daily OMDb quota has been reached. Collected ratings remain cached; we will try again at the next daily update.",
     "episodesAuthenticationUnavailable": "The OMDb key is missing or was rejected by the service.",
-    "episodesMetadataUnavailable": "Some episode dates or identifiers are not available yet. We will check again at the next daily update."
+    "episodesMetadataUnavailable": "Some episode dates or identifiers are not available yet. We will check again at the next daily update.",
+    "episodesDatasetEmpty": "No episode released this week has a rating in the IMDb datasets yet. We will check again at the next daily update.",
+    "episodesDatasetUnavailable": "The IMDb datasets are temporarily unavailable. Collected ratings remain cached; we will try again at the next daily update.",
+    "datasetAttribution": "Episode ratings from IMDb datasets · updated daily",
+    "datasetDate": "Data from"
   }
 }

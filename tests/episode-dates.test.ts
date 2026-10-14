@@ -57,3 +57,8 @@ it('resolves both exact episode and parent IMDb IDs without borrowing the season
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ imdb_id: null })));
   expect(await getTMDBEpisodeIdentity({ seriesId: 21, season: 3, episode: 2, date: '2026-10-14' })).toBeNull();
 });
+
+it('retains English episode names while avoiding a Japanese-only title fallback', () => {
+  expect(readEpisodeDates(21, [{ ...episode, name: 'A real episode name' }], '2026-10-12', '2026-10-18')[0].title).toBe('A real episode name');
+  expect(readEpisodeDates(21, [{ ...episode, name: '日本語' }], '2026-10-12', '2026-10-18')[0].title).toBeUndefined();
+});
