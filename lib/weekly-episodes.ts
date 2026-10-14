@@ -26,7 +26,7 @@ export function topWeeklyEpisodes(entries: readonly WeeklyEpisode[], slug: strin
   const { start, end } = weekRange(week);
   const unique = new Map<string, WeeklyEpisode>();
   for (const entry of entries) {
-    if (!/^tt\d+$/.test(entry.imdbId) || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date) || entry.date < start || entry.date > end || entry.date > today
+    if (!entry || typeof entry !== 'object' || !/^tt\d+$/.test(entry.imdbId) || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date) || entry.date < start || entry.date > end || entry.date > today
       || !Number.isFinite(entry.score) || entry.score <= 0 || entry.score > 10 || !Number.isSafeInteger(entry.votes) || entry.votes <= 0
       || !Number.isSafeInteger(entry.season) || entry.season < 0 || !Number.isSafeInteger(entry.episode) || entry.episode <= 0) continue;
     const previous = unique.get(entry.imdbId);

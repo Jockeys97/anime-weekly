@@ -27,7 +27,7 @@ it('resolves exact episode IDs, skips future releases and uses IMDb numbering ev
   expect(result.entries[0]).toMatchObject({ imdbId: 'tt1', date: '2026-10-13', season: 2, episode: 12, score: 8.7 });
   expect(result.status).toBe('ready');
   expect(getTMDBEpisodeIdentity).toHaveBeenCalledTimes(1);
-  expect(primeImdbEpisode).toHaveBeenCalledExactlyOnceWith('tt1', 'tt100');
+  expect(primeImdbEpisode).toHaveBeenCalledExactlyOnceWith('tt1', 'tt100', '2026-10-14');
 });
 it('keeps unmapped and unrated episodes out and never borrows a series score', async () => {
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue(null);
@@ -43,4 +43,25 @@ it('preserves previously confirmed episodes and stops vendor requests after quot
   expect(result.entries).toEqual([entry()]);
   expect(result.status).toBe('partial');
   expect(primeImdbEpisode).toHaveBeenCalledTimes(1);
+});
+
+it.each(['ready', 'partial', 'unavailable'] as const)('reuses a completed daily attempt (%s) without making any upstream calls', async status => {
+  const previous = { entries: [entry()], status, updatedAt: '2026-10-14T06:00:00Z' };
+  expect(await primeWeeklyEpisodes('2026-42', previous)).toBe(previous);
+  expect(getQuickWeekData).not.toHaveBeenCalled();
+  expect(primeImdbEpisode).not.toHaveBeenCalled();
+});
+it('refreshes the following day instead of permanently freezing an error', async () => {
+  const previous = { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-13T06:00:00Z' };
+  expect((await primeWeeklyEpisodes('2026-42', previous)).status).toBe('ready');
+  expect(primeImdbEpisode).toHaveBeenCalledTimes(1);
+});
+
+it('caps episode rating lookups at sixty per daily run', async () => {
+  vi.mocked(getTMDBWeekEpisodes).mockResolvedValue({ unavailable: false, episodes: Array.from({ length: 70 }, (_, index) => ({ seriesId: 1, season: 1, episode: index + 1, date: '2026-10-13' })) });
+  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: `tt${date.episode}`, seriesImdbId: 'tt100' }));
+  const result = await primeWeeklyEpisodes('2026-42');
+  expect(primeImdbEpisode).toHaveBeenCalledTimes(60);
+  expect(result.entries).toHaveLength(60);
+  expect(result.status).toBe('partial');
 });

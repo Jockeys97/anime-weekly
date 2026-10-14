@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { WeeklyTopFive } from '@/components/WeeklyTopFive';
 import { TitleFilters } from '@/components/TitleFilters';
 import { useWatchlist } from '@/components/Watchlist';
@@ -30,7 +31,7 @@ export function WeeklyScope() {
   return <div className="guide-note"><p>{d.week.scope}</p><span>{d.week.cap}</span></div>;
 }
 interface CardState { status: 'loading' | 'ready' | 'error'; details?: WeeklyTitleDetails }
-export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: WeekData; week: ISOWeek; initialEvents?: AiringEvent[] }) {
+export function WeeklyContent({ initial, week, initialEvents = [], initialEpisodes }: { initial: WeekData; week: ISOWeek; initialEvents?: AiringEvent[]; initialEpisodes?: WeeklyEpisodes }) {
   const locale = useLocale(); const d = getDictionary(locale); const range = weekRange(week);
   const container = useRef<HTMLDivElement>(null);
   const started = useRef(new Set<string>());
@@ -161,7 +162,7 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
     return <AnimeCard anime={anime} locale={locale} pendingAnime={scoresPending && formatAnimeScore(anime.ratings) === 'n/a'} loadingDetails={!providersKnown && card?.status === 'loading'} enrichmentFailed={!providersKnown && card?.status === 'error'} onRetry={() => load(anime, true)} />;
   };
   return <div ref={container}>
-    <WeeklyTopFive slug={slug} />
+    <WeeklyTopFive slug={slug} initialEpisodes={initialEpisodes} />
     {scores?.unavailable && <p className="notice" role="status">{d.title.imdbErrorDetail} <button type="button" disabled={scoresPending} onClick={() => { setScoresPending(true); retryScores(value => value + 1); }}>{d.error.retry}</button></p>}
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
     {initial.status === 'unconfigured' ? <div className="empty-state"><span className="state-icon" aria-hidden="true">⌁</span><p className="eyebrow">{d.week.browse}</p><h3>{d.state.unconfigured}</h3><p>{d.state.setup}</p><a className="button" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">{d.state.setupLink}<span aria-hidden="true">↗</span></a></div> : initial.status === 'error' ? <div className="empty-state" role="status"><h3>{d.state.error}</h3><p>{d.state.errorBody}</p></div> : <>

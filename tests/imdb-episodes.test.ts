@@ -23,3 +23,12 @@ it('does not cache missing ratings or quota failures, making the next scheduled 
   expect(await primeImdbEpisode('tt1', 'tt100')).toMatchObject({ score: 9.1 });
   expect(fetchMock).toHaveBeenCalledTimes(3);
 });
+
+it('uses one vendor request per episode per day, even if the cron is run again manually', async () => {
+  const fetchMock = vi.fn(async () => Response.json(data)); vi.stubGlobal('fetch', fetchMock);
+  await primeImdbEpisode('tt1', 'tt100', '2026-10-14');
+  await primeImdbEpisode('tt1', 'tt100', '2026-10-14');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  await primeImdbEpisode('tt1', 'tt100', '2026-10-15');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});

@@ -6,17 +6,19 @@ import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { loadWeeklyEpisodes } from '@/lib/weekly-episode-client';
 import { topWeeklyEpisodes, type WeeklyEpisodes } from '@/lib/weekly-episodes';
-export function WeeklyTopFive({ slug }: { slug: string }) {
+export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initialEpisodes?: WeeklyEpisodes }) {
   const dictionary = getDictionary(useLocale());
   const d = dictionary.features;
-  const [snapshot, setSnapshot] = useState<{ slug: string; data: WeeklyEpisodes } | null>(null);
+  const [snapshot, setSnapshot] = useState<{ slug: string; data: WeeklyEpisodes } | null>(() => initialEpisodes ? { slug, data: initialEpisodes } : null);
   useEffect(() => {
+    const age = initialEpisodes?.updatedAt ? Date.now() - Date.parse(initialEpisodes.updatedAt) : Infinity;
+    if (initialEpisodes?.status === 'ready' && age >= 0 && age < 300000) return;
     const controller = new AbortController();
     void loadWeeklyEpisodes(slug, controller.signal)
       .then(data => { if (!controller.signal.aborted) setSnapshot({ slug, data }); })
       .catch(() => { if (!controller.signal.aborted) setSnapshot({ slug, data: { entries: [], status: 'unavailable' } }); });
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, initialEpisodes]);
   const data = snapshot?.slug === slug ? snapshot.data : null;
   const top = topWeeklyEpisodes(data?.entries ?? [], slug);
   const pending = !data;

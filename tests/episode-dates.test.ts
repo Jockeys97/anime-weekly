@@ -46,3 +46,14 @@ describe('actual TMDB episode dates', () => {
     expect(await getTMDBWeekEpisodes(21, week)).toEqual({ episodes: [], unavailable: true });
   });
 });
+
+it('resolves both exact episode and parent IMDb IDs without borrowing the season identity', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  const fetchMock = vi.fn(async (url: URL) => Response.json({ imdb_id: url.pathname.includes('/episode/') ? 'tt123' : 'tt100' }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getTMDBEpisodeIdentity } = await import('../lib/tmdb');
+  expect(await getTMDBEpisodeIdentity({ seriesId: 21, season: 3, episode: 2, date: '2026-10-14' })).toEqual({ imdbId: 'tt123', seriesImdbId: 'tt100' });
+  expect(fetchMock.mock.calls.map(([url]) => url.pathname)).toEqual(['/3/tv/21/season/3/episode/2/external_ids', '/3/tv/21/external_ids']);
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ imdb_id: null })));
+  expect(await getTMDBEpisodeIdentity({ seriesId: 21, season: 3, episode: 2, date: '2026-10-14' })).toBeNull();
+});

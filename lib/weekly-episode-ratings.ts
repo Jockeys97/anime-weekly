@@ -13,6 +13,11 @@ export async function primeWeeklyEpisodes(slug: string, previous?: WeeklyEpisode
   if (!week) throw new Error('Invalid week');
   const deadline = Date.now() + 110000;
   const today = japanDate();
+  // A successful, partial or failed daily run is still a completed attempt:
+  // manual repeats read it until tomorrow rather than consuming more quota.
+  if (previous?.updatedAt && Number.isFinite(Date.parse(previous.updatedAt)) && japanDate(new Date(previous.updatedAt)) === today) return previous;
+  const ratingLookups = new Map<string, ReturnType<typeof primeImdbEpisode>>();
+  const maxRatingLookups = 60;
   const catalog = await withTimeout(getQuickWeekData(week, 'en'), 10000);
   if (catalog.status !== 'ready') throw new Error('Weekly episodes unavailable');
   const entries = new Map((previous?.entries ?? []).map(entry => [entry.imdbId, entry]));
@@ -32,7 +37,14 @@ export async function primeWeeklyEpisodes(slug: string, previous?: WeeklyEpisode
           if (remaining <= 0) { failed = true; break; }
           const identity = await withTimeout(getTMDBEpisodeIdentity(date), Math.min(13000, remaining));
           if (!identity) continue;
-          const rating = await withTimeout(primeImdbEpisode(identity.imdbId, identity.seriesImdbId), Math.min(6000, deadline - Date.now()));
+          let lookup = ratingLookups.get(identity.imdbId);
+          if (!lookup) {
+            if (ratingLookups.size >= maxRatingLookups) { failed = true; vendorBlocked = true; break; }
+            if (Date.now() >= deadline) { failed = true; break; }
+            lookup = primeImdbEpisode(identity.imdbId, identity.seriesImdbId, today);
+            ratingLookups.set(identity.imdbId, lookup);
+          }
+          const rating = await withTimeout(lookup, Math.min(6000, deadline - Date.now()));
           if (rating) entries.set(identity.imdbId, { ...rating, imdbId: identity.imdbId, seriesId: title.id, seriesName: displayTitle(title.name), poster: title.poster, date: date.date });
         }
       } catch (error) {

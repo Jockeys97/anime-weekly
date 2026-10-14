@@ -1,4 +1,5 @@
 import 'server-only';
+import { japanDate } from '@/lib/weekly-episodes';
 import { unstable_cache } from 'next/cache';
 
 export interface ImdbEpisodeScore { title: string; season: number; episode: number; score: number; votes: number }
@@ -18,7 +19,8 @@ export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string)
 class UnratedEpisode extends Error {}
 // Only the authenticated cron imports this writer. Valid episode results have
 // a separate cache from series scores; N/A and vendor failures are never stored.
-const episodeScore = unstable_cache(async (id: string, seriesId: string): Promise<ImdbEpisodeScore> => {
+const episodeScore = unstable_cache(async (id: string, seriesId: string, day: string): Promise<ImdbEpisodeScore> => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new EpisodeLookupError('network');
   const key = process.env.OMDB_API_KEY?.trim();
   if (!key) throw new EpisodeLookupError('authentication');
   const url = new URL('https://www.omdbapi.com/');
@@ -33,9 +35,9 @@ const episodeScore = unstable_cache(async (id: string, seriesId: string): Promis
   const result = readImdbEpisode(data, id, seriesId);
   if (!result) throw new UnratedEpisode();
   return result;
-}, ['imdb-episode-score-v1'], { revalidate: 21600, tags: ['imdb-episode-scores'] });
-export async function primeImdbEpisode(id: string, seriesId: string): Promise<ImdbEpisodeScore | null> {
+}, ['imdb-episode-score-v1'], { revalidate: 172800, tags: ['imdb-episode-scores'] });
+export async function primeImdbEpisode(id: string, seriesId: string, day = japanDate()): Promise<ImdbEpisodeScore | null> {
   if (!/^tt\d+$/.test(id) || !/^tt\d+$/.test(seriesId)) return null;
-  try { return await episodeScore(id, seriesId); }
+  try { return await episodeScore(id, seriesId, day); }
   catch (error) { if (error instanceof UnratedEpisode) return null; throw error; }
 }
