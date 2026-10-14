@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useLocale } from '@/components/LanguageSelector';
 import { useEffect, useState } from 'react';
 import { getDictionary } from '@/lib/i18n';
 import type { AnimeTitle } from '@/lib/tmdb';
@@ -8,7 +9,9 @@ import { providerWatchLink } from '@/lib/provider-watch-link';
 import { ProviderLink } from '@/components/ProviderLink';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 
-export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale = 'en', collapsible = true, loading = false }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; seriesWatch?: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; recoveryId?: number; locale?: string; collapsible?: boolean; loading?: boolean }) {
+export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale = 'en', collapsible = true, loading = false, followLocale = false }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; seriesWatch?: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; recoveryId?: number; locale?: string; collapsible?: boolean; loading?: boolean; followLocale?: boolean }) {
+  const selectedLocale = useLocale();
+  locale = followLocale ? selectedLocale : locale;
   const { region } = useStreamingCountry();
   const d = getDictionary(locale);
   const useSeries = !anime.providers[region]?.providers.length && Boolean(seriesWatch?.providers[region]?.providers.length);

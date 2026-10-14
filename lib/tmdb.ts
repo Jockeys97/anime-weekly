@@ -12,7 +12,7 @@ import { readEpisodeDates, selectEpisodeSeasons, type EpisodeDate, type EpisodeD
 
 type Kind = 'tv' | 'movie';
 const TMDB_GENRES: Record<number, string> = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western', 10759: 'Action & Adventure', 10762: 'Kids', 10765: 'Sci-Fi & Fantasy', 10768: 'War & Politics' };
-interface RawTitle { genre_ids?: number[]; id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
+interface RawTitle { popularity?: number; genre_ids?: number[]; id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
 interface Page { results: RawTitle[]; total_pages: number }
 export interface Provider { watch_url?: string; provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
@@ -296,4 +296,29 @@ export async function getWeeklyRelated(kind: Kind, id: number) { return recommen
 export async function getWeeklyProviders(kind: Kind, id: number) {
   const watch = await tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${id}/watch/providers`).catch(() => null);
   return { providers: watchProviders(watch), providersUnavailable: watch === null };
+}
+
+// Provider landings only discover titles: no per-title ratings or availability calls.
+const cachedPlatformAnime = unstable_cache(async (providerId: number, region: string): Promise<WeekData> => {
+  const ranked: { anime: AnimeTitle; popularity: number }[] = [];
+  for (const kind of ['tv', 'movie'] as const) {
+    const pages = await Promise.all([1, 2].map(page => tmdb<Page>(`discover/${kind}`, {
+      language: 'it-IT', with_watch_providers: String(providerId), watch_region: region,
+      with_genres: '16', with_origin_country: 'JP', include_adult: 'false', sort_by: 'popularity.desc', page: String(page),
+    }, 86400)));
+    const seen = new Set<number>();
+    for (const raw of pages.flatMap(page => page.results)) {
+      const name = (raw.name || raw.title)?.trim();
+      if (!name || !Number.isSafeInteger(raw.id) || raw.id <= 0 || seen.has(raw.id)) continue;
+      seen.add(raw.id);
+      ranked.push({ popularity: raw.popularity ?? 0, anime: { id: raw.id, kind, name: displayTitle(name), overview: cleanSynopsis(raw.overview), poster: raw.poster_path || null,
+        ratings: {}, recommendation: null, providers: {}, providersUnavailable: false } });
+    }
+  }
+  return { status: 'ready', titles: ranked.sort((a, b) => b.popularity - a.popularity).map(entry => entry.anime) };
+}, ['platform-anime-v1'], { revalidate: 86400, tags: [CACHE_TAG] });
+export async function getPlatformAnime(providerId: number, region: string): Promise<WeekData> {
+  if (!isTMDBConfigured()) return { status: 'unconfigured', titles: [] };
+  try { return await cachedPlatformAnime(providerId, region); }
+  catch { return { status: 'error', titles: [] }; }
 }

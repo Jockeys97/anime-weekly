@@ -1,114 +1,90 @@
-import { WatchlistButton } from '@/components/Watchlist';
-import { VisitorDate } from '@/components/VisitorTime';
-import { getSynopsis } from '@/lib/synopsis';
-import type { SynopsisResult } from '@/lib/synopsis-client';
-import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
-import { getRequestLocale } from '@/lib/request-locale';
-import Image from 'next/image';
-import { Suspense } from 'react';
-import Link from 'next/link';
+import type { Metadata } from 'next';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { connection } from 'next/server';
-import { AnimeTrailer } from '@/components/AnimeTrailer';
+import { AnimeDetailView } from '@/components/AnimeDetailView';
+import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
 import { AnimeRatingTile, ImdbRatingTile } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
-import { StreamingCountrySelector } from '@/components/StreamingCountry';
+import { getSynopsis } from '@/lib/synopsis';
+import type { SynopsisResult } from '@/lib/synopsis-client';
 import { animeDescription, animeName, getAnime } from '@/lib/anilist';
 import { getAnimeRatingsById } from '@/lib/anime-ratings';
-import { getDictionary, type Locale } from '@/lib/i18n';
-import { isSeason, seasonPath } from '@/lib/season';
+import type { Locale } from '@/lib/i18n';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
 import { getCachedDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
+import { pageMetadata, serializeJsonLd, siteUrl } from '@/lib/seo';
 
 export const revalidate = 86400;
-
-export default async function AnimePage({ params }: { params: Promise<{ id: string }> }) {
-  await connection();
-  const { id } = await params;
+export const dynamicParams = true;
+// A process-local throttle cannot guarantee a shared quota across build workers.
+// Fifty details may also traverse prequels and fetch ratings. Skip build warming;
+// an empty list enables on-demand ISR without spending the AniList build quota.
+export function generateStaticParams(): { id: string }[] { return []; }
+const loadAnime = cache(async (id: string) => {
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const anime = await getAnime(Number(id));
   if (!anime) notFound();
-  const locale = await getRequestLocale();
-  const d = getDictionary(locale);
-  const c = d.catalog;
+  return anime;
+});
+const loadSynopsis = cache(async (id: string) => {
+  const anime = await loadAnime(id);
+  const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
+  return getSynopsis(aliases, anime.startDate?.year ?? anime.seasonYear ?? undefined, 'it', anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id);
+});
+type Props = { params: Promise<{ id: string }> };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const anime = await loadAnime((await params).id);
+  const name = animeName(anime);
+  const synopsis = await loadSynopsis(String(anime.id));
+  return pageMetadata(name, animeDescription(synopsis.synopsis || anime.description).replace(/\s+/g, ' ').slice(0, 155) || `Trama, valutazioni e dove guardare ${name} in streaming.`.slice(0, 155), `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large);
+}
+export default async function AnimePage({ params }: Props) {
+  const anime = await loadAnime((await params).id);
+  const locale = 'it';
   const name = animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
-  // Start optional lookups together, but let the core anime page stream immediately.
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
   const availability = getCachedDetailAvailability(anime);
-  const synopsis = getSynopsis(aliases, year, locale, anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id);
-  const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
-  const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
-  const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
-  const season = anime.season?.toLowerCase();
-  const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
-  const date = anime.startDate;
-  const startDate = date?.year && date.month && date.day ? <VisitorDate value={`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`} /> : date?.year ?? c.unknown;
-  return <main className="catalog-page" lang={locale}>
-    <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
-    {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
-    <article className="anime-card anime-detail">
-      <div className="poster">{cover ? <Image src={cover} alt={name} fill preload sizes="(max-width: 600px) 160px, 220px" /> : <span>{d.state.noPoster}</span>}</div>
-      <div className="card-body">
-        <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
-        <h1>{name}</h1>
-        <WatchlistButton id={`anilist:${anime.id}`} />
-        <a className="catalog-details" href={`/api/ics/anime/${anime.id}`}>{d.features.calendar}</a>
-        {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
-        <Suspense fallback={<p className="synopsis detail-synopsis" role="status">{d.language.loadingSynopsis}</p>}>
-          <DetailSynopsis synopsis={synopsis} anime={anime} aliases={aliases} year={year} locale={locale} />
-        </Suspense>
-        <dl className="ratings">
-          <Suspense fallback={<ImdbRatingTile ratings={{}} title={name} locale={locale} pending />}>
-            <DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />
-          </Suspense>
-          <Suspense fallback={<AnimeRatingTile ratings={{ anilistId: anime.id, anilistScore: anime.averageScore }} title={name} locale={locale} />}>
-            <DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />
-          </Suspense>
-        </dl>
-        <dl className="detail-facts">
-          <div><dt>{c.format}</dt><dd>{format}</dd></div>
-          <div><dt>{c.status}</dt><dd>{status}</dd></div>
-          <div><dt>{c.episodes}</dt><dd>{anime.episodes ?? c.unknown}</dd></div>
-          <div><dt>{c.startDate}</dt><dd>{startDate}</dd></div>
-          <div><dt>{c.studios}</dt><dd>{anime.studios?.nodes.map(studio => studio.name).join(', ') || c.unknown}</dd></div>
-          <div><dt>{c.genres}</dt><dd>{anime.genres?.join(', ') || c.unknown}</dd></div>
-          {seasonal && <div><dt>{c.season}</dt><dd><Link prefetch={false} href={seasonPath(seasonal)}>{c.seasonNames[seasonal.season]} {seasonal.year}</Link></dd></div>}
-        </dl>
-        <a className="catalog-details" href={`https://anilist.co/anime/${anime.id}`} target="_blank" rel="noopener noreferrer">{c.source} ↗</a>
-      </div>
-    </article>
-    <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} locale={locale} />
-    <section className="detail-streaming" aria-labelledby="streaming-heading">
-      <h2 id="streaming-heading">{d.title.streaming}</h2>
-      <StreamingCountrySelector locale={locale} />
-      <Suspense fallback={<p className="detail-loading" role="status">{c.loadingAvailability}</p>}>
-        <DetailAvailability availability={availability} name={name} locale={locale} id={anime.id} />
-      </Suspense>
-      <p className="catalog-intro">{c.availabilityNote}</p>
-    </section>
-  </main>;
+  const synopsis = loadSynopsis(String(anime.id));
+  const ratingCount = anime.stats?.scoreDistribution?.reduce((sum, bucket) => sum + bucket.amount, 0);
+  const structured = {
+    '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries',
+    name, url: new URL(`/anime/${anime.id}`, siteUrl()).href,
+    description: animeDescription(anime.description), image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
+    genre: anime.genres,
+    ...(typeof anime.averageScore === 'number' && Number.isFinite(anime.averageScore) && anime.averageScore > 0 && anime.averageScore <= 100 ? {
+      aggregateRating: { '@type': 'AggregateRating', ratingValue: anime.averageScore, bestRating: 100, worstRating: 0,
+        ...(Number.isSafeInteger(ratingCount) && ratingCount! > 0 ? { ratingCount } : {}) },
+    } : {}),
+  };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structured) }} />
+    <AnimeDetailView anime={anime}
+      synopsis={<DetailSynopsis synopsis={synopsis} anime={anime} aliases={aliases} year={year} locale={locale} />}
+      imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
+      ratings={<DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />}
+      availability={<DetailAvailability availability={availability} name={name} locale={locale} id={anime.id} />} />
+  </>;
 }
 
 async function DetailImdbRating({ availability, name, locale, id }: {
   availability: Promise<AnimeAvailability>; name: string; locale: Locale; id: number;
 }) {
   const watch = await availability;
-  return <ImdbRatingTile ratings={{ ...watch.ratings, anilistId: id }} title={name} locale={locale} />;
+  return <ImdbRatingTile ratings={{ ...watch.ratings, anilistId: id }} title={name} locale={locale} followLocale />;
 }
 
 async function DetailAnimeRating({ animeRatings, id, name, locale }: {
   animeRatings: Promise<Ratings>; id: number; name: string; locale: Locale;
 }) {
   const scores = await animeRatings;
-  return <AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} />;
+  return <AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} followLocale />;
 }
 
 async function DetailAvailability({ availability, name, locale, id }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale; id: number }) {
   const watch = await availability;
-  return <StreamingAvailability locale={locale} collapsible={false} recoveryId={id} seriesWatch={watch.seriesWatch} anime={{
+  return <StreamingAvailability locale={locale} followLocale collapsible={false} recoveryId={id} seriesWatch={watch.seriesWatch} anime={{
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
     providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
   }} />;
@@ -117,5 +93,5 @@ async function DetailAvailability({ availability, name, locale, id }: { availabi
 async function DetailSynopsis({ synopsis, anime, aliases, year, locale }: {
   synopsis: Promise<SynopsisResult>; anime: import('@/lib/anilist').AniListAnime; aliases: string[]; year?: number; locale: Locale;
 }) {
-  return <LocalizedSynopsis initial={await synopsis} anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />;
+  return <LocalizedSynopsis followLocale initial={await synopsis} anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />;
 }

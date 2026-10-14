@@ -1,11 +1,20 @@
 'use client';
+import { useLocale } from '@/components/LanguageSelector';
 import { useEffect, useRef, useState } from 'react';
 import { getDictionary } from '@/lib/i18n';
 import { loadSynopsis, synopsisQuery, type SynopsisResult } from '@/lib/synopsis-client';
 import type { Locale } from '@/lib/locales';
 
-export function LocalizedSynopsis({ original, titles, year, kind, locale, anilistId, initial, className = 'synopsis catalog-synopsis' }: {
-  original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className?: string; initial?: SynopsisResult;
+export function LocalizedSynopsis({ original, titles, year, kind, locale, anilistId, initial, followLocale = false, className = 'synopsis catalog-synopsis' }: {
+  original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className?: string; initial?: SynopsisResult; followLocale?: boolean;
+}) {
+  const selectedLocale = useLocale();
+  const activeLocale = followLocale ? selectedLocale : locale;
+  return <SynopsisContent key={activeLocale} original={original} titles={titles} year={year} kind={kind} locale={activeLocale} anilistId={anilistId} initial={initial?.language === activeLocale || activeLocale === locale ? initial : undefined} className={className} />;
+}
+
+function SynopsisContent({ original, titles, year, kind, locale, anilistId, initial, className }: {
+  original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className: string; initial?: SynopsisResult;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [translation, setTranslation] = useState<string | null>(initial?.language === locale ? initial.synopsis : null);

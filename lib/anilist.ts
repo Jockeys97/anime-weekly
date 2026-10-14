@@ -23,6 +23,7 @@ export interface AniListAnime {
   status: string | null;
   genres: string[];
   averageScore: number | null;
+  stats?: { scoreDistribution?: { amount: number }[] } | null;
   studios: { nodes: { id: number; name: string }[] } | null;
   season: string | null;
   seasonYear: number | null;
@@ -35,6 +36,7 @@ export interface AniListPage {
 const fields = `id idMal title { romaji english native }
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } episodes format status genres averageScore
+  stats { scoreDistribution { amount } }
   studios(isMain: true) { nodes { id name } } season seasonYear
   trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
 const catalogAnime = new Map<number, { expires: number; anime: AniListAnime }>();

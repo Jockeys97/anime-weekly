@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { useLocale } from '@/components/LanguageSelector';
 import { withTimeout } from '@/lib/async-timeout';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getDictionary, type Locale } from '@/lib/i18n';
@@ -28,7 +29,9 @@ function SourceTile({ source, name, href, title, children, locale }: {
 }
 
 export interface ImdbLookup { tmdbId: number; kind: 'tv' | 'movie' }
-export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup, allowRetry = true }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; lookup?: ImdbLookup | null; allowRetry?: boolean }) {
+export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup, allowRetry = true, followLocale = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; lookup?: ImdbLookup | null; allowRetry?: boolean; followLocale?: boolean }) {
+  const selectedLocale = useLocale();
+  locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
   const query = ratings.imdbId ? new URLSearchParams({ imdb: ratings.imdbId }).toString()
     : lookup ? new URLSearchParams({ tmdb: String(lookup.tmdbId), kind: lookup.kind }).toString()
@@ -61,7 +64,9 @@ export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup
   </SourceTile>;
 }
 
-export function AnimeRatingTile({ ratings, title, locale, pending = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean }) {
+export function AnimeRatingTile({ ratings, title, locale, pending = false, followLocale = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean }) {
+  const selectedLocale = useLocale();
+  locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
   const waiting = usePendingTimeout(pending);
   const animeScore = formatAnimeScore(ratings);
