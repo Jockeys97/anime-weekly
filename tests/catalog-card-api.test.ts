@@ -26,6 +26,25 @@ describe('catalog card enrichment', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toEqual({ ratings: { anilistId: 21, anilistScore: 85 }, availability: { match: null, providers: {}, providersUnavailable: false } });
   });
+  it('preserves original-series offers when the sequel has no direct TMDB match', async () => {
+    vi.mocked(getAnime).mockResolvedValue(anime);
+    const seriesWatch = { id: 97525, kind: 'tv' as const, name: 'To Your Eternity', providers: {
+      US: { link: 'https://www.themoviedb.org/tv/97525/watch?locale=US', providers: [{ provider_id: 283, provider_name: 'Crunchyroll', logo_path: null }] },
+    }, providersUnavailable: false };
+    vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: null, ratings: { imdbId: 'tt123', imdbRating: '8.6', imdbSeriesTitle: 'To Your Eternity' }, providers: {}, providersUnavailable: false, seriesWatch });
+    const data = await (await call('21')).json();
+    expect(data.availability).toEqual({ match: null, providers: {}, providersUnavailable: false, seriesWatch });
+    expect(data.ratings).toMatchObject({ anilistId: 21, anilistScore: 85, imdbSeriesTitle: 'To Your Eternity' });
+  });
+  it('retains exact-season offers separately and never caches a failed original-series lookup', async () => {
+    vi.mocked(getAnime).mockResolvedValue(anime);
+    const direct = { US: { link: 'https://example.com/season', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } };
+    const seriesWatch = { id: 43, kind: 'tv' as const, name: 'Example', providers: {}, providersUnavailable: true };
+    vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: { id: 42, kind: 'tv' }, ratings: { imdbRating: '8.6' }, providers: direct, providersUnavailable: false, seriesWatch });
+    const response = await call('21');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect((await response.json()).availability).toEqual({ match: { id: 42, kind: 'tv' }, providers: direct, providersUnavailable: false, seriesWatch });
+  });
   it.each(['bad', '0', '-1', '2.5', '2147483648'])('rejects invalid ID %s before fetching', async id => {
     expect((await call(id)).status).toBe(400);
     expect(getAnime).not.toHaveBeenCalled();
