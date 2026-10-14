@@ -137,7 +137,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "Dieses Produkt verwendet die TMDB-API, wird jedoch nicht von TMDB unterstützt oder zertifiziert.",
     "justwatch": "Streaming-Daten von JustWatch",
-    "omdb": "IMDb-Bewertungen von OMDb",
+    "omdb": "IMDb-Serienbewertungen bereitgestellt von OMDb",
     "anilist": "Anime-Zuordnung und alternative Bewertungen von AniList",
     "mal": "MyAnimeList-Bewertungen über Jikan",
     "note": "Termine und Verfügbarkeit stammen aus den genannten Quellen. Bewertungen werden nicht geschätzt."
@@ -364,6 +364,10 @@
     "episodesSourceUnavailable": "OMDb kann die Bewertungen der neuen Folgen noch nicht abrufen. Ein neuer Versuch erfolgt beim nächsten täglichen Update.",
     "episodesQuotaUnavailable": "Das tägliche OMDb-Kontingent ist aufgebraucht. Bereits abgerufene Bewertungen bleiben gespeichert; ein neuer Versuch erfolgt beim nächsten täglichen Update.",
     "episodesAuthenticationUnavailable": "Der OMDb-Schlüssel fehlt oder wurde vom Dienst abgelehnt.",
-    "episodesMetadataUnavailable": "Einige Termine oder Kennungen der Folgen sind noch nicht verfügbar. Eine neue Prüfung erfolgt beim nächsten täglichen Update."
+    "episodesMetadataUnavailable": "Einige Termine oder Kennungen der Folgen sind noch nicht verfügbar. Eine neue Prüfung erfolgt beim nächsten täglichen Update.",
+    "episodesDatasetEmpty": "Für die bereits erschienenen Folgen dieser Woche gibt es noch keine Bewertung in den IMDb-Datensätzen. Eine neue Prüfung erfolgt beim nächsten täglichen Update.",
+    "episodesDatasetUnavailable": "Die IMDb-Datensätze sind vorübergehend nicht verfügbar. Bereits abgerufene Bewertungen bleiben gespeichert; ein neuer Versuch erfolgt beim nächsten täglichen Update.",
+    "datasetAttribution": "Folgenbewertungen aus IMDb-Datensätzen · täglich aktualisiert",
+    "datasetDate": "Daten vom"
   }
 }

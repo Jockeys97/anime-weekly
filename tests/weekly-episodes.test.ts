@@ -2,18 +2,20 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
 vi.mock('../lib/tmdb', () => ({ getQuickWeekData: vi.fn(), getTMDBWeekEpisodes: vi.fn(), getTMDBEpisodeIdentity: vi.fn() }));
-vi.mock('../lib/imdb-episodes', () => ({ EpisodeLookupError: class extends Error { constructor(public reason: string) { super(reason); } }, primeImdbEpisode: vi.fn() }));
+vi.mock('../lib/imdb-datasets', () => ({ primeImdbDatasetEpisodes: vi.fn() }));
+vi.mock('../lib/imdb-episodes', () => ({ primeImdbEpisode: vi.fn() }));
 import { getQuickWeekData, getTMDBWeekEpisodes, getTMDBEpisodeIdentity } from '../lib/tmdb';
-import { primeImdbEpisode, EpisodeLookupError } from '../lib/imdb-episodes';
+import { primeImdbDatasetEpisodes } from '../lib/imdb-datasets';
+import { primeImdbEpisode } from '../lib/imdb-episodes';
 import { primeWeeklyEpisodes } from '../lib/weekly-episode-ratings';
-import { topWeeklyEpisodes, type WeeklyEpisode } from '../lib/weekly-episodes';
+import { topWeeklyEpisodes, EPISODE_COLLECTOR_VERSION, type WeeklyEpisode } from '../lib/weekly-episodes';
 const entry = (id = 1, score = 8, votes = 10): WeeklyEpisode => ({ imdbId: `tt${id}`, seriesId: 1, seriesName: 'Example', poster: null, title: 'Episode', season: 2, episode: id, date: '2026-10-13', score, votes });
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T12:00:00Z'));
   vi.mocked(getQuickWeekData).mockResolvedValue({ status: 'ready', titles: [{ id: 1, kind: 'tv', name: 'Example', poster: null, overview: '', ratings: { imdbRating: '9.9' }, recommendation: null, providers: {}, providersUnavailable: false }] });
-  vi.mocked(getTMDBWeekEpisodes).mockResolvedValue({ episodes: [{ seriesId: 1, season: 4, episode: 60, date: '2026-10-13' }, { seriesId: 1, season: 4, episode: 61, date: '2026-10-16' }], unavailable: false });
+  vi.mocked(getTMDBWeekEpisodes).mockResolvedValue({ episodes: [{ seriesId: 1, season: 4, episode: 60, date: '2026-10-13', title: 'Exact episode' }, { seriesId: 1, season: 4, episode: 61, date: '2026-10-16' }], unavailable: false });
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue({ imdbId: 'tt1', seriesImdbId: 'tt100' });
-  vi.mocked(primeImdbEpisode).mockResolvedValue({ title: 'Exact episode', season: 2, episode: 12, score: 8.7, votes: 20 });
+  vi.mocked(primeImdbDatasetEpisodes).mockResolvedValue({ status: 'ready', ratings: { tt1: { season: 2, episode: 12, score: 8.7, votes: 20 } }, updatedAt: '2026-10-14T12:00:00Z', dataUpdatedAt: '2026-10-14T00:00:00Z' });
 });
 afterEach(() => { vi.useRealTimers(); vi.resetAllMocks(); });
 it('ranks actual episode votes, rejects invalid/out-of-week/future entries and breaks ties by vote count', () => {
@@ -22,77 +24,90 @@ it('ranks actual episode votes, rejects invalid/out-of-week/future entries and b
   expect(entries).toHaveLength(12);
   expect(topWeeklyEpisodes(entries, 'bad')).toEqual([]);
 });
-it('resolves exact episode IDs, skips future releases and uses IMDb numbering even when TMDB differs', async () => {
+it('joins exact episode IDs, skips future releases and uses IMDb numbering even when TMDB differs', async () => {
   const result = await primeWeeklyEpisodes('2026-42');
-  expect(result.entries[0]).toMatchObject({ imdbId: 'tt1', date: '2026-10-13', season: 2, episode: 12, score: 8.7 });
-  expect(result.status).toBe('ready');
+  expect(result.entries[0]).toMatchObject({ imdbId: 'tt1', date: '2026-10-13', title: 'Exact episode', season: 2, episode: 12, score: 8.7, source: 'imdb-datasets' });
+  expect(result).toMatchObject({ status: 'ready', source: 'imdb-datasets', dataUpdatedAt: '2026-10-14T00:00:00Z' });
   expect(getTMDBEpisodeIdentity).toHaveBeenCalledTimes(1);
-  expect(primeImdbEpisode).toHaveBeenCalledExactlyOnceWith('tt1', 'tt100', '2026-10-14', { season: 4, episode: 60 });
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledExactlyOnceWith([{ imdbId: 'tt1', seriesImdbId: 'tt100' }], '2026-10-14');
+  expect(primeImdbEpisode).not.toHaveBeenCalled();
 });
 it('keeps unmapped and unrated episodes out and never borrows a series score', async () => {
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue(null);
   expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
-  expect(primeImdbEpisode).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue({ imdbId: 'tt1', seriesImdbId: 'tt100' });
-  vi.mocked(primeImdbEpisode).mockResolvedValue(null);
+  vi.mocked(primeImdbDatasetEpisodes).mockResolvedValue({ status: 'ready', ratings: {}, updatedAt: '2026-10-14T12:00:00Z' });
   expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
+  expect(primeImdbEpisode).not.toHaveBeenCalled();
 });
-it('preserves previously confirmed episodes and stops vendor requests after quota failure', async () => {
-  vi.mocked(primeImdbEpisode).mockRejectedValue(new EpisodeLookupError('quota'));
+it('preserves previously confirmed episodes during a dataset failure and reuses the daily attempt', async () => {
+  vi.mocked(primeImdbDatasetEpisodes).mockResolvedValue({ status: 'unavailable', ratings: {}, updatedAt: '2026-10-14T12:00:00Z' });
   const result = await primeWeeklyEpisodes('2026-42', { entries: [entry()], status: 'ready' });
   expect(result.entries).toEqual([entry()]);
-  expect(result.status).toBe('partial');
-  expect(primeImdbEpisode).toHaveBeenCalledTimes(1);
+  expect(result).toMatchObject({ status: 'partial', reason: 'source', source: 'imdb-datasets' });
+  expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledTimes(1);
 });
-
-it.each(['ready', 'partial', 'unavailable'] as const)('reuses a completed daily attempt (%s) without making any upstream calls', async status => {
-  const previous = { entries: [entry()], status, collectorVersion: 2, updatedAt: '2026-10-14T06:00:00Z' };
+it.each(['ready', 'partial', 'unavailable'] as const)('reuses a completed daily attempt (%s) without upstream calls', async status => {
+  const previous = { entries: [entry()], status, collectorVersion: EPISODE_COLLECTOR_VERSION, updatedAt: '2026-10-14T06:00:00Z' };
   expect(await primeWeeklyEpisodes('2026-42', previous)).toBe(previous);
   expect(getQuickWeekData).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
   expect(primeImdbEpisode).not.toHaveBeenCalled();
 });
 it('refreshes the following day instead of permanently freezing an error', async () => {
-  const previous = { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-13T06:00:00Z' };
+  const previous = { entries: [], status: 'unavailable' as const, collectorVersion: EPISODE_COLLECTOR_VERSION, updatedAt: '2026-10-13T06:00:00Z' };
   expect((await primeWeeklyEpisodes('2026-42', previous)).status).toBe('ready');
-  expect(primeImdbEpisode).toHaveBeenCalledTimes(1);
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledTimes(1);
 });
-
-it('caps candidates at thirty to allow at most sixty HTTP calls per daily run', async () => {
-  vi.mocked(getTMDBWeekEpisodes).mockResolvedValue({ unavailable: false, episodes: Array.from({ length: 70 }, (_, index) => ({ seriesId: 1, season: 1, episode: index + 1, date: '2026-10-13' })) });
-  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: `tt${date.episode}`, seriesImdbId: 'tt100' }));
+it('caps exact targets at sixty even across concurrent metadata workers', async () => {
+  const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
+  vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: Array.from({ length: 4 }, (_, index) => ({ ...catalog.titles[0], id: index + 1 })) });
+  vi.mocked(getTMDBWeekEpisodes).mockImplementation(async id => ({ unavailable: false, episodes: Array.from({ length: 20 }, (_, index) => ({ seriesId: id, season: 1, episode: index + 1, date: '2026-10-13' })) }));
+  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: `tt${date.seriesId * 100 + date.episode}`, seriesImdbId: 'tt100' }));
+  vi.mocked(primeImdbDatasetEpisodes).mockImplementation(async targets => ({ status: 'ready', ratings: Object.fromEntries(targets.map(target => [target.imdbId, { score: 8.7, votes: 20, season: 1, episode: 1 }])), updatedAt: '2026-10-14T12:00:00Z' }));
   const result = await primeWeeklyEpisodes('2026-42');
-  expect(primeImdbEpisode).toHaveBeenCalledTimes(30);
-  expect(result.entries).toHaveLength(30);
+  expect(vi.mocked(primeImdbDatasetEpisodes).mock.calls[0][0]).toHaveLength(60);
+  expect(result.entries).toHaveLength(5);
   expect(result.status).toBe('partial');
-});
-
-it('repairs a pre-fix failure once and then reuses its new daily snapshot', async () => {
-  const result = await primeWeeklyEpisodes('2026-42', { entries: [], status: 'unavailable', updatedAt: '2026-10-14T06:00:00Z' });
-  expect(result).toMatchObject({ status: 'ready', collectorVersion: 2, coverage: { rated: 1 } });
-  expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
-  expect(primeImdbEpisode).toHaveBeenCalledTimes(1);
-});
-it('reports a source outage separately from a quota failure', async () => {
-  vi.mocked(primeImdbEpisode).mockRejectedValue(new EpisodeLookupError('source'));
-  expect(await primeWeeklyEpisodes('2026-42')).toMatchObject({ status: 'unavailable', reason: 'source' });
-  vi.mocked(primeImdbEpisode).mockRejectedValue(new EpisodeLookupError('quota'));
-  expect(await primeWeeklyEpisodes('2026-42')).toMatchObject({ status: 'unavailable', reason: 'quota' });
-});
-
-it('saves discovery failure as a daily attempt rather than throwing and repeatedly retrying', async () => {
-  vi.mocked(getQuickWeekData).mockRejectedValue(new Error('timeout'));
-  const result = await primeWeeklyEpisodes('2026-42');
-  expect(result).toMatchObject({ status: 'unavailable', reason: 'metadata', collectorVersion: 2 });
-  expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
-  expect(getQuickWeekData).toHaveBeenCalledTimes(1);
   expect(primeImdbEpisode).not.toHaveBeenCalled();
 });
-
-it('keeps a quota failure visible even when another in-flight lookup reports a source error', async () => {
+it('migrates an OMDb snapshot once and then reuses the new daily dataset snapshot', async () => {
+  const result = await primeWeeklyEpisodes('2026-42', { entries: [], status: 'unavailable', collectorVersion: 2, updatedAt: '2026-10-14T06:00:00Z' });
+  expect(result).toMatchObject({ status: 'ready', collectorVersion: EPISODE_COLLECTOR_VERSION, coverage: { rated: 1 } });
+  expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledTimes(1);
+});
+it('saves discovery failure as a daily attempt and keeps confirmed ratings intact', async () => {
+  vi.mocked(getQuickWeekData).mockRejectedValue(new Error('timeout'));
+  const result = await primeWeeklyEpisodes('2026-42', { entries: [entry()], status: 'ready' });
+  expect(result).toMatchObject({ entries: [entry()], status: 'partial', reason: 'metadata', collectorVersion: EPISODE_COLLECTOR_VERSION });
+  expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
+  expect(getQuickWeekData).toHaveBeenCalledTimes(1);
+  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+});
+it('excludes movies and does not manufacture a weekday or episode identity for an unmapped title', async () => {
   const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
-  vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: [...catalog.titles, { ...catalog.titles[0], id: 2 }] });
-  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: `tt${date.seriesId}`, seriesImdbId: 'tt100' }));
+  vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: [{ ...catalog.titles[0], kind: 'movie' }] });
+  expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
+  expect(getTMDBWeekEpisodes).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+});
+it('does not choose between conflicting parent identities for one IMDb episode', async () => {
+  const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
+  vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: [{ ...catalog.titles[0] }, { ...catalog.titles[0], id: 2 }] });
   vi.mocked(getTMDBWeekEpisodes).mockImplementation(async id => ({ episodes: [{ seriesId: id, season: 1, episode: 1, date: '2026-10-13' }], unavailable: false }));
-  vi.mocked(primeImdbEpisode).mockRejectedValueOnce(new EpisodeLookupError('quota')).mockRejectedValueOnce(new EpisodeLookupError('source'));
-  expect(await primeWeeklyEpisodes('2026-42')).toMatchObject({ status: 'unavailable', reason: 'quota' });
+  vi.mocked(getTMDBEpisodeIdentity).mockImplementation(async date => ({ imdbId: 'tt1', seriesImdbId: `tt${date.seriesId}` }));
+  const result = await primeWeeklyEpisodes('2026-42');
+  expect(result.entries).toEqual([]);
+  expect(result.reason).toBe('metadata');
+  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+});
+
+it('drops a formerly rated candidate when a complete daily dataset can no longer verify its vote', async () => {
+  vi.mocked(primeImdbDatasetEpisodes).mockResolvedValue({ status: 'ready', ratings: {}, updatedAt: '2026-10-14T12:00:00Z' });
+  const result = await primeWeeklyEpisodes('2026-42', { entries: [entry()], status: 'ready' });
+  expect(result.entries).toEqual([]);
+  expect(result.coverage?.unrated).toBe(1);
 });

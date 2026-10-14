@@ -137,7 +137,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "Este produto utiliza a API TMDB, mas não é aprovado nem certificado pelo TMDB.",
     "justwatch": "Dados de streaming fornecidos pelo JustWatch",
-    "omdb": "Avaliações IMDb fornecidas pelo OMDb",
+    "omdb": "Avaliações IMDb de séries fornecidas pelo OMDb",
     "anilist": "Identificação de anime e pontuações alternativas do AniList",
     "mal": "Pontuações MyAnimeList via Jikan",
     "note": "As datas e a disponibilidade vêm das fontes indicadas. Nenhuma avaliação é estimada."
@@ -364,6 +364,10 @@
     "episodesSourceUnavailable": "O OMDb ainda não consegue obter as avaliações dos novos episódios. Nova tentativa na próxima atualização diária.",
     "episodesQuotaUnavailable": "A quota diária do OMDb foi atingida. As avaliações obtidas continuam guardadas; nova tentativa na próxima atualização diária.",
     "episodesAuthenticationUnavailable": "A chave do OMDb não está configurada ou foi rejeitada pelo serviço.",
-    "episodesMetadataUnavailable": "Algumas datas ou identificadores de episódios ainda não estão disponíveis. Nova verificação na próxima atualização diária."
+    "episodesMetadataUnavailable": "Algumas datas ou identificadores de episódios ainda não estão disponíveis. Nova verificação na próxima atualização diária.",
+    "episodesDatasetEmpty": "Nenhum episódio lançado esta semana tem ainda uma avaliação nos datasets do IMDb. Nova verificação na próxima atualização diária.",
+    "episodesDatasetUnavailable": "Os datasets do IMDb estão temporariamente indisponíveis. As avaliações obtidas continuam guardadas; nova tentativa na próxima atualização diária.",
+    "datasetAttribution": "Avaliações dos episódios dos datasets do IMDb · atualização diária",
+    "datasetDate": "Dados de"
   }
 }
