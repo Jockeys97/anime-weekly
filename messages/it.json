@@ -201,7 +201,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "Questo prodotto utilizza l’API TMDB ma non è approvato né certificato da TMDB.",
     "justwatch": "Dati streaming forniti da JustWatch",
-    "omdb": "Voti IMDb delle serie forniti da OMDb",
+    "omdb": "Voti IMDb: dataset IMDb giornalieri · OMDb come alternativa",
     "anilist": "Abbinamenti anime e voti alternativi di AniList",
     "mal": "Voti MyAnimeList tramite Jikan",
     "note": "Date e disponibilità provengono dalle fonti indicate. Nessun voto è stimato."

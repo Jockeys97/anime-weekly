@@ -1,3 +1,4 @@
+import { readSharedImdbScore, hasImdbScore } from '@/lib/imdb';
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
 import { after } from 'next/server';
@@ -46,6 +47,12 @@ export async function GET(request: Request) {
   // Public read-only mode: serve the cron-written snapshot from this same
   // bundle (unstable_cache entries are only reliably readable here). Never
   // calls rating APIs; a cold cache returns an empty snapshot.
+  const imdb = new URL(request.url).searchParams.get('imdb');
+  if (imdb !== null) {
+    if (!/^tt\d+$/.test(imdb) || imdb.length > 32) return Response.json({ error: 'invalid IMDb ID' }, { status: 400 });
+    const rating = await readSharedImdbScore(imdb);
+    return Response.json(rating, { headers: { 'cache-control': hasImdbScore(rating) ? 'public, max-age=60, s-maxage=300' : 'no-store' } });
+  }
   const episodeWeek = new URL(request.url).searchParams.get('episodes');
   if (episodeWeek !== null) {
     if (!parseWeek(episodeWeek)) return Response.json({ error: 'invalid week' }, { status: 400 });

@@ -1,5 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
+import { readImdbDatasetRating } from '@/lib/imdb-rating-index';
+import { readRatingsStore } from '@/lib/ratings-store';
 import { CACHE_SECONDS } from '@/lib/config';
 import { formatWeek, isoWeek } from '@/lib/week';
 export const IMDB_CACHE_TAG = 'weekly-imdb-scores';
@@ -20,10 +22,12 @@ class UncachedImdb extends Error {
 // On a reader cache miss, throwing prevents an empty/error value from being
 // persisted and, crucially, never makes an OMDb request. Only the cron can fill it.
 function scoreCache(week: string, canPopulate: boolean) {
-  return unstable_cache(async (id: string): Promise<Ratings> => {
+  const loader = async (id: string): Promise<Ratings> => {
     if (!canPopulate) throw new UncachedImdb({ imdbId: id, imdbStatus: 'unavailable' });
     return fetchScore(id);
-  }, ['imdb-weekly-valid-v2', week], { revalidate: CACHE_SECONDS, tags: [IMDB_CACHE_TAG, `${IMDB_CACHE_TAG}:${week}`] });
+  };
+  Object.defineProperty(loader, 'toString', { value: () => 'imdb-weekly-score-loader-v2' });
+  return unstable_cache(loader, ['imdb-weekly-valid-v2', week], { revalidate: CACHE_SECONDS, tags: [IMDB_CACHE_TAG, `${IMDB_CACHE_TAG}:${week}`] });
 }
 async function fetchScore(id: string): Promise<Ratings> {
   const key = process.env.OMDB_API_KEY?.trim();
@@ -73,14 +77,53 @@ function accessScore(id: string, week: string, canPopulate: boolean, fresh = fal
   const key = `${week}:${id}:${canPopulate}:${fresh}`;
   const existing = pending.get(key);
   if (existing) return existing;
-  const promise = (fresh && canPopulate ? fetchScore(id) : scoreCache(week, canPopulate)(id)).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
+  const promise = (async () => {
+    if (canPopulate) {
+      const daily = await readImdbDatasetRating(id);
+      if (daily) return daily;
+    }
+    return fresh && canPopulate ? fetchScore(id) : scoreCache(week, canPopulate)(id);
+  })().catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
     .finally(() => { pending.delete(key); });
   pending.set(key, promise);
   return promise;
 }
 // All visitor paths are read-only, including retries and catalog/detail lookups.
-export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
+export async function readSharedImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
+  if (!/^tt\d+$/.test(id)) return { imdbStatus: 'unmatched' };
+  const daily = await readImdbDatasetRating(id);
+  if (daily) return daily;
+  const stored = (await readRatingsStore()).ratings[`imdb:${id}`];
+  if (stored && hasImdbScore(stored.values) && Date.now() - stored.fetchedAt <= 120 * 86400000) {
+    return { ...stored.values, imdbId: id, imdbStatus: 'ready' };
+  }
   return accessScore(id, week, false);
+}
+const reads = new Map<string, Promise<Ratings>>();
+export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
+  if (!/^tt\d+$/.test(id)) return Promise.resolve({ imdbStatus: 'unmatched' });
+  const key = `${week}:${id}`;
+  const pending = reads.get(key);
+  if (pending) return pending;
+  const task = (async () => {
+    const local = await readSharedImdbScore(id, week);
+    if (hasImdbScore(local)) return local;
+    // Read through the collector's bundle as well: deployments can isolate
+    // Data Cache entries by route. This endpoint is strictly cache-only.
+    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    if (host && process.env.VERCEL_ENV === 'production') {
+      try {
+        const response = await fetch(`https://${host}/api/revalidate?imdb=${id}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+        if (response.ok) {
+          const result = await response.json() as Ratings;
+          if (result.imdbId === id && hasImdbScore(result)) return { ...result, imdbStatus: 'ready' as const };
+        }
+      } catch { /* Retain the local result without a vendor request. */ }
+    }
+    return local;
+  })().finally(() => { reads.delete(key); });
+  reads.set(key, task);
+  return task;
 }
 // Called only by the authenticated weekly cron. Successful values dedupe across
 // the week's titles; errors throw inside unstable_cache and are never persisted.
