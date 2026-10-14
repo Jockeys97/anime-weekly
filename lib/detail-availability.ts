@@ -1,5 +1,6 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
+import { hasImdbScore } from '@/lib/imdb';
 import { CACHE_TAG } from '@/lib/config';
 import { animeName, getAnime, getSeasonFamily, type AniListAnime } from '@/lib/anilist';
 import { normalizeTitle } from '@/lib/anime-match';
@@ -11,7 +12,8 @@ const seriesFormats = ['TV', 'TV_SHORT', 'ONA'];
 export function seriesBaseTitle(title: string): string {
   let base = title.normalize("NFKC").trim();
   for (let i = 0; i < 4; i++) {
-    const next = base.replace(/\s*(?:[-:–]\s*)?(?:(?:the\s+)?final\s+season|season\s*\d+|\d+(?:st|nd|rd|th)?\s+season|part\s*\.?\s*\d+|第\s*\d+\s*(?:期|クール))\s*$/iu, '').trim();
+    const arcBase = base.replace(/:\s*[^:]+(?:-hen|\s+arc)$/iu, '').trim();
+    const next = arcBase.replace(/\s*(?:[-:–]\s*)?(?:(?:the\s+)?final\s+season|season\s*\d+|[2-9]\s*(?:nd|rd|th)?\s*(?:cour)|\d+(?:st|nd|rd|th)?\s+season|part\s*\.?\s*\d+|(?:\s+(?:II|III|IV|V|VI|VII|VIII|IX|X|[2-9]))|第\s*\d+\s*(?:期|クール))\s*$/iu, '').trim();
     if (next === base) break;
     base = next;
   }
@@ -52,15 +54,15 @@ export interface DetailAvailability extends AnimeAvailability {
   seriesWatch?: { id: number; kind: 'tv'; name: string; providers: AnimeAvailability['providers']; providersUnavailable: boolean };
 }
 
-export async function getDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
+export async function getDetailAvailability(anime: AniListAnime, fresh = false): Promise<DetailAvailability> {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const kind = seriesFormats.includes(anime.format || '') ? 'tv' : anime.format === 'MOVIE' ? 'movie' : undefined;
   const originalLookup = findSeasonSeries(anime).then(async series => series ? {
     series,
-    original: await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined, 'tv'),
+    original: await getAnimeAvailability(titlesOf(series), series.startDate?.year ?? undefined, 'tv', fresh),
   } : null);
   const [direct, resolved] = await Promise.all([
-    getAnimeAvailability(titlesOf(anime), year, kind),
+    getAnimeAvailability(titlesOf(anime), year, kind, fresh),
     originalLookup,
   ]);
   if (!resolved) return direct;
@@ -69,7 +71,7 @@ export async function getDetailAvailability(anime: AniListAnime): Promise<Detail
   // when the chosen country has no direct offers, without claiming season coverage.
   return {
     ...direct,
-    ratings: !direct.ratings.imdbId && original.ratings.imdbId
+    ratings: (!direct.ratings.imdbId || !hasImdbScore(direct.ratings)) && hasImdbScore(original.ratings)
       ? { ...direct.ratings, ...original.ratings, imdbSeriesTitle: animeName(series) }
       : direct.ratings,
     ...(original.match?.kind === 'tv' && original.match.id !== direct.match?.id ? {
@@ -86,9 +88,10 @@ class UncachedAvailability extends Error {
 const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
   const result = await getDetailAvailability(anime);
   if ((!result.match && !result.seriesWatch) || result.providersUnavailable || result.seriesWatch?.providersUnavailable
-    || (result.ratings.imdbId && !result.ratings.imdbRating)) throw new UncachedAvailability(result);
+    || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured'
+    || (result.ratings.imdbId && !hasImdbScore(result.ratings))) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v2-batched-series'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v4-expanded-series'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }

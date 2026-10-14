@@ -1,26 +1,31 @@
-import { getRequestLocale } from '@/lib/request-locale';
+import Link from 'next/link';
+import { Suspense } from 'react';
 import { connection } from 'next/server';
+import { getRequestLocale } from '@/lib/request-locale';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { CatalogCard } from '@/components/CatalogCard';
-import { SearchBox } from '@/components/SearchBox';
-import { searchAnime } from '@/lib/anilist';
-import { getDictionary } from '@/lib/i18n';
-
+import { AnimeSearchFilters } from '@/components/AnimeSearchFilters';
+import { discoverAnime } from '@/lib/anilist';
+import { parseAnimeFilters, searchHref, type AnimeFilters, type SearchParams } from '@/lib/anime-search';
+import { getDictionary, type Locale } from '@/lib/i18n';
 export const revalidate = 86400;
-
-export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await connection();
-  const { q } = await searchParams;
-  const query = (typeof q === 'string' ? q : '').trim().slice(0, 200);
+  const filters = parseAnimeFilters(await searchParams);
   const locale = await getRequestLocale();
-  const d = getDictionary(locale).catalog;
-  const results = query ? await searchAnime(query) : [];
-  return <main className="catalog-page" lang={locale}>
-    <h1>{d.searchTitle}</h1>
-    <SearchBox locale={locale} query={query} id="catalog-search" />
-    {query ? <>
-      <h2 className="search-results-heading">{d.searchResults} «{query}»</h2>
-      {results.length ? <><StreamingCountrySelector locale={locale} /><div className="anime-grid">{results.map(anime => <CatalogCard key={anime.id} anime={anime} locale={locale} />)}</div></> : <div className="empty-state" role="status"><p>{d.noResults}</p></div>}
-    </> : <p className="catalog-intro">{d.searchPrompt}</p>}
+  const d = getDictionary(locale);
+  return <main className="catalog-page explore-page" lang={locale}>
+    <header className="explore-heading"><p className="eyebrow">{d.explore.eyebrow}</p><h1>{d.catalog.searchTitle}</h1><p className="catalog-intro">{d.explore.intro}</p></header>
+    <AnimeSearchFilters key={searchHref(filters)} filters={filters} locale={locale} />
+    <Suspense key={`${locale}:${searchHref(filters)}`} fallback={<p className="detail-loading" role="status">{d.explore.loading}</p>}><SearchResults filters={filters} locale={locale} /></Suspense>
   </main>;
+}
+async function SearchResults({ filters, locale }: { filters: AnimeFilters; locale: Locale }) {
+  const data = await discoverAnime(filters);
+  const d = getDictionary(locale);
+  return <section aria-labelledby="search-results-heading">
+    <div className="explore-results-heading"><h2 id="search-results-heading">{filters.q ? `${d.catalog.searchResults} «${filters.q}»` : d.explore.discover}</h2><span>{d.catalog.page} {filters.page} · {data.media.length} {d.explore.results}</span></div>
+    {data.unavailable ? <div className="empty-state" role="status"><p>{d.explore.error}</p><Link href={searchHref(filters)} prefetch={false}>{d.explore.retry}</Link></div> : data.media.length ? <><StreamingCountrySelector locale={locale} /><div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} locale={locale} />)}</div></> : <div className="empty-state" role="status"><h3>{d.catalog.noResults}</h3><p>{d.explore.emptyHint}</p><Link href="/search" prefetch={false}>{d.explore.reset}</Link></div>}
+    {!data.unavailable && <nav className="catalog-pagination" aria-label={d.catalog.pagination}>{filters.page > 1 && <Link href={searchHref(filters, filters.page - 1)} prefetch={false}>← {d.catalog.previousPage}</Link>}<span>{d.catalog.page} {filters.page}</span>{data.pageInfo.hasNextPage && filters.page < 500 && <Link href={searchHref(filters, filters.page + 1)} prefetch={false}>{d.catalog.nextPage} →</Link>}</nav>}
+  </section>;
 }

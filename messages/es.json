@@ -40,6 +40,11 @@
     "providersError": "No se pudo cargar la disponibilidad."
   },
   "title": {
+    "imdbError": "No recuperado",
+    "imdbUnavailable": "No disponible",
+    "imdbErrorDetail": "No se pudo recuperar la puntuación. Vuelve a intentarlo.",
+    "imdbUnavailableDetail": "No hay puntuación IMDb disponible para este título.",
+    "imdbUnmatchedDetail": "No hay una coincidencia IMDb confirmada para este título.",
     "imdb": "IMDb",
     "animeScore": "Puntuación anime",
     "votes": "Votos IMDb",
@@ -124,7 +129,8 @@
     "loadingAnime": "Cargando los detalles…",
     "loadingRatings": "Cargando las valoraciones…",
     "loadingAvailability": "Cargando la disponibilidad…",
-    "enrichmentUnavailable": "Los votos y las plataformas no están disponibles temporalmente."
+    "enrichmentUnavailable": "Los votos y las plataformas no están disponibles temporalmente.",
+    "imdbMissing": "Valoración IMDb no disponible para este título."
   },
   "footer": {
     "tagline": "Una nueva semana. Una nueva historia.",
@@ -225,5 +231,57 @@
     "HK": "RAE de Hong Kong (China)",
     "SG": "Singapur",
     "ZA": "Sudáfrica"
+  },
+  "explore": {
+    "eyebrow": "EXPLORA EL CATÁLOGO",
+    "intro": "Encuentra tu próximo anime por título, género, temporada o valoración.",
+    "optionalTitle": "El título es opcional. Combina filtros para descubrir algo nuevo.",
+    "apply": "Buscar anime",
+    "filters": "Refinar búsqueda",
+    "genre": "Género",
+    "year": "Año de temporada",
+    "anyYear": "Cualquier año",
+    "allGenres": "Todos los géneros",
+    "allSeasons": "Todas las temporadas",
+    "allFormats": "Todos los formatos",
+    "allStatuses": "Todos los estados",
+    "minScore": "Valoración mínima",
+    "anyScore": "Cualquier valoración",
+    "sort": "Ordenar por",
+    "reset": "Borrar filtros",
+    "scoreHint": "El filtro utiliza la media de AniList, convertida a una escala de 10 puntos.",
+    "discover": "Descubrir anime",
+    "results": "resultados en esta página",
+    "loading": "Buscando anime…",
+    "error": "El catálogo no está disponible temporalmente. Se han conservado los filtros.",
+    "retry": "Reintentar",
+    "emptyHint": "Prueba menos filtros o un título diferente.",
+    "sorts": {
+      "relevance": "Relevancia",
+      "popular": "Más populares",
+      "score": "Mayor valoración",
+      "newest": "Estrenos recientes",
+      "trending": "Tendencias"
+    },
+    "genres": {
+      "Action": "Acción",
+      "Adventure": "Aventura",
+      "Comedy": "Comedia",
+      "Drama": "Drama",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasía",
+      "Horror": "Terror",
+      "Mahou Shoujo": "Chicas mágicas",
+      "Mecha": "Mecha",
+      "Music": "Música",
+      "Mystery": "Misterio",
+      "Psychological": "Psicológico",
+      "Romance": "Romance",
+      "Sci-Fi": "Ciencia ficción",
+      "Slice of Life": "Vida cotidiana",
+      "Sports": "Deportes",
+      "Supernatural": "Sobrenatural",
+      "Thriller": "Suspense"
+    }
   }
 }

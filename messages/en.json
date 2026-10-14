@@ -45,6 +45,11 @@
     "providersError": "Streaming availability could not be loaded."
   },
   "title": {
+    "imdbError": "Not loaded",
+    "imdbUnavailable": "Unavailable",
+    "imdbErrorDetail": "Could not retrieve the score. Try again.",
+    "imdbUnavailableDetail": "No IMDb score is currently available for this title.",
+    "imdbUnmatchedDetail": "No confirmed IMDb match for this title.",
     "imdb": "IMDb",
     "animeScore": "Anime score",
     "votes": "IMDb votes",
@@ -197,7 +202,8 @@
     "loadingAnime": "Loading anime details…",
     "loadingRatings": "Loading ratings…",
     "loadingAvailability": "Loading streaming availability…",
-    "enrichmentUnavailable": "Ratings and streaming services are temporarily unavailable."
+    "enrichmentUnavailable": "Ratings and streaming services are temporarily unavailable.",
+    "imdbMissing": "IMDb rating unavailable for this title."
   },
   "trailer": {
     "heading": "Trailer",
@@ -231,5 +237,57 @@
     "loadingSynopsis": "Loading translated synopsis…",
     "sourceSynopsis": "Synopsis in its original language",
     "machineTranslation": "Automatic translation"
+  },
+  "explore": {
+    "eyebrow": "EXPLORE THE CATALOG",
+    "intro": "Find your next anime by title, genre, season or score.",
+    "optionalTitle": "A title is optional. Combine filters to discover something new.",
+    "apply": "Find anime",
+    "filters": "Refine your search",
+    "genre": "Genre",
+    "year": "Season year",
+    "anyYear": "Any year",
+    "allGenres": "All genres",
+    "allSeasons": "All seasons",
+    "allFormats": "All formats",
+    "allStatuses": "All statuses",
+    "minScore": "Minimum score",
+    "anyScore": "Any score",
+    "sort": "Sort by",
+    "reset": "Clear filters",
+    "scoreHint": "Score filter uses the AniList average, converted to a 10-point scale.",
+    "discover": "Discover anime",
+    "results": "results on this page",
+    "loading": "Finding anime…",
+    "error": "The catalog is temporarily unavailable. Your filters have been preserved.",
+    "retry": "Try again",
+    "emptyHint": "Try fewer filters or a different title.",
+    "sorts": {
+      "relevance": "Relevance",
+      "popular": "Most popular",
+      "score": "Highest score",
+      "newest": "Newest releases",
+      "trending": "Trending"
+    },
+    "genres": {
+      "Action": "Action",
+      "Adventure": "Adventure",
+      "Comedy": "Comedy",
+      "Drama": "Drama",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasy",
+      "Horror": "Horror",
+      "Mahou Shoujo": "Mahou Shoujo",
+      "Mecha": "Mecha",
+      "Music": "Music",
+      "Mystery": "Mystery",
+      "Psychological": "Psychological",
+      "Romance": "Romance",
+      "Sci-Fi": "Sci-Fi",
+      "Slice of Life": "Slice of Life",
+      "Sports": "Sports",
+      "Supernatural": "Supernatural",
+      "Thriller": "Thriller"
+    }
   }
 }

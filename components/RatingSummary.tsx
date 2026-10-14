@@ -1,5 +1,6 @@
+'use client';
 import Image from 'next/image';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { formatAnimeScore, formatMembers, formatRating, formatVotes, ratingSourceLink, type Ratings } from '@/lib/ratings';
 
@@ -14,12 +15,35 @@ function SourceTile({ source, name, href, title, children, locale }: {
   </div>;
 }
 
-export function ImdbRatingTile({ ratings, title, locale, pending = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean }) {
+export interface ImdbLookup { tmdbId: number; kind: 'tv' | 'movie' }
+export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; lookup?: ImdbLookup | null }) {
   const d = getDictionary(locale);
-  return <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', ratings)} title={ratings.imdbSeriesTitle || title} locale={locale}>
-    <dd className="rating-value">{pending ? '…' : formatRating(ratings.imdbRating)}{!pending && formatRating(ratings.imdbRating) !== 'n/a' && <span className="rating-scale"> / 10</span>}</dd>
-    <dd className="rating-detail" role={pending ? 'status' : undefined}>{pending ? d.catalog.loadingRatings : <>{formatVotes(ratings.imdbVotes)} {d.title.voteCount}</>}</dd>
-    {ratings.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {ratings.imdbSeriesTitle}</dd>}
+  const query = ratings.imdbId ? new URLSearchParams({ imdb: ratings.imdbId }).toString()
+    : lookup ? new URLSearchParams({ tmdb: String(lookup.tmdbId), kind: lookup.kind }).toString()
+      : lookup !== null && ratings.anilistId ? new URLSearchParams({ anilist: String(ratings.anilistId) }).toString() : '';
+  const [retried, setRetried] = useState<{ query: string; ratings: Ratings } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const current = retried?.query === query ? retried.ratings : ratings;
+  const waiting = pending || busy;
+  const value = formatRating(current.imdbRating);
+  const ready = value !== 'n/a';
+  const error = current.imdbStatus === 'error' || current.imdbStatus === 'unconfigured';
+  const retry = async () => {
+    if (!query) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/imdb?${query}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+      if (!response.ok) throw new Error('IMDb unavailable');
+      const result = await response.json() as Ratings;
+      setRetried({ query, ratings: { ...ratings, ...result } });
+    } catch { setRetried({ query, ratings: { ...ratings, imdbStatus: 'error' } }); }
+    finally { setBusy(false); }
+  };
+  return <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', current)} title={current.imdbSeriesTitle || title} locale={locale}>
+    <dd className="rating-value">{waiting ? '…' : ready ? value : error ? d.title.imdbError : d.title.imdbUnavailable}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : ready ? <>{formatVotes(current.imdbVotes)} {d.title.voteCount}</> : error ? d.title.imdbErrorDetail : current.imdbStatus === 'unmatched' ? d.title.imdbUnmatchedDetail : d.title.imdbUnavailableDetail}</dd>
+    {!waiting && !ready && query && <dd className="rating-detail"><button type="button" onClick={retry}>{d.error.retry}</button></dd>}
+    {current.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {current.imdbSeriesTitle}</dd>}
   </SourceTile>;
 }
 
@@ -36,9 +60,9 @@ export function AnimeRatingTile({ ratings, title, locale, pending = false }: { r
   </SourceTile>;
 }
 
-export function RatingSummary({ ratings, title, locale, pendingImdb = false, pendingAnime = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean; pendingAnime?: boolean }) {
+export function RatingSummary({ ratings, title, locale, pendingImdb = false, pendingAnime = false, imdbLookup }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean; pendingAnime?: boolean; imdbLookup?: ImdbLookup | null }) {
   return <dl className="ratings">
-    <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} />
+    <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} lookup={imdbLookup} />
     <AnimeRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} />
   </dl>;
 }
