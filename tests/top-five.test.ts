@@ -14,8 +14,7 @@ it('ranks the best five stably without mutating the input', () => {
   expect(titles.map(title => title.id)).toEqual([0, 1, 2, 3, 4, 5, 6]);
   expect(topFive([{ ratings: {} }])).toEqual([]);
 });
-it('OG rankings require cached names and fall back for cold or older snapshots', () => {
-  expect(snapshotTopFive({ titles: {}, events: [] })).toEqual([]);
-  expect(snapshotTopFive({ titles: { 'tv:1': { malScore: 9 } }, events: [] })).toEqual([]);
-  expect(snapshotTopFive({ titles: { 'tv:1': { malScore: 9 } }, names: { 'tv:1': 'Example' }, events: [] })[0].name).toBe('Example');
+it('OG rankings never substitute cached series scores for episode votes', () => {
+  expect(snapshotTopFive({ titles: {}, events: [] }, '2026-42')).toEqual([]);
+  expect(snapshotTopFive({ titles: { 'tv:1': { malScore: 9, imdbRating: '9.9' } }, names: { 'tv:1': 'Example' }, events: [] }, '2026-42')).toEqual([]);
 });

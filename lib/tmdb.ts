@@ -268,6 +268,17 @@ export async function getTMDBWeekEpisodes(id: number, week: ISOWeek): Promise<{ 
   } catch { return { episodes: [], unavailable: true }; }
 }
 
+// Resolve the exact episode identity; IMDb/TMDB season numbers are not interchangeable.
+export async function getTMDBEpisodeIdentity(episode: EpisodeDate): Promise<{ imdbId: string; seriesImdbId: string } | null> {
+  if (!Number.isSafeInteger(episode.seriesId) || episode.seriesId <= 0 || !Number.isSafeInteger(episode.season) || episode.season < 0 || !Number.isSafeInteger(episode.episode) || episode.episode <= 0) return null;
+  const [detail, series] = await Promise.all([
+    tmdb<{ imdb_id?: string | null }>(`tv/${episode.seriesId}/season/${episode.season}/episode/${episode.episode}/external_ids`, {}, 86400),
+    tmdb<{ imdb_id?: string | null }>(`tv/${episode.seriesId}/external_ids`, {}, 86400),
+  ]);
+  return /^tt\d+$/.test(detail.imdb_id ?? '') && /^tt\d+$/.test(series.imdb_id ?? '')
+    ? { imdbId: detail.imdb_id!, seriesImdbId: series.imdb_id! } : null;
+}
+
 export interface TMDBTextTranslation { iso_639_1: string; iso_3166_1?: string; name?: string; overview?: string }
 export async function getTMDBTextTranslations(id: number, kind: Kind): Promise<TMDBTextTranslation[]> {
   try {

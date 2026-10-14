@@ -345,8 +345,8 @@
     "weekLabel": "Your weekly calendar"
   },
   "features": {
-    "topFive": "Top 5 this week",
-    "topFiveDescription": "The highest-rated picks, with scores on a 10-point scale.",
+    "topFive": "Top 5 episodes this week",
+    "topFiveDescription": "Episodes released this week with the highest IMDb ratings. Updated daily.",
     "share": "Share",
     "copied": "Link copied",
     "copyLink": "Copy link",
@@ -360,6 +360,11 @@
     "all": "All",
     "noScores": "No cached scores available.",
     "noMatches": "No titles match these filters.",
-    "storageError": "Unable to save your list in this browser."
+    "storageError": "Unable to save your list in this browser.",
+    "episodeLabel": "Season {season} · Episode {episode}",
+    "noRatedEpisodes": "No episode released this week has a verified IMDb rating available yet.",
+    "episodesPending": "This week’s episode ranking has not been updated yet.",
+    "episodesUnavailable": "IMDb episode ratings are temporarily unavailable.",
+    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet."
   }
 }
