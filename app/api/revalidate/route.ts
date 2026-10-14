@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
 import { primeWeeklyRatings, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
@@ -12,7 +12,6 @@ export async function GET(request: Request) {
   const expected = Buffer.from(`Bearer ${secret}`);
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
   revalidateTag(CACHE_TAG, { expire: 0 });
-  revalidatePath('/');
   const week = isoWeek(new Date());
   let populated = 0;
   let unavailable = 0;
