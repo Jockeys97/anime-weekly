@@ -15,7 +15,8 @@ it('routes a missing regional season offer to the original series and labels its
   expect(html).toContain('Verifica che includano la stagione selezionata');
   expect(html).toContain('id=1429&amp;region=IT');
   expect(html).not.toContain('id=99');
-  expect(html).toContain('<details class="streaming"><summary>');
+  expect(html).toContain('<details class="streaming">');
+  expect(html).not.toContain('<details class="streaming" open="">');
 });
 it('prefers the exact season in countries with direct offers', () => {
   country.region = 'US';

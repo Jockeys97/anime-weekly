@@ -61,5 +61,4 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
     </div></div></div>
   </>;
   return collapsible ? <details className="streaming" open={showStreaming}><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
-
 }
