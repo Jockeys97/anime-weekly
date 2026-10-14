@@ -19,7 +19,8 @@ export async function GET(request: Request) {
         try { return { ...date, identity: await withTimeout(getTMDBEpisodeIdentity(date), Math.max(1, Math.min(14000, deadline - Date.now()))) }; }
         catch (error) { return { ...date, identity: null, error: error instanceof TMDBRequestError ? `tmdb-http-${error.status}` : 'identity-lookup-failed' }; }
       }));
-      const candidate = identities.find(entry => entry.identity);
+      const requestedId = new URL(request.url).searchParams.get('probeImdbId');
+      const candidate = identities.find(entry => entry.identity && (!requestedId || entry.identity.imdbId === requestedId));
       const probe = process.env.VERCEL_ENV === 'preview' && week === formatWeek(isoWeek(new Date())) && new URL(request.url).searchParams.get('probe') === '1' && candidate?.identity && deadline - Date.now() > 6000
         ? await inspectImdbEpisode(candidate.identity.imdbId, candidate.identity.seriesImdbId, japanDate()) : undefined;
       return Response.json({ unavailable: result.unavailable, imdbConfigured: isOMDBConfigured(), identities, probe }, { headers: { 'Cache-Control': 'no-store' } });
