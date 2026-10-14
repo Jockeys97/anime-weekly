@@ -40,7 +40,7 @@ export function CatalogCardExtras({ id, name, score, locale = 'en' }: { id: numb
   return <div ref={container} className="catalog-card-extras" aria-busy={pending}>
     <RatingSummary ratings={summary?.ratings ?? { anilistId: id, anilistScore: score, ...(failed ? { imdbStatus: 'error' as const } : {}) }} title={name} locale={locale} pendingImdb={pending} imdbLookup={failed ? null : undefined} />
     {failed && <p className="catalog-enrichment-error" role="status">{d.catalog.enrichmentUnavailable} <button type="button" onClick={() => { invalidateCatalogCard(id); setSummary(null); setFailed(false); setAttempt(value => value + 1); }}>{d.error.retry}</button></p>}
-    <StreamingAvailability locale={locale} loading={pending && !earlyWatch} seriesWatch={summary?.availability.seriesWatch} recoveryId={id} anime={{
+    <StreamingAvailability locale={locale} loading={pending && !earlyWatch} seriesWatch={summary?.availability.seriesWatch} recoveryId={summary || earlyWatch ? id : undefined} anime={{
       id: availability?.match?.id ?? 0, kind: availability?.match?.kind ?? 'tv', name,
       providers: availability?.match ? availability.providers : {},
       providersUnavailable: availability?.providersUnavailable === true || (!availability && failed),

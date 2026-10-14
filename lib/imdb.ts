@@ -68,12 +68,12 @@ async function fetchScore(id: string): Promise<Ratings> {
 }
 const pending = new Map<string, Promise<Ratings>>();
 const scoreWeek = () => formatWeek(isoWeek(new Date()));
-function accessScore(id: string, week: string, canPopulate: boolean): Promise<Ratings> {
+function accessScore(id: string, week: string, canPopulate: boolean, fresh = false): Promise<Ratings> {
   if (!/^tt\d+$/.test(id)) return Promise.resolve({ imdbStatus: 'unmatched' });
-  const key = `${week}:${id}:${canPopulate}`;
+  const key = `${week}:${id}:${canPopulate}:${fresh}`;
   const existing = pending.get(key);
   if (existing) return existing;
-  const promise = scoreCache(week, canPopulate)(id).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
+  const promise = (fresh && canPopulate ? fetchScore(id) : scoreCache(week, canPopulate)(id)).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })
     .finally(() => { pending.delete(key); });
   pending.set(key, promise);
   return promise;
@@ -84,6 +84,7 @@ export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
 }
 // Called only by the authenticated weekly cron. Successful values dedupe across
 // the week's titles; errors throw inside unstable_cache and are never persisted.
-export function primeImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
-  return accessScore(id, week, true);
+// The cross-week store can request a fresh fetch and persists its success itself.
+export function primeImdbScore(id: string, week = scoreWeek(), fresh = false): Promise<Ratings> {
+  return accessScore(id, week, true, fresh);
 }

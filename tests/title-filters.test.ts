@@ -38,3 +38,16 @@ it('builds deduplicated options from available genres and the selected country o
   expect(filterOptions(titles, 'US').platforms).toEqual([['2', 'B']]);
   expect(filterOptions([], 'IT')).toEqual({ genres: [], platforms: [] });
 });
+
+it('groups ad-supported Netflix and Prime offers without merging separately subscribed Amazon channels', () => {
+  expect(providerPlatform(provider(1796, 'Netflix Standard with Ads'))).toEqual(['netflix', 'Netflix']);
+  expect(providerPlatform(provider(119, 'Amazon Prime Video'))).toEqual(['prime-video', 'Prime Video']);
+  expect(providerPlatform(provider(2100, 'Amazon Prime Video with Ads'))).toEqual(['prime-video', 'Prime Video']);
+  expect(providerPlatform(provider(1968, 'Crunchyroll Amazon Channel'))).toEqual(['1968', 'Crunchyroll Amazon Channel']);
+  const offers = [{ key: 'tv:1', providers: { IT: { link: '', providers: [provider(8, 'Netflix'), provider(1796, 'Netflix Standard with Ads')] }, US: { link: '', providers: [provider(119, 'Amazon Prime Video')] } } }];
+  const filters = { genre: '', platform: 'netflix', region: 'IT' as const, onlyWatchlist: false, watchlist: [] };
+  expect(filterOptions(offers, 'IT').platforms).toEqual([['netflix', 'Netflix']]);
+  expect(filterTitles(offers, filters)).toHaveLength(1);
+  expect(filterTitles(offers, { ...filters, region: 'US' })).toEqual([]);
+  expect(filterOptions(offers, 'US', 'netflix').platforms).toEqual([['netflix', 'Netflix'], ['prime-video', 'Prime Video']]);
+});

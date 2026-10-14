@@ -5,9 +5,9 @@ import { SearchBox } from '@/components/SearchBox';
 import { LanguageSelector, useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
-export function SiteHeader() {
+export function SiteHeader({ myAnimeEnabled = false }: { myAnimeEnabled?: boolean }) {
   const locale = useLocale(); const d = getDictionary(locale);
-  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">a<span>↗</span></span>{d.brand}<span className="brand-period">.</span></Link><div className="header-tools"><HeaderNavigation locale={locale} /><SearchBox locale={locale} /><LanguageSelector /></div></header>;
+  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">a<span>↗</span></span>{d.brand}<span className="brand-period">.</span></Link><div className="header-tools"><HeaderNavigation locale={locale} myAnimeEnabled={myAnimeEnabled} /><SearchBox locale={locale} /><LanguageSelector /></div></header>;
 }
 export function SiteFooter() {
   const d = getDictionary(useLocale());

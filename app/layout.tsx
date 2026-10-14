@@ -6,6 +6,7 @@ import { StreamingCountryProvider } from '@/components/StreamingCountry';
 import { LocaleProvider } from '@/components/LanguageSelector';
 import { VisitorTimeProvider } from '@/components/VisitorTime';
 import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
+import { myAnimeConfig } from '@/lib/my-anime-config';
 import './globals.css';
 import './header-navigation.css';
 const d = getDictionary('it');
@@ -18,5 +19,5 @@ export const metadata: Metadata = {
   twitter: { card: 'summary', title: d.metadata.title, description: d.metadata.description },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="it"><body><LocaleProvider><VisitorTimeProvider><div className="site-shell"><SiteHeader /><StreamingCountryProvider><Suspense fallback={<main className="empty-state" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider></body></html>;
+  return <html lang="it"><body><LocaleProvider><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider></body></html>;
 }
