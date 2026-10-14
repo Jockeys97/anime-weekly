@@ -54,6 +54,67 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/revalidat
 
 The 40-title cap and IMDb-ID deduplication limit OMDb requests to at most 40 per weekly cron, independent of visitor traffic. Separate queues serialize AniList and Jikan attempts with at least 800ms and 1100ms between starts, respectively. HTTP 429 responses honor Retry-After (seconds or HTTP date) with exponential backoff, up to three attempts; long cooldowns also suppress subsequent queued calls. Cron 5xx responses retry with backoff. These process-local queues do not coordinate independent server instances. Queued client enrichment, response bodies and retries have deadlines and explicit failure/retry states.
 
+## I miei anime
+
+`/my-anime` è una pagina personale separata, dinamica e non indicizzata. La guida
+settimanale, le stagioni e la ricerca mantengono il proprio comportamento di
+rendering e cache. Il link **I miei anime** nel menu dipende esclusivamente dalla
+configurazione del server, senza leggere cookie nel layout condiviso.
+
+Configura le seguenti variabili sul server (mai con prefisso `NEXT_PUBLIC_`):
+
+| Variabile | Uso |
+| --- | --- |
+| `AUTH_COOKIE_SECRET` | Obbligatoria: segreto casuale lungo, almeno 32 byte consigliati, per derivare la chiave AES-256-GCM. |
+| `TRAKT_CLIENT_ID` | ID dell'applicazione Trakt. |
+| `TRAKT_CLIENT_SECRET` | Segreto Trakt; necessario insieme al client ID. |
+| `MAL_CLIENT_ID` | ID dell'applicazione MyAnimeList; abilita il pulsante MAL. |
+| `MAL_CLIENT_SECRET` | Facoltativo, per applicazioni MAL che richiedono un segreto. |
+
+La funzionalità richiede `AUTH_COOKIE_SECRET` e almeno un provider configurato.
+In caso contrario, `/my-anime` e gli endpoint di autenticazione restituiscono
+404 e il menu nasconde il link. Ogni pulsante appare solo con le credenziali del
+relativo provider. Ridistribuisci l'app dopo aver modificato la configurazione,
+per aggiornare anche il menu delle pagine statiche.
+
+Registra esattamente questi redirect URI nelle applicazioni dei provider,
+sostituendo `https://example.com` con l'origine dell'app:
+
+- Trakt: `https://example.com/api/auth/trakt/callback`
+- MyAnimeList: `https://example.com/api/auth/mal/callback`
+
+I redirect vengono calcolati dall'origine della richiesta. Usa HTTPS anche per
+lo sviluppo OAuth: i cookie sono sempre `Secure`, `HttpOnly` e `SameSite=Lax`.
+Trakt usa authorization code con stato casuale; MAL usa authorization code con
+PKCE e metodo `plain`, come richiesto dal servizio. Lo stato scade dopo 10 minuti.
+Token di accesso e refresh sono cifrati in cookie separati per provider, con durata
+massima di 90 giorni. Le route `/api/auth/{provider}/refresh` rinnovano i token in
+scadenza e aggiornano i cookie; se il rinnovo fallisce, chiedono di ricollegare
+l'account. Cambiare `AUTH_COOKIE_SECRET` invalida tutte le sessioni esistenti.
+
+Gli endpoint `/api/auth/{provider}/logout` accettano solo POST dalla stessa origine
+(header `Origin` obbligatorio), eliminano i cookie e tentano la revoca Trakt senza
+impedire la disconnessione locale. MAL viene scollegato localmente.
+
+Il calendario copre lunedì–domenica in `Europe/Rome`, inclusi i cambi d'ora.
+Mostra gli eventi del calendario personale Trakt, legge la watchlist e il titolo
+attualmente in visione da `/users/me/watching`, e unisce gli anime MAL con stato
+`watching` o `plan_to_watch`. Le corrispondenze usano gli ID dello snapshot
+settimanale, `idMal` di AniList e nomi esatti non ambigui; gli anime MAL confermati
+su AniList possono comparire anche fuori dalla selezione settimanale del sito.
+Gli orari MAL arrivano da `airingSchedule` AniList: il giorno di broadcast da solo
+non viene trasformato in un episodio stimato. Le corrispondenze verificate hanno
+un link a `/anime/ID`; dati mancanti o servizi indisponibili hanno messaggi dedicati.
+
+La cache personale `unstable_cache` dura 600 secondi ed è separata per hash dei
+token e settimana: nessun token è passato come argomento o chiave della cache.
+Le richieste autenticate ai provider usano `no-store`. Il pulsante di aggiornamento
+rilegge la cache senza aggirarne il TTL. Le code del modulo `rate-limited-fetch`
+distanziano Trakt di 350 ms (sotto 1000 richieste/5 minuti per processo), MAL di
+1000 ms e rispettano `Retry-After`. Come le code esistenti, non coordinano istanze
+server diverse. Paginazione e attese sono limitate: liste molto grandi o limiti del
+provider possono produrre risultati parziali, indicati nella pagina.
+
 ## Checks
 
 ```sh

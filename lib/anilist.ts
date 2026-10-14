@@ -151,6 +151,34 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
   try { return await getCachedAnime(id); } catch { return null; }
 }
 
+export type AnimeMapping = Pick<AniListAnime, 'id' | 'idMal' | 'title'>;
+// Separate bounded lookups for the personal calendar; catalog cache semantics
+// and the weekly snapshot writer remain unchanged.
+export async function getAnimeMappings(ids: number[], byMal = false, maxWaitMs = 20000): Promise<{ media: AnimeMapping[]; unavailable: boolean }> {
+  const selected = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0 && id <= 2147483647))];
+  const media: AnimeMapping[] = [];
+  const deadline = Date.now() + maxWaitMs;
+  try {
+    for (let offset = 0; offset < selected.length; offset += 50) {
+      const response = await anilistFetch('https://graphql.anilist.co', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) {
+          pageInfo { hasNextPage } media(type: ANIME, ${byMal ? 'idMal_in' : 'id_in'}: $ids) { id idMal title { romaji english native } }
+        } }`, variables: { ids: selected.slice(offset, offset + 50) } }),
+        next: { revalidate: 600 },
+      }, Math.max(0, deadline - Date.now()));
+      if (!response.ok) return { media, unavailable: true };
+      const result = await response.json() as { data?: { Page?: { media?: AnimeMapping[]; pageInfo?: { hasNextPage?: boolean } } }; errors?: unknown[] };
+      const page = result.data?.Page;
+      if (result.errors?.length || !Array.isArray(page?.media)) return { media, unavailable: true };
+      media.push(...page.media.filter(anime => Number.isSafeInteger(anime.id) && anime.id > 0 && anime.title
+        && selected.slice(offset, offset + 50).includes(byMal ? anime.idMal! : anime.id)));
+      if (page.pageInfo?.hasNextPage) return { media, unavailable: true };
+    }
+    return { media, unavailable: false };
+  } catch { return { media, unavailable: true }; }
+}
+
 export function animeName(anime: AniListAnime): string {
   return displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
 }

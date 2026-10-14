@@ -317,6 +317,26 @@
     "digestIntro": "Les titres à découvrir cette semaine, avec les liens vers le guide.",
     "viewWeek": "Ouvrir le guide hebdomadaire"
   },
+  "myAnime": {
+    "title": "Mes animes",
+    "description": "Les épisodes de la semaine des animes que vous suivez sur Trakt et MyAnimeList.",
+    "connectIntro": "Connectez un compte pour voir votre calendrier personnel.",
+    "connect": "Connecter {provider}",
+    "disconnect": "Déconnecter {provider}",
+    "connected": "{provider} connecté",
+    "week": "Cette semaine · {start} – {end}",
+    "timezone": "Dates et heures en Europe/Rome.",
+    "empty": "Aucun épisode ni sortie confirmé cette semaine pour les titres que vous suivez.",
+    "noFollows": "Votre liste est vide. Ajoutez des animes sur Trakt ou MyAnimeList.",
+    "unavailable": "Impossible de mettre à jour toutes les données ({providers}). Réessayez dans quelques minutes.",
+    "authError": "Connexion échouée ou session expirée. Reconnectez votre compte.",
+    "unmatched": "{count} titres n'ont pas de correspondance vérifiée sur AniList.",
+    "episode": "Épisode {number}",
+    "season": "Saison {number}",
+    "details": "Ouvrir la fiche",
+    "refresh": "Actualiser",
+    "weekLabel": "Votre calendrier hebdomadaire"
+  },
   "features": {
     "topFive": "Top 5 de la semaine",
     "topFiveDescription": "Les titres les mieux notés, avec des notes sur 10.",

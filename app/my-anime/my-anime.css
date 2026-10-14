@@ -1,0 +1,20 @@
+.my-anime { max-width: 960px; margin: 40px auto 64px; }
+.my-anime-heading h1 { font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; margin: 12px 0 20px; }
+.my-anime-heading p { margin: 12px 0; }
+.my-anime-note { color: var(--muted, #506354); font-size: 0.9rem; }
+.my-anime-connections { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0; }
+.my-anime-connection { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 18px; border: 1px solid #d4ddcd; border-radius: 16px; background: #f7faed; }
+.my-anime button, .my-anime-connect { display: inline-block; min-height: 44px; padding: 10px 16px; border: 1px solid #264a37; border-radius: 10px; font: inherit; background: #264a37; color: #fff; cursor: pointer; }
+.my-anime button:focus-visible, .my-anime-connect:focus-visible { outline: 2px solid #264a37; outline-offset: 4px; }
+.my-anime-refresh { margin-bottom: 12px; }
+.my-anime-notice { padding: 16px; border-left: 4px solid #8c6b28; background: #faf4e6; }
+.my-anime-day { margin: 28px 0; }
+.my-anime-day h2 { font-size: 1.15rem; text-transform: capitalize; }
+.my-anime-day ul { list-style: none; padding: 0; }
+.my-anime-day li { display: flex; align-items: baseline; gap: 18px; padding: 18px 0; border-bottom: 1px solid #d4ddcd; }
+.my-anime-day time { font-variant-numeric: tabular-nums; }
+.my-anime-day li div { flex: 1; }
+.my-anime-day li a, .my-anime-day li strong { font-weight: 650; }
+.my-anime-day li p { font-size: 0.9rem; margin: 8px 0 0; }
+.my-anime-source { font-size: 0.8rem; color: #506354; }
+@media (max-width: 600px) { .my-anime-day li { flex-wrap: wrap; gap: 12px; } .my-anime-source { flex-basis: 100%; padding-left: 52px; } }
