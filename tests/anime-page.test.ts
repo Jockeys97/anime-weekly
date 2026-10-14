@@ -13,7 +13,7 @@ import { getAnimeAvailability } from '../lib/tmdb';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { LocaleProvider } from '../components/LanguageSelector';
 import { renderToStaticMarkup } from 'react-dom/server';
-import AnimePage, { generateMetadata, generateStaticParams, dynamicParams, revalidate } from '../app/anime/[id]/page';
+import AnimePage, { generateMetadata, revalidate } from '../app/anime/[id]/page';
 import { AnimeDetailView } from '../components/AnimeDetailView';
 
 afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
@@ -66,8 +66,6 @@ it('generates detail SEO from cached anime data without enrichment', async () =>
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
   expect(getAnimeRatingsById).not.toHaveBeenCalled();
   expect(getAnimeAvailability).not.toHaveBeenCalled();
-  expect(generateStaticParams()).toEqual([]);
-  expect(dynamicParams).toBe(true);
   expect(revalidate).toBe(86400);
 });
 

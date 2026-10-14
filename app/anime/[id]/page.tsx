@@ -16,11 +16,9 @@ import type { Ratings } from '@/lib/ratings';
 import { pageMetadata, serializeJsonLd, siteUrl } from '@/lib/seo';
 
 export const revalidate = 86400;
-export const dynamicParams = true;
 // A process-local throttle cannot guarantee a shared quota across build workers.
 // Fifty details may also traverse prequels and fetch ratings. Skip build warming;
 // an empty list enables on-demand ISR without spending the AniList build quota.
-export function generateStaticParams(): { id: string }[] { return []; }
 const loadAnime = cache(async (id: string) => {
   if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
   const anime = await getAnime(Number(id));
