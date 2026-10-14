@@ -40,7 +40,7 @@ export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup
     finally { setBusy(false); }
   };
   return <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', current)} title={current.imdbSeriesTitle || title} locale={locale}>
-    <dd className="rating-value">{waiting ? '…' : ready ? value : error ? d.title.imdbError : d.title.imdbUnavailable}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className={`rating-value${!waiting && !ready ? ' rating-value-state' : ''}`}>{waiting ? '…' : ready ? value : error ? d.title.imdbError : d.title.imdbUnavailable}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
     <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : ready ? <>{formatVotes(current.imdbVotes)} {d.title.voteCount}</> : error ? d.title.imdbErrorDetail : current.imdbStatus === 'unmatched' ? d.title.imdbUnmatchedDetail : d.title.imdbUnavailableDetail}</dd>
     {!waiting && !ready && query && <dd className="rating-detail"><button type="button" onClick={retry}>{d.error.retry}</button></dd>}
     {current.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {current.imdbSeriesTitle}</dd>}

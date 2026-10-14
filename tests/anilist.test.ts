@@ -99,3 +99,14 @@ describe('AniList catalog (offline)', () => {
     expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false } }, [], null]);
   });
 });
+
+it('reuses trusted catalog entries with prequel edges when loading a visible card', async () => {
+  vi.useRealTimers();
+  const entry = { ...anime, format: 'TV', relations: { edges: [] } };
+  const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: { media: [entry], pageInfo: { currentPage: 1, hasNextPage: false } } } }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getSeason, getAnime } = await import('../lib/anilist');
+  await getSeason(2026, 'fall');
+  expect(await getAnime(21)).toEqual(entry);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});

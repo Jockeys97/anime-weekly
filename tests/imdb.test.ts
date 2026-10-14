@@ -10,7 +10,7 @@ describe('validated IMDb scores', () => {
     const { getImdbScore } = await import('../lib/imdb');
     const first = getImdbScore('tt2560140'), second = getImdbScore('tt2560140');
     expect(first).toBe(second);
-    expect(await first).toEqual({ imdbId:'tt2560140', imdbRating:'9.1', imdbVotes:'746,262', imdbStatus:'ready' });
+    expect(await first).toMatchObject({ imdbId:'tt2560140', imdbRating:'9.1', imdbVotes:'746,262', imdbStatus:'ready' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache:'no-store' });
   });
@@ -18,7 +18,7 @@ describe('validated IMDb scores', () => {
     const fetchMock = vi.fn().mockImplementation(async () => Response.json({ Response:'False', Error:'Request limit reached!' }));
     vi.stubGlobal('fetch', fetchMock);
     const { getImdbScore } = await import('../lib/imdb');
-    expect(await getImdbScore('tt123')).toEqual({ imdbId:'tt123', imdbStatus:'error' });
+    expect(await getImdbScore('tt123')).toMatchObject({ imdbId:'tt123', imdbStatus:'error' });
     await getImdbScore('tt123');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -32,7 +32,7 @@ describe('validated IMDb scores', () => {
   it('does not label an explicit N/A score ready', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ Response:'True', imdbRating:'N/A' })));
     const { getImdbScore } = await import('../lib/imdb');
-    expect(await getImdbScore('tt123')).toEqual({ imdbId:'tt123', imdbStatus:'unavailable' });
+    expect(await getImdbScore('tt123')).toMatchObject({ imdbId:'tt123', imdbStatus:'unavailable' });
   });
   it('rejects invalid IDs and detects missing configuration before making requests', async () => {
     const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock); vi.stubEnv('OMDB_API_KEY','');

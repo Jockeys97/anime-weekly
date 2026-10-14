@@ -42,7 +42,7 @@ it('retries a transient 503 once and retains the confirmed ID on persistent netw
   const result = getImdbScore('tt4'); await vi.runAllTimersAsync();
   expect((await result).imdbRating).toBe('9'); expect(fetchMock).toHaveBeenCalledTimes(2);
   fetchMock.mockRejectedValue(new Error('offline'));
-  expect(await getImdbScore('tt5')).toEqual({ imdbId: 'tt5', imdbStatus: 'error' });
+  expect(await getImdbScore('tt5')).toEqual({ imdbId: 'tt5', imdbStatus: 'error', imdbErrorReason: 'network' });
 });
 it('does not retry before a long Retry-After or send a request with missing configuration', async () => {
   const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 429, headers: { 'Retry-After': '60' } }));

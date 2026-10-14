@@ -33,7 +33,7 @@ describe('visible card request queue', () => {
   it('cancels old-page requests and skips abandoned queued cards', async () => {
     const finish = new Map<number, (value: Response) => void>();
     const fetchMock = vi.fn((url: string, init: RequestInit) => new Promise<Response>((resolve, reject) => {
-      finish.set(Number(url.split('/').at(-1)), resolve);
+      finish.set(Number(new URL(url, 'https://example.test').pathname.split('/').at(-1)), resolve);
       init.signal!.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once:true });
     }));
     vi.stubGlobal('fetch', fetchMock);
@@ -44,7 +44,7 @@ describe('visible card request queue', () => {
     controllers.forEach(controller => controller.abort());
     const next = loadCatalogCard(4);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/anime-card/1','/api/anime-card/2','/api/anime-card/4']);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/anime-card/1?ratings=v2','/api/anime-card/2?ratings=v2','/api/anime-card/4?ratings=v2']);
     finish.get(4)!(summary(4));
     await next; await Promise.all(previous);
   });
@@ -74,4 +74,15 @@ describe('visible card request queue', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+});
+
+it('allows a subsequent load to recover from a 200 response containing an IMDb error', async () => {
+  vi.resetModules();
+  const bad = Response.json({ ratings: { anilistId: 21, imdbStatus: 'error' }, availability: { match: null, providers: {}, providersUnavailable: false } });
+  const good = Response.json({ ratings: { anilistId: 21, imdbStatus: 'ready', imdbRating: '8' }, availability: { match: null, providers: {}, providersUnavailable: false } });
+  const fetchMock = vi.fn().mockResolvedValueOnce(bad).mockResolvedValueOnce(good); vi.stubGlobal('fetch', fetchMock);
+  const { loadCatalogCard } = await import('../lib/catalog-card-client');
+  expect((await loadCatalogCard(21)).ratings.imdbStatus).toBe('error');
+  expect((await loadCatalogCard(21)).ratings.imdbRating).toBe('8');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });

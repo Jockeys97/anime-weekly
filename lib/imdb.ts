@@ -21,7 +21,9 @@ const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
       // Cache validated successful scores, never HTTP error bodies or quota errors.
       const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
       if (!response.ok) {
-        const seconds = Number(response.headers.get('Retry-After'));
+        const retryAfter = response.headers.get('Retry-After');
+        const numeric = retryAfter ? Number(retryAfter) : 0;
+        const seconds = Number.isFinite(numeric) ? numeric : (Date.parse(retryAfter || '') - Date.now()) / 1000;
         if (attempt === 0 && (response.status === 429 || response.status >= 500) && (!Number.isFinite(seconds) || seconds <= 1)) {
           await response.body?.cancel();
           await new Promise(resolve => setTimeout(resolve, Math.max(250, Number.isFinite(seconds) ? seconds * 1000 : 0)));
@@ -31,14 +33,15 @@ const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
       }
       const data = await response.json() as { Response?: string; Error?: string; imdbRating?: string; imdbVotes?: string };
       if (data.Response !== 'True') {
-        throw new UncachedImdb({ ...base, imdbStatus: /not found/i.test(data.Error || '') ? 'unavailable' : 'error' });
+        if (/not found/i.test(data.Error || '')) throw new UncachedImdb({ ...base, imdbStatus: 'unavailable' });
+        throw new UncachedImdb({ ...base, imdbStatus: 'error', imdbErrorReason: /limit|quota/i.test(data.Error || '') ? 'quota' : /key|auth/i.test(data.Error || '') ? 'authentication' : 'upstream' });
       }
       const ratings: Ratings = { ...base, imdbRating: data.imdbRating, imdbVotes: data.imdbVotes };
       if (!hasImdbScore(ratings)) throw new UncachedImdb({ ...base, imdbStatus: 'unavailable' });
       return { ...ratings, imdbStatus: 'ready' };
     } catch (error) {
       if (error instanceof UncachedImdb) throw error;
-      if (attempt === 1) throw new UncachedImdb({ ...base, imdbStatus: 'error' });
+      if (attempt === 1) throw new UncachedImdb({ ...base, imdbStatus: 'error', imdbErrorReason: 'network' });
     }
   }
   throw new UncachedImdb({ ...base, imdbStatus: 'error' });
@@ -46,6 +49,7 @@ const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
 const pending = new Map<string, Promise<Ratings>>();
 export function getImdbScore(id: string): Promise<Ratings> {
   if (!/^tt\d+$/.test(id)) return Promise.resolve({ imdbStatus: 'unmatched' });
+  if (!process.env.OMDB_API_KEY?.trim()) return Promise.resolve({ imdbId: id, imdbStatus: 'unconfigured' });
   const existing = pending.get(id);
   if (existing) return existing;
   const promise = cachedScore(id).catch(error => error instanceof UncachedImdb ? error.ratings : { imdbId: id, imdbStatus: 'error' as const })

@@ -48,7 +48,7 @@ export function loadCatalogCard(id: number, signal?: AbortSignal): Promise<Catal
   const current = entry;
   queue.push({ entry: current, run: async () => {
     try {
-      const response = await fetch(`/api/anime-card/${id}`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
+      const response = await fetch(`/api/anime-card/${id}?ratings=v2`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
       if (!response.ok) throw new Error('Catalog card unavailable');
       const result = await response.json() as CatalogCardSummary;
       if (result.ratings?.anilistId !== id || !result.availability?.providers) throw new Error('Invalid catalog card');
