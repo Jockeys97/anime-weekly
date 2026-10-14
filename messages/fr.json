@@ -319,6 +319,7 @@
   },
   "features": {
     "topFive": "Top 5 de la semaine",
+    "topFiveDescription": "Les titres les mieux notés, avec des notes sur 10.",
     "share": "Partager",
     "copied": "Lien copié",
     "copyLink": "Copier le lien",
