@@ -365,6 +365,7 @@
     "noRatedEpisodes": "No episode released this week has a verified IMDb rating available yet.",
     "episodesPending": "This week’s episode ranking has not been updated yet.",
     "episodesUnavailable": "IMDb episode ratings are temporarily unavailable.",
-    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet."
+    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet.",
+    "showStreaming": "Show where to watch"
   }
 }

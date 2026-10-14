@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { WatchlistButton } from '@/components/Watchlist';
+import { AnimeActions } from '@/components/AnimeActions';
 import { VisitorDate } from '@/components/VisitorTime';
 import { AnimeTrailer } from '@/components/AnimeTrailer';
 import { AnimeRatingTile, ImdbRatingTile } from '@/components/RatingSummary';
@@ -37,8 +37,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability }
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{name}</h1>
-        <WatchlistButton id={`anilist:${anime.id}`} />
-        <a className="catalog-details" href={`/api/ics/anime/${anime.id}`}>{d.features.calendar}</a>
+        <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
         {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
         <Suspense fallback={<p className="synopsis detail-synopsis" role="status">{d.language.loadingSynopsis}</p>}>
           {synopsis}

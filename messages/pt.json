@@ -359,6 +359,7 @@
     "noRatedEpisodes": "Nenhum episódio já lançado esta semana tem uma avaliação verificada do IMDb disponível.",
     "episodesPending": "A classificação desta semana ainda não foi atualizada.",
     "episodesUnavailable": "As avaliações de episódios no IMDb estão temporariamente indisponíveis.",
-    "episodesPartial": "Classificação parcial: algumas avaliações do IMDb ainda não estão disponíveis."
+    "episodesPartial": "Classificação parcial: algumas avaliações do IMDb ainda não estão disponíveis.",
+    "showStreaming": "Mostrar onde assistir"
   }
 }
