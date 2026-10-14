@@ -15,7 +15,8 @@ import { VisitorDate } from '@/components/VisitorTime';
 import { getDictionary } from '@/lib/i18n';
 import type { AiringEvent } from '@/lib/airing-schedule';
 import type { AnimeTitle, WeekData } from '@/lib/tmdb';
-import { mergeWeeklyCalendar, type WeeklyCalendarSchedule, type WeeklyTitleDetails } from '@/lib/weekly-details';
+import { mergeAnimeRatings, mergeWeeklyCalendar, type WeeklyCalendarSchedule, type WeeklyTitleDetails, type WeeklyRatingScores } from '@/lib/weekly-details';
+import { formatAnimeScore } from '@/lib/ratings';
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
 import { formatWeek, isoWeek, shiftWeek, weekRange, type ISOWeek } from '@/lib/week';
 const titleKey = (anime: Pick<AnimeTitle, 'kind' | 'id'>) => `${anime.kind}:${anime.id}`;
@@ -37,6 +38,9 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
   const [calendar, setCalendar] = useState<WeeklyCalendarSchedule | null>(null);
   const [calendarAttempt, retryCalendar] = useState(0);
   const [calendarPending, setCalendarPending] = useState(true);
+  const [scores, setScores] = useState<WeeklyRatingScores | null>(null);
+  const [scoreAttempt, retryScores] = useState(0);
+  const [scoresPending, setScoresPending] = useState(() => initial.titles.some(title => formatAnimeScore(title.ratings) === 'n/a'));
   const [today, setToday] = useState<string | null>(null);
   const slug = formatWeek(week);
   const { region } = useStreamingCountry();
@@ -82,6 +86,24 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
     return () => controller.abort();
   }, [slug, initial.status, initial.titles.length, calendarAttempt]);
   useEffect(() => {
+    if (initial.status !== 'ready' || !initial.titles.some(title => formatAnimeScore(title.ratings) === 'n/a')) return;
+    const controller = new AbortController();
+    const url = `/api/weekly-ratings?week=${slug}`;
+    if (scoreAttempt) invalidateWeeklyLookup(url);
+    void loadWeeklyLookup<WeeklyRatingScores>(url, controller.signal)
+      .then(next => {
+        if (!controller.signal.aborted) setScores(previous => ({ ...next, titles: Object.fromEntries(initial.titles.map(title => {
+          const key = titleKey(title);
+          return [key, mergeAnimeRatings(previous?.titles[key] ?? title.ratings, next.titles[key])];
+        })) }));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setScores(previous => ({ titles: previous?.titles ?? Object.fromEntries(initial.titles.map(title => [titleKey(title), mergeAnimeRatings(title.ratings, { animeStatus: 'error' })])), unavailable: true }));
+      })
+      .finally(() => { if (!controller.signal.aborted) setScoresPending(false); });
+    return () => controller.abort();
+  }, [slug, initial.status, initial.titles, scoreAttempt]);
+  useEffect(() => {
     // Browser time is read after hydration, so the cached markup stays stable.
     const timer = setTimeout(() => setToday(formatWeek(isoWeek(new Date()))), 0);
     return () => clearTimeout(timer);
@@ -111,17 +133,18 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
   }, [genre, platform, onlyWatchlist, initial.titles, load]);
   const titles = initial.titles.map(anime => {
     const details = cards[titleKey(anime)]?.details;
-    return details ? { ...anime, ...details } : anime;
+    return { ...anime, ...details, ratings: mergeAnimeRatings(anime.ratings, scores?.titles[titleKey(anime)]) };
   });
   const filterable = titles.map(title => ({ ...title, key: watchlistId(title) }));
   const options = filterOptions(filterable, region);
   const visible = filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist });
   const renderCard = (anime: AnimeTitle) => {
     const card = cards[titleKey(anime)];
-    return <AnimeCard anime={anime} locale={locale} loadingDetails={card?.status === 'loading'} enrichmentFailed={card?.status === 'error'} onRetry={() => load(anime, true)} />;
+    return <AnimeCard anime={anime} locale={locale} pendingAnime={scoresPending && formatAnimeScore(anime.ratings) === 'n/a'} loadingDetails={card?.status === 'loading'} enrichmentFailed={card?.status === 'error'} onRetry={() => load(anime, true)} />;
   };
   return <div ref={container}>
-    <WeeklyTopFive titles={initial.titles} slug={slug} />
+    <WeeklyTopFive titles={titles} slug={slug} pending={scoresPending} />
+    {scores?.unavailable && <p className="notice" role="status">{d.title.imdbErrorDetail} <button type="button" disabled={scoresPending} onClick={() => { setScoresPending(true); retryScores(value => value + 1); }}>{d.error.retry}</button></p>}
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
     {initial.status === 'unconfigured' ? <div className="empty-state"><span className="state-icon" aria-hidden="true">⌁</span><p className="eyebrow">{d.week.browse}</p><h3>{d.state.unconfigured}</h3><p>{d.state.setup}</p><a className="button" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">{d.state.setupLink}<span aria-hidden="true">↗</span></a></div> : initial.status === 'error' ? <div className="empty-state" role="status"><h3>{d.state.error}</h3><p>{d.state.errorBody}</p></div> : <>
       {initial.partial && <p className="notice" role="status">{d.state.partial}</p>}

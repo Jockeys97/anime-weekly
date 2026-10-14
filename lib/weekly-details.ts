@@ -1,6 +1,18 @@
 import type { AnimeTitle } from '@/lib/tmdb';
 import type { AiringEvent } from '@/lib/airing-schedule';
 import type { EpisodeDate } from '@/lib/episode-dates';
+import { formatAnimeScore, type Ratings } from '@/lib/ratings';
+export interface WeeklyRatingScores { titles: Record<string, Ratings>; unavailable: boolean }
+export function mergeAnimeRatings(existing: Ratings, recovered?: Ratings): Ratings {
+  if (!recovered || formatAnimeScore(existing) !== 'n/a') return existing;
+  // Recovery owns only anime scores/identities: never erase IMDb or overwrite
+  // a confirmed score with a failed request or a nullable fallback.
+  const result = { ...existing };
+  for (const field of ['anilistId', 'malId', 'anilistScore', 'malScore', 'malMembers', 'animeStatus'] as const) {
+    if (recovered[field] != null) Object.assign(result, { [field]: recovered[field] });
+  }
+  return result;
+}
 export interface WeeklyTitleDetails {
   id: number;
   kind: 'tv' | 'movie';

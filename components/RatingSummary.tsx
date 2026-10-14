@@ -72,11 +72,12 @@ export function AnimeRatingTile({ ratings, title, locale, pending = false, follo
   const animeScore = formatAnimeScore(ratings);
   const isMal = animeScore.startsWith('MAL ');
   const isAnilist = animeScore.startsWith('AniList ');
+  const failed = !isMal && !isAnilist && ratings.animeStatus === 'error';
   const source = isMal ? 'myanimelist' : 'anilist';
   const members = formatMembers(ratings.malMembers);
   return <SourceTile source={source} name={isMal ? 'MyAnimeList' : isAnilist ? 'AniList' : d.title.animeScore} href={ratingSourceLink(source, ratings)} title={title} locale={locale}>
-    <dd className="rating-value">{waiting ? '…' : isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
-    <dd className="rating-detail">{waiting ? d.catalog.loadingRatings : isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
+    <dd className={`rating-value${failed ? ' rating-value-state' : ''}`}>{waiting ? '…' : isMal ? ratings.malScore!.toFixed(2) : isAnilist ? `${ratings.anilistScore}%` : failed ? d.title.imdbError : 'n/a'}{isMal && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : failed ? d.title.imdbErrorDetail : isMal && members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
   </SourceTile>;
 }
 
