@@ -7,13 +7,20 @@ export function hasImdbScore(ratings: Ratings): boolean {
   const score = text ? Number(text) : NaN;
   return Number.isFinite(score) && score >= 0 && score <= 10;
 }
+let quotaUntil = 0;
 class UncachedImdb extends Error {
-  constructor(readonly ratings: Ratings) { super('IMDb score unavailable'); }
+  constructor(readonly ratings: Ratings) {
+    super('IMDb score unavailable');
+    if (ratings.imdbErrorReason === 'quota' && Date.now() >= quotaUntil) quotaUntil = Date.now() + 60000;
+  }
 }
 const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
   const key = process.env.OMDB_API_KEY?.trim();
   const base: Ratings = { imdbId: id };
   if (!key) throw new UncachedImdb({ ...base, imdbStatus: 'unconfigured' });
+  // Checked inside the cache fill: existing valid cached scores still bypass
+  // this pause. Suppress repeated vendor calls briefly, never cache an N/A vote.
+  if (Date.now() < quotaUntil) throw new UncachedImdb({ ...base, imdbStatus: 'error', imdbErrorReason: 'quota' });
   const url = new URL('https://www.omdbapi.com/');
   url.searchParams.set('i', id); url.searchParams.set('apikey', key);
   for (let attempt = 0; attempt < 2; attempt++) {
