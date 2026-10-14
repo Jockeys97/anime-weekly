@@ -62,7 +62,8 @@
     "loadingAnime": "Caricamento dei dettagli…",
     "loadingRatings": "Caricamento dei voti…",
     "loadingAvailability": "Caricamento della disponibilità…",
-    "enrichmentUnavailable": "Voti e piattaforme temporaneamente non disponibili."
+    "enrichmentUnavailable": "Voti e piattaforme temporaneamente non disponibili.",
+    "imdbMissing": "Voto IMDb non disponibile per questo titolo."
   },
   "state": {
     "noPoster": "Locandina non disponibile",
@@ -230,5 +231,57 @@
   "metadata": {
     "title": "Anime Weekly · La guida settimanale",
     "description": "Gli anime in onda in Giappone e le nuove uscite al cinema. Trova la tua prossima storia e scopri dove guardarla."
+  },
+  "explore": {
+    "eyebrow": "ESPLORA IL CATALOGO",
+    "intro": "Trova il tuo prossimo anime per titolo, genere, stagione o voto.",
+    "optionalTitle": "Il titolo è facoltativo. Combina i filtri per scoprire qualcosa di nuovo.",
+    "apply": "Trova anime",
+    "filters": "Affina la ricerca",
+    "genre": "Genere",
+    "year": "Anno della stagione",
+    "anyYear": "Qualsiasi anno",
+    "allGenres": "Tutti i generi",
+    "allSeasons": "Tutte le stagioni",
+    "allFormats": "Tutti i formati",
+    "allStatuses": "Tutti gli stati",
+    "minScore": "Voto minimo",
+    "anyScore": "Qualsiasi voto",
+    "sort": "Ordina per",
+    "reset": "Azzera filtri",
+    "scoreHint": "Il filtro usa il voto medio AniList, convertito in una scala da 1 a 10.",
+    "discover": "Anime da scoprire",
+    "results": "risultati in questa pagina",
+    "loading": "Ricerca degli anime…",
+    "error": "Il catalogo è temporaneamente non disponibile. I filtri sono stati mantenuti.",
+    "retry": "Riprova",
+    "emptyHint": "Prova meno filtri o un titolo diverso.",
+    "sorts": {
+      "relevance": "Pertinenza",
+      "popular": "Più popolari",
+      "score": "Voto più alto",
+      "newest": "Uscite più recenti",
+      "trending": "Di tendenza"
+    },
+    "genres": {
+      "Action": "Azione",
+      "Adventure": "Avventura",
+      "Comedy": "Commedia",
+      "Drama": "Drammatico",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasy",
+      "Horror": "Horror",
+      "Mahou Shoujo": "Ragazze magiche",
+      "Mecha": "Mecha",
+      "Music": "Musica",
+      "Mystery": "Mistero",
+      "Psychological": "Psicologico",
+      "Romance": "Romantico",
+      "Sci-Fi": "Fantascienza",
+      "Slice of Life": "Vita quotidiana",
+      "Sports": "Sport",
+      "Supernatural": "Soprannaturale",
+      "Thriller": "Thriller"
+    }
   }
 }

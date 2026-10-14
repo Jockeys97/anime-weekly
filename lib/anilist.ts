@@ -1,4 +1,5 @@
 import 'server-only';
+import type { AnimeFilters } from '@/lib/anime-search';
 import { unstable_cache } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
@@ -33,8 +34,8 @@ export interface AniListPage {
 const fields = `id idMal title { romaji english native }
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } episodes format status genres averageScore
-  studios(isMain: true) { nodes { id name } } season seasonYear trailer { id site }
-  relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
+  studios(isMain: true) { nodes { id name } } season seasonYear
+  trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
 const catalogAnime = new Map<number, { expires: number; anime: AniListAnime }>();
 function rememberCatalog(media: AniListAnime[]): void {
   for (const anime of media) {
@@ -45,7 +46,7 @@ function rememberCatalog(media: AniListAnime[]): void {
 }
 const emptyPage = (page: number): AniListPage => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false } });
 
-async function graphql<T>(query: string, variables: Record<string, string | number>): Promise<T | null> {
+async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null>): Promise<T | null> {
   try {
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -101,6 +102,36 @@ export async function getSeasonFamily(search: string): Promise<AniListAnime[]> {
   return media;
 }
 
+export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage & { unavailable?: boolean }> {
+  const sorts = { relevance: filters.q ? 'SEARCH_MATCH' : 'POPULARITY_DESC', popular: 'POPULARITY_DESC', score: 'SCORE_DESC', newest: 'START_DATE_DESC', trending: 'TRENDING_DESC' };
+  const variables: Record<string, string | number> = { page: filters.page, sort: sorts[filters.sort] };
+  const definitions = ['$page: Int!', '$sort: [MediaSort!]'];
+  const argumentsList = ['type: ANIME', 'isAdult: false', 'sort: $sort'];
+  const optional = [
+    ['search', 'String', filters.q || undefined], ['genre', 'String', filters.genre],
+    ['format', 'MediaFormat', filters.format], ['status', 'MediaStatus', filters.status],
+    ['season', 'MediaSeason', filters.season], ['seasonYear', 'Int', filters.year],
+    ['averageScore_greater', 'Int', filters.minScore == null ? undefined : filters.minScore * 10 - 1],
+  ] as const;
+  // AniList distinguishes omitted filters from explicit nulls. Only send active
+  // filters; all user values remain GraphQL variables, never query source.
+  for (const [name, type, value] of optional) {
+    if (value == null) continue;
+    variables[name] = value;
+    definitions.push(`$${name}: ${type}`);
+    argumentsList.push(`${name}: $${name}`);
+  }
+  const data = await graphql<{ Page?: AniListPage }>(`query (${definitions.join(', ')}) {
+    Page(page: $page, perPage: 20) {
+      pageInfo { currentPage hasNextPage }
+      media(${argumentsList.join(', ')}) { ${fields} }
+    }
+  }`, variables);
+  if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(filters.page), unavailable: true };
+  rememberCatalog(data.Page.media);
+  return { media: data.Page.media, pageInfo: { currentPage: filters.page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
+}
+
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }
@@ -108,7 +139,7 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   // Reject transient upstream failures so they never become cached empty details.
   if (!data) throw new Error('Anime details unavailable');
   return data.Media?.id === id ? data.Media : null;
-}, ['anime-detail-v4-catalog-relations'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v5-catalog-trailer'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;

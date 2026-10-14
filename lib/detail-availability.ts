@@ -91,7 +91,7 @@ const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
     || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured'
     || (result.ratings.imdbId && !hasImdbScore(result.ratings))) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v3-imdb-states'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v4-expanded-series'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }

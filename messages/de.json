@@ -129,7 +129,8 @@
     "loadingAnime": "Details werden geladen…",
     "loadingRatings": "Bewertungen werden geladen…",
     "loadingAvailability": "Verfügbarkeit wird geladen…",
-    "enrichmentUnavailable": "Bewertungen und Streamingdienste sind vorübergehend nicht verfügbar."
+    "enrichmentUnavailable": "Bewertungen und Streamingdienste sind vorübergehend nicht verfügbar.",
+    "imdbMissing": "IMDb-Bewertung für diesen Titel nicht verfügbar."
   },
   "footer": {
     "tagline": "Eine neue Woche. Eine neue Geschichte.",
@@ -230,5 +231,57 @@
     "HK": "Sonderverwaltungsregion Hongkong",
     "SG": "Singapur",
     "ZA": "Südafrika"
+  },
+  "explore": {
+    "eyebrow": "KATALOG ENTDECKEN",
+    "intro": "Finde deinen nächsten Anime nach Titel, Genre, Saison oder Bewertung.",
+    "optionalTitle": "Der Titel ist optional. Kombiniere Filter, um Neues zu entdecken.",
+    "apply": "Anime finden",
+    "filters": "Suche verfeinern",
+    "genre": "Genre",
+    "year": "Saisonjahr",
+    "anyYear": "Beliebiges Jahr",
+    "allGenres": "Alle Genres",
+    "allSeasons": "Alle Saisons",
+    "allFormats": "Alle Formate",
+    "allStatuses": "Alle Status",
+    "minScore": "Mindestbewertung",
+    "anyScore": "Beliebige Bewertung",
+    "sort": "Sortieren nach",
+    "reset": "Filter zurücksetzen",
+    "scoreHint": "Der Filter nutzt den AniList-Durchschnitt, umgerechnet auf eine 10-Punkte-Skala.",
+    "discover": "Anime entdecken",
+    "results": "Ergebnisse auf dieser Seite",
+    "loading": "Anime werden gesucht…",
+    "error": "Der Katalog ist vorübergehend nicht verfügbar. Deine Filter bleiben erhalten.",
+    "retry": "Erneut versuchen",
+    "emptyHint": "Versuche weniger Filter oder einen anderen Titel.",
+    "sorts": {
+      "relevance": "Relevanz",
+      "popular": "Beliebtheit",
+      "score": "Beste Bewertung",
+      "newest": "Neueste Veröffentlichungen",
+      "trending": "Im Trend"
+    },
+    "genres": {
+      "Action": "Action",
+      "Adventure": "Abenteuer",
+      "Comedy": "Komödie",
+      "Drama": "Drama",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasy",
+      "Horror": "Horror",
+      "Mahou Shoujo": "Magische Mädchen",
+      "Mecha": "Mecha",
+      "Music": "Musik",
+      "Mystery": "Mystery",
+      "Psychological": "Psychologisch",
+      "Romance": "Romantik",
+      "Sci-Fi": "Science-Fiction",
+      "Slice of Life": "Alltag",
+      "Sports": "Sport",
+      "Supernatural": "Übernatürlich",
+      "Thriller": "Thriller"
+    }
   }
 }

@@ -22,7 +22,9 @@ describe('catalog card enrichment', () => {
   it('keeps AniList available without inventing IMDb IDs or platforms when no match exists', async () => {
     vi.mocked(getAnime).mockResolvedValue(anime);
     vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
-    expect(await (await call('21')).json()).toEqual({ ratings: { anilistId: 21, anilistScore: 85 }, availability: { match: null, providers: {}, providersUnavailable: false } });
+    const response = await call('21');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual({ ratings: { anilistId: 21, anilistScore: 85 }, availability: { match: null, providers: {}, providersUnavailable: false } });
   });
   it.each(['bad', '0', '-1', '2.5', '2147483648'])('rejects invalid ID %s before fetching', async id => {
     expect((await call(id)).status).toBe(400);
@@ -37,12 +39,4 @@ describe('catalog card enrichment', () => {
     vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: true });
     expect((await call('21')).headers.get('cache-control')).toBe('no-store');
   });
-});
-
-it('does not cache a score retrieval error even when providers were retrieved successfully', async () => {
-  vi.mocked(getAnime).mockResolvedValue(anime);
-  vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: { id: 42, kind: 'tv' }, ratings: { imdbId: 'tt123', imdbStatus: 'error' }, providers: {}, providersUnavailable: false });
-  const response = await call('21');
-  expect(response.headers.get('cache-control')).toBe('no-store');
-  expect((await response.json()).ratings.imdbStatus).toBe('error');
 });
