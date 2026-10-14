@@ -26,6 +26,20 @@ describe('catalog card enrichment', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toEqual({ ratings: { anilistId: 21, anilistScore: 85 }, availability: { match: null, providers: {}, providersUnavailable: false } });
   });
+  it('forwards verified series watch options even without an exact-season match or IMDb score', async () => {
+    vi.mocked(getAnime).mockResolvedValue(anime);
+    const seriesWatch = {
+      id: 234198, kind: 'tv' as const, name: 'Blue Box',
+      providers: { US: { link: 'https://example.com/us', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
+      providersUnavailable: false,
+    };
+    vi.mocked(getCachedDetailAvailability).mockResolvedValue({ match: null, ratings: { imdbId: 'tt123', imdbRating: 'N/A' }, providers: {}, providersUnavailable: false, seriesWatch });
+    const response = await call('21');
+    const summary = await response.json();
+    expect(summary.availability).toEqual({ match: null, providers: {}, providersUnavailable: false, seriesWatch });
+    expect(summary.ratings.anilistScore).toBe(85);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
   it.each(['bad', '0', '-1', '2.5', '2147483648'])('rejects invalid ID %s before fetching', async id => {
     expect((await call(id)).status).toBe(400);
     expect(getAnime).not.toHaveBeenCalled();

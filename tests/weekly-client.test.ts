@@ -48,3 +48,16 @@ it('recovers anime scores independently of stalled streaming and calendar reques
   expect(fetchMock).toHaveBeenCalledTimes(4);
   controller.abort(); await Promise.all(stalled); await vi.runAllTimersAsync();
 });
+
+it('loads provider filter metadata independently of stalled streaming cards', async () => {
+  const fetchMock = vi.fn(async (url: string) => url.startsWith('/api/weekly-providers?')
+    ? Response.json({ titles: { 'tv:1': { providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } }, unavailable: false })
+    : new Promise<Response>(() => {}));
+  vi.stubGlobal('fetch', fetchMock);
+  const { loadWeeklyLookup } = await import('../lib/weekly-client');
+  const controller = new AbortController();
+  const stalled = [1, 2].map(id => loadWeeklyLookup(`/api/weekly-title?week=2026-42&kind=tv&id=${id}`, controller.signal).catch(error => error));
+  expect(await loadWeeklyLookup('/api/weekly-providers?week=2026-42', controller.signal)).toMatchObject({ unavailable: false, titles: { 'tv:1': { providersUnavailable: false } } });
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  controller.abort(); await Promise.all(stalled); await vi.runAllTimersAsync();
+});

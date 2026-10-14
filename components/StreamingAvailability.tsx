@@ -8,6 +8,7 @@ import type { AnimeTitle } from '@/lib/tmdb';
 import { providerWatchLink } from '@/lib/provider-watch-link';
 import { ProviderLink } from '@/components/ProviderLink';
 import { useStreamingCountry } from '@/components/StreamingCountry';
+import { withTimeout } from '@/lib/async-timeout';
 
 export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale = 'en', collapsible = true, loading = false, followLocale = false }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; seriesWatch?: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; recoveryId?: number; locale?: string; collapsible?: boolean; loading?: boolean; followLocale?: boolean }) {
   const selectedLocale = useLocale();
@@ -18,16 +19,25 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
   const base = useSeries && seriesWatch ? seriesWatch : anime;
   type Recovery = typeof base & { series?: boolean; recovered?: boolean };
   const key = `${recoveryId}:${region}`;
-  const [results, setResults] = useState<Record<string, Recovery | null>>({});
+  type RecoveryResult = { status: 'ready'; data: Recovery | null } | { status: 'error' };
+  const [results, setResults] = useState<Record<string, RecoveryResult>>({});
   const needsRecovery = Boolean(recoveryId && !base.providers[region]?.providers.length && !loading);
-  const recovered = needsRecovery ? results[key] : null;
+  const result = needsRecovery ? results[key] : undefined;
+  const recovered = result?.status === 'ready' ? result.data : null;
   useEffect(() => {
     if (!needsRecovery || key in results) return;
     const controller = new AbortController();
-    fetch(`/api/streaming-recovery?anime=${recoveryId}&region=${region}`, { signal: controller.signal })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: data?.providers ? data : null })); })
-      .catch(() => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: null })); });
+    // A failed request is not proof that the country has no streaming offers.
+    // Bound both fetching and reading the body, and let the visitor retry.
+    void withTimeout((async () => {
+      const response = await fetch(`/api/streaming-recovery?anime=${recoveryId}&region=${region}`, {
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(25000)]),
+      });
+      if (!response.ok) throw new Error('Streaming recovery unavailable');
+      return await response.json() as Recovery;
+    })(), 25000)
+      .then(data => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: { status: 'ready', data: data?.providers ? data : null } })); })
+      .catch(() => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: { status: 'error' } })); });
     return () => controller.abort();
   }, [needsRecovery, key, recoveryId, region, results]);
   const source = recovered || base;
@@ -43,8 +53,10 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
         label={`${source.name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
         {provider.logo_path && <Image src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`} alt="" width={24} height={24} />}
         <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
-      </ProviderLink>) : <p>{anime.providersUnavailable ? d.state.providersError : d.title.noWatchData}</p>}
+      </ProviderLink>) : result?.status === 'error' ? <p role="status">{d.state.providersError} <button type="button" onClick={() => {
+        setResults(previous => { const next = { ...previous }; delete next[key]; return next; });
+      }}>{d.error.retry}</button></p> : <p>{source.providersUnavailable ? d.state.providersError : d.title.noWatchData}</p>}
     </div></div></div>
   </>;
-  return collapsible ? <details className="streaming"><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
+  return collapsible ? <details className="streaming" open><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
 }

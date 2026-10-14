@@ -1,0 +1,70 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
+vi.mock('next/cache', async () => import('./helpers/next-cache'));
+vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
+vi.mock('../lib/tmdb', () => ({ getQuickWeekData: vi.fn(), getWeeklyProviders: vi.fn(), getAnimeAvailability: vi.fn() }));
+import { getSeason } from '../lib/anilist';
+import { getQuickWeekData, getWeeklyProviders, getAnimeAvailability } from '../lib/tmdb';
+import { getWeeklyPlatformMetadata, getSeasonPlatformMetadata } from '../lib/platform-metadata';
+import { mergePlatformSnapshot } from '../lib/platform-data';
+import { GET as weeklyGet } from '../app/api/weekly-providers/route';
+import { GET as seasonGet } from '../app/api/season-providers/route';
+import type { AniListAnime } from '../lib/anilist';
+const providers = { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] }, US: { link: '', providers: [{ provider_id: 9, provider_name: 'Amazon Prime Video', logo_path: null }] } };
+beforeEach(async () => {
+  (await import('./helpers/next-cache')).clearNextCache();
+  vi.mocked(getQuickWeekData).mockResolvedValue({ status: 'ready', titles: [1, 2].map(id => ({ id, kind: 'tv', name: `Show ${id}`, poster: null, overview: '', ratings: {}, recommendation: null, providers: {}, providersUnavailable: false })) });
+  vi.mocked(getWeeklyProviders).mockResolvedValue({ providers, providersUnavailable: false });
+});
+afterEach(() => { vi.resetAllMocks(); vi.useRealTimers(); });
+it('loads metadata for every weekly title, with all countries, without rating or recommendation requests', async () => {
+  const data = await getWeeklyPlatformMetadata('2026-42');
+  expect(data.titles['tv:1'].providers.IT?.providers[0].provider_name).toBe('Netflix');
+  expect(data.titles['tv:2'].providers.US?.providers[0].provider_name).toBe('Amazon Prime Video');
+  expect(data.unavailable).toBe(false);
+  expect(getWeeklyProviders).toHaveBeenCalledTimes(2);
+  await getWeeklyPlatformMetadata('2026-42');
+  expect(getWeeklyProviders).toHaveBeenCalledTimes(2);
+  expect(getAnimeAvailability).not.toHaveBeenCalled();
+});
+it('reuses the canonical season page and explicitly bypasses all rating lookups', async () => {
+  vi.mocked(getSeason).mockResolvedValue({ media: [{ id: 178533, title: { english: 'Ranma ½ (2024)', romaji: null, native: null }, format: 'TV', startDate: { year: 2024 }, seasonYear: 2024 } as AniListAnime], pageInfo: { currentPage: 1, hasNextPage: false } });
+  vi.mocked(getAnimeAvailability).mockResolvedValue({ match: { id: 259140, kind: 'tv' }, ratings: {}, providers, providersUnavailable: false });
+  const data = await getSeasonPlatformMetadata(2024, 'fall', 1);
+  expect(getSeason).toHaveBeenCalledExactlyOnceWith(2024, 'fall', 1);
+  expect(getAnimeAvailability).toHaveBeenCalledExactlyOnceWith(['Ranma ½'], 2024, 'tv', false, true);
+  expect(data.titles['anilist:178533'].providers).toEqual(providers);
+  expect(data.titles['anilist:178533'].match).toEqual({ id: 259140, kind: 'tv' });
+  expect(getWeeklyProviders).not.toHaveBeenCalled();
+});
+it('retains successful regional data while making failed lookups retryable', async () => {
+  vi.mocked(getWeeklyProviders).mockImplementation(async (_kind, id) => ({ providers: id === 1 ? providers : {}, providersUnavailable: id === 2 }));
+  const first = await weeklyGet(new Request('https://example.test/api/weekly-providers?week=2026-42'));
+  expect(first.headers.get('cache-control')).toBe('no-store');
+  const data = await first.json();
+  expect(data.unavailable).toBe(true);
+  vi.mocked(getWeeklyProviders).mockResolvedValue({ providers, providersUnavailable: false });
+  const next = await getWeeklyPlatformMetadata('2026-42');
+  expect(getWeeklyProviders).toHaveBeenCalledTimes(3);
+  expect(next.titles['tv:2'].providers).toEqual(providers);
+  const merged = mergePlatformSnapshot(next, { titles: { 'tv:1': { providers: {}, providersUnavailable: true } }, unavailable: true });
+  expect(merged.titles['tv:1'].providers).toEqual(providers);
+});
+it('bounds eager metadata work and exposes a partial response rather than false empty results', async () => {
+  vi.useFakeTimers();
+  vi.mocked(getQuickWeekData).mockResolvedValue({ status: 'ready', titles: Array.from({ length: 40 }, (_, id) => ({ id: id + 1, kind: 'tv', name: 'Show', poster: null, overview: '', ratings: {}, recommendation: null, providers: {}, providersUnavailable: false })) });
+  vi.mocked(getWeeklyProviders).mockImplementation(() => new Promise(() => {}));
+  const pending = getWeeklyPlatformMetadata('2026-42');
+  await vi.advanceTimersByTimeAsync(23001);
+  const data = await pending;
+  expect(getWeeklyProviders).toHaveBeenCalledTimes(4);
+  expect(data.unavailable).toBe(true);
+  expect(Object.values(data.titles)).toHaveLength(40);
+  expect(Object.values(data.titles).every(title => title.providersUnavailable)).toBe(true);
+});
+it('validates weekly and seasonal parameters before making external requests', async () => {
+  expect((await weeklyGet(new Request('https://example.test/api/weekly-providers?week=bad'))).status).toBe(400);
+  expect((await seasonGet(new Request('https://example.test/api/season-providers?year=2026&season=bad'))).status).toBe(400);
+  expect((await seasonGet(new Request('https://example.test/api/season-providers?year=2026&season=fall&page=0'))).status).toBe(400);
+  expect(getQuickWeekData).not.toHaveBeenCalled(); expect(getSeason).not.toHaveBeenCalled();
+});

@@ -1,6 +1,6 @@
 import type { Ratings } from '@/lib/ratings';
-import type { AnimeAvailability } from '@/lib/tmdb';
+import type { DetailAvailability } from '@/lib/detail-availability';
 export interface CatalogCardSummary {
   ratings: Ratings;
-  availability: Omit<AnimeAvailability, 'ratings'>;
+  availability: Omit<DetailAvailability, 'ratings'>;
 }
