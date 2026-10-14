@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
 beforeEach(() => { vi.resetModules(); vi.stubEnv('OMDB_API_KEY', 'fixture'); });
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe('validated IMDb scores', () => {
   it('deduplicates parallel lookups for the series IMDb ID and marks only valid scores ready', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ Response:'True', imdbRating:'9.1', imdbVotes:'746,262' }));
@@ -18,7 +18,9 @@ describe('validated IMDb scores', () => {
     const fetchMock = vi.fn().mockImplementation(async () => Response.json({ Response:'False', Error:'Request limit reached!' }));
     vi.stubGlobal('fetch', fetchMock);
     const { primeImdbScore } = await import('../lib/imdb');
-    expect(await primeImdbScore('tt123')).toMatchObject({ imdbId:'tt123', imdbStatus:'error' });
+    vi.useFakeTimers();
+    expect(await primeImdbScore('tt123')).toMatchObject({ imdbId:'tt123', imdbStatus:'error', imdbErrorReason:'quota' });
+    await vi.advanceTimersByTimeAsync(60001);
     await primeImdbScore('tt123');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
