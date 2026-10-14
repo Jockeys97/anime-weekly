@@ -114,3 +114,8 @@
 @media (prefers-reduced-motion: reduce) {
   .season-years a, .season-options a { transition: none; }
 }
+@media (max-width: 400px) {
+  .season-options a { gap: 7px; font-size: 11px; }
+  .season-option-icon { width: 27px; height: 27px; }
+  .season-option-indicator { display: none; }
+}
