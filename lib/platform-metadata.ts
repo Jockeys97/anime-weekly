@@ -7,6 +7,7 @@ import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
 import type { Season } from '@/lib/season';
 import type { PlatformMetadata, PlatformSnapshot } from '@/lib/platform-data';
+import { getVerifiedTitleLinks } from '@/lib/verified-title-links';
 class MissingProviders extends Error {}
 const weeklyProviders = unstable_cache(async (kind: 'tv' | 'movie', id: number): Promise<PlatformMetadata> => {
   const result = await getWeeklyProviders(kind, id);
@@ -52,6 +53,8 @@ export async function getSeasonPlatformMetadata(year: number, season: Season, pa
   const catalog = await withTimeout(getSeason(year, season, page), 10000);
   if (!catalog.media.length) throw new MissingProviders();
   return collect(catalog.media.map(anime => {
+    const verified = getVerifiedTitleLinks(anime);
+    if (verified) return { key: `anilist:${anime.id}`, load: async () => ({ providers: verified.providers, providersUnavailable: false }) };
     const premiere = anime.startDate?.year ?? anime.seasonYear ?? undefined;
     const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((name): name is string => Boolean(name))
       .map(name => premiere == null ? name : name.replace(/\s*\((?:19|20)\d{2}\)\s*$/u, ''));

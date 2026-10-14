@@ -42,7 +42,7 @@ export function CatalogCardExtras({ id, name, score, locale = 'en' }: { id: numb
     {failed && <p className="catalog-enrichment-error" role="status">{d.catalog.enrichmentUnavailable} <button type="button" onClick={() => { invalidateCatalogCard(id); setSummary(null); setFailed(false); setAttempt(value => value + 1); }}>{d.error.retry}</button></p>}
     <StreamingAvailability locale={locale} loading={pending && !earlyWatch} seriesWatch={summary?.availability.seriesWatch} recoveryId={summary || earlyWatch ? id : undefined} anime={{
       id: availability?.match?.id ?? 0, kind: availability?.match?.kind ?? 'tv', name,
-      providers: availability?.match ? availability.providers : {},
+      providers: availability?.providers ?? {},
       providersUnavailable: availability?.providersUnavailable === true || (!availability && failed),
     }} />
   </div>;

@@ -1,10 +1,11 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { hasImdbScore } from '@/lib/imdb';
+import { getImdbScore, hasImdbScore } from '@/lib/imdb';
 import { CACHE_TAG } from '@/lib/config';
 import { animeName, getAnime, getSeasonFamily, type AniListAnime } from '@/lib/anilist';
 import { normalizeTitle } from '@/lib/anime-match';
 import { getAnimeAvailability, type AnimeAvailability } from '@/lib/tmdb';
+import { getVerifiedTitleLinks } from '@/lib/verified-title-links';
 
 const titlesOf = (anime: Pick<AniListAnime, 'title'>) => [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
 const seriesFormats = ['TV', 'TV_SHORT', 'ONA'];
@@ -12,7 +13,8 @@ const seriesFormats = ['TV', 'TV_SHORT', 'ONA'];
 export function seriesBaseTitle(title: string): string {
   let base = title.normalize("NFKC").trim();
   for (let i = 0; i < 4; i++) {
-    const arcBase = base.replace(/:\s*[^:]+(?:-hen|\s+arc)$/iu, '').trim();
+    const stageBase = base.replace(/\s*(?:[-:–]\s*)?\d+(?:st|nd|rd|th)?(?:\s*(?:[-–&]|and)\s*\d+(?:st|nd|rd|th)?)*\s+STAGES?\s*$/iu, '').trim();
+    const arcBase = stageBase.replace(/:\s*[^:]+(?:-hen|\s+arc)$/iu, '').trim();
     const next = arcBase.replace(/\s*(?:[-:–]\s*)?(?:(?:the\s+)?final\s+season|season\s*\d+|[2-9]\s*(?:nd|rd|th)?\s*(?:cour)|\d+(?:st|nd|rd|th)?\s+season|part\s*\.?\s*\d+|(?:\s+(?:II|III|IV|V|VI|VII|VIII|IX|X|[2-9]))|第\s*\d+\s*(?:期|クール))\s*$/iu, '').trim();
     if (next === base) break;
     base = next;
@@ -44,7 +46,8 @@ export async function findSeasonSeries(anime: AniListAnime): Promise<AniListAnim
     const parentYear = parent.startDate?.year;
     if (!parentYear || (current.startDate?.year && parentYear > current.startDate.year)) return null;
     visited.add(parent.id);
-    if (!titlesOf(parent).some(title => seriesBaseTitle(title) !== title.normalize('NFKC').trim())) return parent;
+    if (titlesOf(parent).some(title => /\b1(?:st)?\s+STAGE\s*$/iu.test(title))
+      || !titlesOf(parent).some(title => seriesBaseTitle(title) !== title.normalize('NFKC').trim())) return parent;
     current = parent;
   }
   return null;
@@ -55,6 +58,13 @@ export interface DetailAvailability extends AnimeAvailability {
 }
 
 export async function getDetailAvailability(anime: AniListAnime, fresh = false): Promise<DetailAvailability> {
+  const verified = getVerifiedTitleLinks(anime);
+  if (verified) {
+    // This work has its own IMDb/Netflix entries. Do not inherit the 2012 JoJo
+    // identity, and do not require a TMDB match to display a verified direct link.
+    return { match: null, ratings: { ...await getImdbScore(verified.imdbId), imdbId: verified.imdbId, imdbSeriesTitle: verified.title },
+      providers: verified.providers, providersUnavailable: false };
+  }
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const kind = seriesFormats.includes(anime.format || '') ? 'tv' : anime.format === 'MOVIE' ? 'movie' : undefined;
   const originalLookup = findSeasonSeries(anime).then(async series => series ? {
@@ -92,7 +102,7 @@ const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
     || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured'
     || (result.ratings.imdbId && !hasImdbScore(result.ratings))) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v5-series-error-state'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v6-verified-identities'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }
