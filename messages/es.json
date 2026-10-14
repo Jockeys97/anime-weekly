@@ -283,25 +283,5 @@
       "Supernatural": "Sobrenatural",
       "Thriller": "Suspense"
     }
-  },
-  "newsletter": {
-    "title": "El anime semanal en tu correo",
-    "description": "Un resumen semanal con títulos por descubrir y enlaces a la guía.",
-    "email": "Correo electrónico",
-    "consent": "Acepto recibir el boletín semanal. Puedo darme de baja en cualquier momento.",
-    "website": "Sitio web",
-    "submit": "Suscribirme",
-    "sending": "Suscribiendo…",
-    "success": "¡Suscripción completada! Recibirás el próximo resumen semanal.",
-    "comingSoon": "El boletín llegará pronto. ¡Vuelve a intentarlo pronto!",
-    "invalid": "Introduce un correo válido y acepta recibir el boletín.",
-    "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
-    "error": "No pudimos completar la solicitud. Inténtalo más tarde.",
-    "unsubscribe": "Cancelar suscripción",
-    "unsubscribed": "Suscripción cancelada. Ya no recibirás el boletín.",
-    "invalidToken": "Enlace de baja no válido.",
-    "digestTitle": "Anime de la semana",
-    "digestIntro": "Títulos por descubrir esta semana, con enlaces a la guía.",
-    "viewWeek": "Abrir la guía semanal"
   }
 }

@@ -1,15 +1,13 @@
 import { Suspense } from 'react';
 import { WeeklyHeading, WeeklyContent, WeeklyScope } from '@/components/WeeklyContent';
 import { SponsorSlot } from '@/components/SponsorSlot';
-import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { getDictionary } from '@/lib/i18n';
 import { getQuickWeekData } from '@/lib/tmdb';
 import { getWeeklyRatings, trackWeeklyPage } from '@/lib/weekly-ratings';
 import { formatWeek, type ISOWeek } from '@/lib/week';
-export function WeeklyGuide({ week, newsletter = false }: { week: ISOWeek; newsletter?: boolean }) {
+export function WeeklyGuide({ week }: { week: ISOWeek }) {
   return <main id="main">
     <WeeklyHeading week={week} />
-    {newsletter && <NewsletterSignup />}
     <section className="guide" aria-labelledby="releases-heading">
       <Suspense fallback={<p className="calendar-note" role="status">{getDictionary('it').loading}</p>}>
         <WeeklyCatalog week={week} />
