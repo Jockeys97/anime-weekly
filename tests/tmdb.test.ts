@@ -49,7 +49,7 @@ describe('TMDB anime availability (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     const url = fetchMock.mock.calls[0][0];
     expect(url.searchParams.get('query')).toBe('Example');
-    expect(url.searchParams.get('first_air_date_year')).toBe('2026');
+    expect(url.searchParams.get('first_air_date_year')).toBeNull();
   });
 
   it('matches a movie after no TV match and uses the movie release year', async () => {
