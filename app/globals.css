@@ -119,3 +119,12 @@
 .rating-detail button:focus-visible{outline:3px solid #769641;outline-offset:3px}
 
 .card-details button.catalog-details{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}.card-details button:disabled{cursor:wait}
+.newsletter{position:relative;padding:24px;margin:0 0 30px;border:1px solid var(--line);border-radius:10px;background:#edf2e5}
+.newsletter h2{font-size:22px;margin:0 0 8px}.newsletter p{font-size:13px;line-height:1.6;color:var(--muted)}
+.newsletter label{font-size:12px}.newsletter-fields{display:flex;gap:10px;margin:8px 0 12px}
+.newsletter-fields input{flex:1;min-width:0;padding:12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font:inherit}
+.newsletter-consent{display:flex;align-items:flex-start;gap:8px;line-height:1.6}.newsletter-consent input{margin-top:4px;flex-shrink:0}
+.newsletter input:focus-visible,.newsletter button:focus-visible{outline:3px solid #769641;outline-offset:3px}
+.newsletter button:disabled{opacity:.6;cursor:wait}.newsletter [role=status]{min-height:1.6em;margin-bottom:0}
+.newsletter-trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+@media(max-width:600px){.newsletter{padding:18px}.newsletter-fields{flex-direction:column}}

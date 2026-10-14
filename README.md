@@ -145,3 +145,26 @@ Successful translations are cached for 30 days by source text and language, inde
 Create an API Free account at [DeepL for Developers](https://www.deepl.com/en/developers), add the key directly in Vercel Project Settings → Environment Variables as `DEEPL_AUTH_KEY`, then redeploy. Do not paste the key into chat, source control or a public environment variable.
 
 Weekly cards also retrieve missing text lazily from the canonical TMDB ID. Localized TMDB text is preferred, then English or Japanese source synopses can be translated by DeepL with an explicit source language. Official localized/English titles take priority over literal Japanese-title translations. If no source synopsis exists, the missing-synopsis message remains. Translation failures retain the actual source-language notice. This also supports Japanese-to-English translation, without delaying the initial weekly page.
+
+## Newsletter
+
+The newsletter is optional and hidden by default. All signup/status text and digest copy use the existing six dictionaries, defaulting to Italian. The home page shows the signup below the weekly hero; another form appears in the footer. The saved language is used for future digests. Consent is required; subscriptions are immediate (no double opt-in).
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_NEWSLETTER_ENABLED` | Set exactly to `1` to show forms and accept subscriptions. Public, embedded at build time: redeploy after changing. Otherwise forms are hidden and subscription POSTs return 503. |
+| `KV_REST_API_URL` | Upstash Redis REST URL from the Vercel Marketplace free plan. |
+| `KV_REST_API_TOKEN` | Server-only read/write REST token for the same Redis database. |
+| `NEWSLETTER_SECRET` | Long random server-only HMAC secret for unsubscribe links. Required for sending; rotating it invalidates previous links. |
+| `RESEND_API_KEY` | Server-only Resend API key. |
+| `NEWSLETTER_FROM` | Sender address on a verified Resend domain, e.g. `Anime Weekly <news@example.com>`. |
+| `CRON_SECRET` | Existing server-only secret, required as `Authorization: Bearer <CRON_SECRET>` for sending. |
+| `NEWSLETTER_SITE_URL` | Optional canonical site origin for email links, e.g. `https://example.com`. Defaults to the authenticated send request's origin. Set this for production to avoid preview/local links. |
+
+No additional packages are needed: Redis and Resend use REST through `fetch`. `POST /api/newsletter/subscribe` accepts JSON `{email, consent: true, website: "", locale: "it"}`. The empty `website` field is a honeypot. Email addresses are normalized, deduplicated in the Redis set `newsletter:subscribers`, and associated with their latest language in `newsletter:locales` (hash). Missing Redis configuration returns 503 with the localized “Newsletter in arrivo” state. Storage failures show a retry message. Requests are limited to five per IP per fifteen minutes in a bounded, process-local map; this is best effort across restarts/instances and depends on the hosting proxy's forwarded IP headers.
+
+Every message includes `/api/newsletter/unsubscribe?email=...&token=...&locale=...`, which validates an address-specific SHA-256 HMAC and removes both stored entries. Repeating a valid cancellation succeeds; cancellation remains available when signup is disabled. Tokens have no expiry so old newsletters remain usable. Keep `NEWSLETTER_SECRET` configured while subscribers exist.
+
+Call `POST /api/newsletter/send` (GET is also supported for future cron use) with the bearer secret. Missing Resend, sender, HMAC or Redis configuration returns `{skipped: "not configured"}` without external requests. Configured sends use the current ISO week's first ten titles from the existing weekly discovery order, each linking to the site's detail/search page, plus the weekly guide and unsubscribe links. Missing, partial or empty weekly data is skipped. Sends use private, individual messages in Resend batches of at most 100 and return accepted `sent` and `failed` counts; provider acceptance does not guarantee inbox delivery. Provider failures return 502 and are not retried automatically. Resend idempotency keys protect identical batch retries within its retention window; this is not a persistent once-per-week delivery ledger. Review results before rerunning a partially failed send, especially after the subscriber list changes.
+
+No newsletter cron is added to `vercel.json`; sending must be triggered manually until scheduling is explicitly configured. Existing revalidation cron behavior is unchanged.
