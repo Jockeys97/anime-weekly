@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       const requestedId = new URL(request.url).searchParams.get('probeImdbId');
       const candidate = identities.find(entry => entry.identity && (!requestedId || entry.identity.imdbId === requestedId));
       const probe = process.env.VERCEL_ENV === 'preview' && week === formatWeek(isoWeek(new Date())) && new URL(request.url).searchParams.get('probe') === '1' && candidate?.identity && deadline - Date.now() > 6000
-        ? await inspectImdbEpisode(candidate.identity.imdbId, candidate.identity.seriesImdbId, japanDate()) : undefined;
+        ? await inspectImdbEpisode(candidate.identity.imdbId, candidate.identity.seriesImdbId, japanDate(), { season: candidate.season, episode: candidate.episode }) : undefined;
       return Response.json({ unavailable: result.unavailable, imdbConfigured: isOMDBConfigured(), identities, probe }, { headers: { 'Cache-Control': 'no-store' } });
     }
     return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=300' } });

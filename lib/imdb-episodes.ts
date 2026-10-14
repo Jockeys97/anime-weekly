@@ -18,12 +18,13 @@ export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string)
 export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating'; details?: { score?: string; votes?: string; season?: string; episode?: string; type?: string; parentMatches: boolean } } | { state: 'error'; reason: 'quota' | 'authentication' | 'network'; status?: number; message?: string };
 // Persist the daily attempt, including outages and N/A. A second job cannot
 // silently spend quota again after a failure; a new day has a new cache key.
-async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): Promise<EpisodeAttempt> {
+async function fetchEpisodeAttempt (id: string, seriesId: string, day: string, coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> {
   if (!/^tt\d+$/.test(id) || !/^tt\d+$/.test(seriesId) || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { state: 'unrated', cause: 'invalid-episode' };
   const key = process.env.OMDB_API_KEY?.trim();
   if (!key) return { state: 'error', reason: 'authentication' };
   const url = new URL('https://www.omdbapi.com/');
-  url.searchParams.set('i', id); url.searchParams.set('type', 'episode'); url.searchParams.set('apikey', key);
+  url.searchParams.set('i', coordinates ? seriesId : id); url.searchParams.set('type', 'episode'); url.searchParams.set('apikey', key);
+  if (coordinates) { url.searchParams.set('Season', String(coordinates.season)); url.searchParams.set('Episode', String(coordinates.episode)); }
   let response: Response;
   try { response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) }); }
   catch { return { state: 'error', reason: 'network' }; }
@@ -39,15 +40,15 @@ async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): 
 }
 class ColdEpisodeAttempt extends Error {}
 function attemptCache(populate: boolean) {
-  const loader = async (id: string, seriesId: string, day: string): Promise<EpisodeAttempt> => {
+  const loader = async (id: string, seriesId: string, day: string, coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> => {
     if (!populate) throw new ColdEpisodeAttempt();
-    return fetchEpisodeAttempt(id, seriesId, day);
+    return fetchEpisodeAttempt(id, seriesId, day, coordinates);
   };
   Object.defineProperty(loader, 'toString', { value: () => 'imdb-episode-daily-attempt-loader-v3' });
   return unstable_cache(loader, ['imdb-episode-daily-attempt-v3'], { revalidate: 172800, tags: ['imdb-episode-attempts'] });
 }
-export function inspectImdbEpisode(id: string, seriesId: string, day = japanDate()): Promise<EpisodeAttempt> {
-  return attemptCache(true)(id, seriesId, day);
+export function inspectImdbEpisode(id: string, seriesId: string, day = japanDate(), coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> {
+  return attemptCache(true)(id, seriesId, day, coordinates);
 }
 export async function readImdbEpisodeAttempt(id: string, seriesId: string, day = japanDate()): Promise<EpisodeAttempt | null> {
   try { return await attemptCache(false)(id, seriesId, day); }
