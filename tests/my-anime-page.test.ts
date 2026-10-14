@@ -32,6 +32,15 @@ describe('isolated personal page', () => {
     expect(element.props.connected).toEqual({ trakt: false, mal: false });
     expect(element.props.data).toBeNull(); expect(personalWeek).not.toHaveBeenCalled();
   });
+  it('enables Trakt with only a client ID and hides unconfigured MAL', async () => {
+    vi.stubEnv('TRAKT_CLIENT_ID', 'trakt-id');
+    vi.stubEnv('TRAKT_CLIENT_SECRET', undefined);
+    vi.stubEnv('MAL_CLIENT_ID', undefined);
+    const element = await MyAnimePage({ searchParams: Promise.resolve({}) });
+    expect(element.props.providers).toEqual({ trakt: true, mal: false });
+    expect(element.props.connected).toEqual({ trakt: false, mal: false });
+    expect(element.props.data).toBeNull(); expect(personalWeek).not.toHaveBeenCalled();
+  });
   it('redirects an expired session to a cookie-writing refresh endpoint before fetching data', async () => {
     const value = encryptCookie({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }, tokenCookie('mal'));
     cookies.mockResolvedValue({ get: () => ({ value }) });
