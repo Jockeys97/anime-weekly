@@ -24,7 +24,7 @@ it('keeps quota errors retryable instead of caching them as unavailable ratings'
   vi.stubGlobal('fetch', fetchMock);
   const { getImdbScore } = await import('../lib/imdb');
   expect((await getImdbScore('tt2')).imdbStatus).toBe('error');
-  expect((await getImdbScore('tt2')).imdbRating).toBe('8');
+  vi.useFakeTimers(); await vi.advanceTimersByTimeAsync(60001); expect((await getImdbScore('tt2')).imdbRating).toBe('8');
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 it('keeps a genuine N/A score distinct from an outage and allows later recovery', async () => {

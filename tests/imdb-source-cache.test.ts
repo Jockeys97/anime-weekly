@@ -24,6 +24,7 @@ it('keeps quota errors retryable instead of caching them as unavailable ratings'
   vi.stubGlobal('fetch', fetchMock);
   const { getImdbScore } = await import('../lib/imdb');
   expect((await getImdbScore('tt2')).imdbStatus).toBe('error');
+  vi.useFakeTimers(); await vi.advanceTimersByTimeAsync(60001);
   expect((await getImdbScore('tt2')).imdbRating).toBe('8');
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
@@ -59,4 +60,20 @@ it('identifies quota errors returned with a non-success HTTP status', async () =
   const { getImdbScore } = await import('../lib/imdb');
   expect(await getImdbScore('ttquota')).toMatchObject({ imdbStatus: 'unmatched' });
   expect(await getImdbScore('tt9')).toMatchObject({ imdbStatus: 'error', imdbErrorReason: 'quota' });
+});
+
+it('pauses quota failures across IDs while preserving valid cached scores and resumes after a minute', async () => {
+  vi.useFakeTimers();
+  const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ Response: 'True', imdbRating: '8' }))
+    .mockResolvedValueOnce(Response.json({ Response: 'False', Error: 'Request limit reached!' }))
+    .mockResolvedValueOnce(Response.json({ Response: 'True', imdbRating: '7' }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getImdbScore } = await import('../lib/imdb');
+  expect((await getImdbScore('tt10')).imdbRating).toBe('8');
+  expect((await getImdbScore('tt11')).imdbErrorReason).toBe('quota');
+  expect((await getImdbScore('tt12')).imdbErrorReason).toBe('quota');
+  expect((await getImdbScore('tt10')).imdbRating).toBe('8');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(60001);
+  expect((await getImdbScore('tt12')).imdbRating).toBe('7');
 });
