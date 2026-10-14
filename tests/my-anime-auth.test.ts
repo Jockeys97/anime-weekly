@@ -105,6 +105,11 @@ describe('encrypted cookies and OAuth flow', () => {
     const [url, init] = upstream.mock.calls[0];
     expect(url).toBe(provider === 'trakt' ? 'https://api.trakt.tv/oauth/token' : 'https://myanimelist.net/v1/oauth2/token');
     expect(init.cache).toBe('no-store');
+    if (provider === 'trakt') expect(init.headers).toMatchObject({
+      'Content-Type': 'application/json', Accept: 'application/json', 'trakt-api-key': 'trakt-id',
+      'trakt-api-version': '2', 'User-Agent': 'AnimeWeekly/0.1.0 (+https://anime-weekly.vercel.app)',
+    });
+    else expect(init.headers).not.toHaveProperty('trakt-api-key');
     const payload = provider === 'trakt' ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));
     expect(payload).toMatchObject({ grant_type: 'authorization_code', code: 'code', code_verifier: flow.verifier,
       client_id: `${provider}-id`, redirect_uri: `${origin}/api/auth/${provider}/callback` });
