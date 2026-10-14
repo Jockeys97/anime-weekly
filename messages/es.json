@@ -175,6 +175,7 @@
     "releases": "estrenos",
     "titles": "títulos",
     "episode": "Episodio",
+    "tmdbNumbering": "numeración TMDB",
     "airing": "Emisión · AniList",
     "movieRelease": "Estreno de película",
     "timeUnavailable": "Horario no disponible",
