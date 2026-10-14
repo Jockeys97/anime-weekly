@@ -90,3 +90,7 @@
 .country-search-results{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto}
 .country-search-results button{font:inherit;color:var(--ink);background:white;border:1px solid var(--line);border-radius:7px;padding:8px 12px;cursor:pointer}
 .country-search-results button:focus-visible{outline:3px solid #769641;outline-offset:2px}
+
+.ratings .rating-value-state{font-size:14px;line-height:1.4;letter-spacing:0;overflow-wrap:anywhere}
+.rating-detail button{font:inherit;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);cursor:pointer}
+.rating-detail button:focus-visible{outline:3px solid #769641;outline-offset:3px}
