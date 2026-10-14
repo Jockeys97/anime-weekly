@@ -34,6 +34,11 @@ export function animeSearchTitles(search: AnimeSearch): string[] {
   return [...new Set([...full, ...full.map(baseTitle)])].filter(Boolean).slice(0, 4);
 }
 function aliasDistance(input: string, alias: string, yearKnown: boolean): number | null {
+  // AniList distinguishes remakes with a parenthesized year (e.g. Ranma
+  // 1/2 (2024)), while TMDB uses the bare name. The caller has already
+  // validated the premiere year; retain explicit season suffixes and ties.
+  const releaseLabel = (value: string) => canonicalTitle(value).replace(/\s*\((?:19|20)\d{2}\)(?=\s*(?:$|season|part|cour))/giu, '');
+  if (yearKnown) { input = releaseLabel(input); alias = releaseLabel(alias); }
   if (normalizeTitle(canonicalTitle(input)) === normalizeTitle(canonicalTitle(alias))) return 0;
   // Relax only named subtitles and explicit season suffixes, never substrings.
   // A bare series title must not inherit a later season's scores.
