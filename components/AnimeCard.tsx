@@ -11,7 +11,7 @@ export function AnimeCard({ anime, locale = 'en', loadingDetails = false, loadin
   return <article className="anime-card">
     <div className="poster">{anime.poster ? <Image src={`https://image.tmdb.org/t/p/w500${anime.poster}`} alt={anime.name} fill sizes="(max-width: 640px) 120px, 200px" /> : <span>{d.state.noPoster}</span>}</div>
     <div className="card-body"><span className="type-label">{d.week[anime.kind]}</span><WeeklyText key={`${locale}:${anime.kind}:${anime.id}`} id={anime.id} kind={anime.kind} name={anime.name} overview={anime.overview} locale={locale} />
-      <>{loadingDetails ? <p className="calendar-note" role="status">{d.calendar.enrichmentLoading}</p> : <RatingSummary ratings={anime.ratings} title={anime.name} locale={locale} pendingAnime={loadingAnime} />}</>
+      <>{loadingDetails ? <p className="calendar-note" role="status">{d.calendar.enrichmentLoading}</p> : <RatingSummary ratings={anime.ratings} title={anime.name} locale={locale} pendingAnime={loadingAnime} imdbLookup={{ tmdbId: anime.id, kind: anime.kind }} />}</>
       {anime.recommendation && <p className="recommendation">{d.title.liked} <strong>{anime.recommendation}</strong></p>}
       <p className="card-details"><Link href={animeDetailLink(anime)} prefetch={false} className="catalog-details">{d.catalog.details} →</Link></p>
       {!loadingDetails && <StreamingAvailability locale={locale} anime={{ id: anime.id, kind: anime.kind, name: anime.name, providers: anime.providers, providersUnavailable: anime.providersUnavailable }} />}

@@ -37,7 +37,7 @@ describe('TMDB anime availability (offline)', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeAvailability } = await import('../lib/tmdb');
     expect(await getAnimeAvailability([' Example ', 'Example'], 2026)).toEqual({
-      match: { id: 21, kind: 'tv' }, ratings: {}, providersUnavailable: false,
+      match: { id: 21, kind: 'tv' }, ratings: { imdbStatus: 'unmatched' }, providersUnavailable: false,
       providers: {
         IT: { link: link('IT'), providers: [netflix, crunchyroll] },
         US: { link: link('US'), providers: [crunchyroll] },
@@ -65,7 +65,7 @@ describe('TMDB anime availability (offline)', () => {
     const result = await getAnimeAvailability(['Example'], 2026);
     expect(result.match).toEqual({ id: 42, kind: 'movie' });
     expect(result.providers.GB?.providers).toEqual([crunchyroll]);
-    expect(fetchMock.mock.calls[1][0].searchParams.get('primary_release_year')).toBe('2026');
+    expect(fetchMock.mock.calls[1][0].searchParams.get('primary_release_year')).toBeNull();
   });
 
   it.each(['network', 'http'] as const)('returns no providers when watch providers fail (%s)', async failure => {
@@ -76,7 +76,7 @@ describe('TMDB anime availability (offline)', () => {
     }));
     const { getAnimeAvailability } = await import('../lib/tmdb');
     expect(await getAnimeAvailability(['Example'], 2026)).toEqual({
-      match: { id: 21, kind: 'tv' }, ratings: {}, providers: {}, providersUnavailable: true,
+      match: { id: 21, kind: 'tv' }, ratings: { imdbStatus: 'error' }, providers: {}, providersUnavailable: true,
     });
   });
 
@@ -84,7 +84,7 @@ describe('TMDB anime availability (offline)', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     const { getAnimeAvailability } = await import('../lib/tmdb');
     expect(await getAnimeAvailability(['Example'], 2026)).toEqual({
-      match: null, ratings: {}, providers: {}, providersUnavailable: false,
+      match: null, ratings: { imdbStatus: 'error' }, providers: {}, providersUnavailable: false,
     });
   });
 
@@ -94,8 +94,16 @@ describe('TMDB anime availability (offline)', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeAvailability } = await import('../lib/tmdb');
     expect(await getAnimeAvailability(['Example'], 2026)).toEqual({
-      match: null, ratings: {}, providers: {}, providersUnavailable: false,
+      match: null, ratings: { imdbStatus: 'unconfigured' }, providers: {}, providersUnavailable: false,
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+});
+
+it('matches a confirmed nearby premiere year without an exact-year search filter', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: URL) => url.pathname.endsWith('/search/tv')
+    ? Response.json({ results: [{ ...candidate, first_air_date: '2025-12-31' }] })
+    : Response.json({ imdb_id: null, results: {} })));
+  const { getAnimeAvailability } = await import('../lib/tmdb');
+  expect((await getAnimeAvailability(['Example'], 2026, 'tv')).match?.id).toBe(21);
 });

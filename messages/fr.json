@@ -40,6 +40,11 @@
     "providersError": "Impossible de charger la disponibilité."
   },
   "title": {
+    "imdbError": "Non récupérée",
+    "imdbUnavailable": "Indisponible",
+    "imdbErrorDetail": "La note n’a pas pu être récupérée. Réessayez.",
+    "imdbUnavailableDetail": "Aucune note IMDb n’est disponible pour ce titre.",
+    "imdbUnmatchedDetail": "Aucune correspondance IMDb confirmée pour ce titre.",
     "imdb": "IMDb",
     "animeScore": "Note anime",
     "votes": "Votes IMDb",
@@ -124,7 +129,8 @@
     "loadingAnime": "Chargement des détails…",
     "loadingRatings": "Chargement des notes…",
     "loadingAvailability": "Chargement de la disponibilité…",
-    "enrichmentUnavailable": "Les notes et les plateformes sont temporairement indisponibles."
+    "enrichmentUnavailable": "Les notes et les plateformes sont temporairement indisponibles.",
+    "imdbMissing": "Note IMDb indisponible pour ce titre."
   },
   "footer": {
     "tagline": "Une nouvelle semaine. Une nouvelle histoire.",
@@ -225,5 +231,57 @@
     "HK": "R.A.S. chinoise de Hong Kong",
     "SG": "Singapour",
     "ZA": "Afrique du Sud"
+  },
+  "explore": {
+    "eyebrow": "EXPLOREZ LE CATALOGUE",
+    "intro": "Trouvez votre prochain anime par titre, genre, saison ou note.",
+    "optionalTitle": "Le titre est facultatif. Combinez les filtres pour découvrir quelque chose de nouveau.",
+    "apply": "Trouver des anime",
+    "filters": "Affiner la recherche",
+    "genre": "Genre",
+    "year": "Année de saison",
+    "anyYear": "Toute année",
+    "allGenres": "Tous les genres",
+    "allSeasons": "Toutes les saisons",
+    "allFormats": "Tous les formats",
+    "allStatuses": "Tous les statuts",
+    "minScore": "Note minimale",
+    "anyScore": "Toute note",
+    "sort": "Trier par",
+    "reset": "Effacer les filtres",
+    "scoreHint": "Le filtre utilise la moyenne AniList, convertie sur une échelle de 10 points.",
+    "discover": "Découvrir des anime",
+    "results": "résultats sur cette page",
+    "loading": "Recherche des anime…",
+    "error": "Le catalogue est temporairement indisponible. Vos filtres sont conservés.",
+    "retry": "Réessayer",
+    "emptyHint": "Essayez moins de filtres ou un autre titre.",
+    "sorts": {
+      "relevance": "Pertinence",
+      "popular": "Les plus populaires",
+      "score": "Meilleures notes",
+      "newest": "Sorties récentes",
+      "trending": "Tendances"
+    },
+    "genres": {
+      "Action": "Action",
+      "Adventure": "Aventure",
+      "Comedy": "Comédie",
+      "Drama": "Drame",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasy",
+      "Horror": "Horreur",
+      "Mahou Shoujo": "Filles magiques",
+      "Mecha": "Mecha",
+      "Music": "Musique",
+      "Mystery": "Mystère",
+      "Psychological": "Psychologique",
+      "Romance": "Romance",
+      "Sci-Fi": "Science-fiction",
+      "Slice of Life": "Vie quotidienne",
+      "Sports": "Sport",
+      "Supernatural": "Surnaturel",
+      "Thriller": "Thriller"
+    }
   }
 }

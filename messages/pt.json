@@ -40,6 +40,11 @@
     "providersError": "Não foi possível carregar a disponibilidade."
   },
   "title": {
+    "imdbError": "Não obtida",
+    "imdbUnavailable": "Indisponível",
+    "imdbErrorDetail": "Não foi possível obter a avaliação. Tenta novamente.",
+    "imdbUnavailableDetail": "Ainda não existe avaliação IMDb para este título.",
+    "imdbUnmatchedDetail": "Sem correspondência IMDb confirmada para este título.",
     "imdb": "IMDb",
     "animeScore": "Pontuação anime",
     "votes": "Votos IMDb",
@@ -124,7 +129,8 @@
     "loadingAnime": "A carregar os detalhes…",
     "loadingRatings": "A carregar as avaliações…",
     "loadingAvailability": "A carregar a disponibilidade…",
-    "enrichmentUnavailable": "As avaliações e as plataformas estão temporariamente indisponíveis."
+    "enrichmentUnavailable": "As avaliações e as plataformas estão temporariamente indisponíveis.",
+    "imdbMissing": "Avaliação IMDb indisponível para este título."
   },
   "footer": {
     "tagline": "Uma nova semana. Uma nova história.",
@@ -225,5 +231,57 @@
     "HK": "Hong Kong, RAE da China",
     "SG": "Singapura",
     "ZA": "África do Sul"
+  },
+  "explore": {
+    "eyebrow": "EXPLORA O CATÁLOGO",
+    "intro": "Encontra o teu próximo anime por título, género, temporada ou avaliação.",
+    "optionalTitle": "O título é opcional. Combina filtros para descobrir algo novo.",
+    "apply": "Encontrar anime",
+    "filters": "Refinar pesquisa",
+    "genre": "Género",
+    "year": "Ano da temporada",
+    "anyYear": "Qualquer ano",
+    "allGenres": "Todos os géneros",
+    "allSeasons": "Todas as temporadas",
+    "allFormats": "Todos os formatos",
+    "allStatuses": "Todos os estados",
+    "minScore": "Avaliação mínima",
+    "anyScore": "Qualquer avaliação",
+    "sort": "Ordenar por",
+    "reset": "Limpar filtros",
+    "scoreHint": "O filtro usa a média AniList, convertida numa escala de 10 pontos.",
+    "discover": "Descobrir anime",
+    "results": "resultados nesta página",
+    "loading": "A procurar anime…",
+    "error": "O catálogo está temporariamente indisponível. Os filtros foram mantidos.",
+    "retry": "Tentar novamente",
+    "emptyHint": "Experimenta menos filtros ou outro título.",
+    "sorts": {
+      "relevance": "Relevância",
+      "popular": "Mais populares",
+      "score": "Melhor avaliação",
+      "newest": "Lançamentos recentes",
+      "trending": "Tendências"
+    },
+    "genres": {
+      "Action": "Ação",
+      "Adventure": "Aventura",
+      "Comedy": "Comédia",
+      "Drama": "Drama",
+      "Ecchi": "Ecchi",
+      "Fantasy": "Fantasia",
+      "Horror": "Terror",
+      "Mahou Shoujo": "Raparigas mágicas",
+      "Mecha": "Mecha",
+      "Music": "Música",
+      "Mystery": "Mistério",
+      "Psychological": "Psicológico",
+      "Romance": "Romance",
+      "Sci-Fi": "Ficção científica",
+      "Slice of Life": "Vida quotidiana",
+      "Sports": "Desporto",
+      "Supernatural": "Sobrenatural",
+      "Thriller": "Thriller"
+    }
   }
 }

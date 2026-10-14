@@ -90,3 +90,26 @@
 .country-search-results{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto}
 .country-search-results button{font:inherit;color:var(--ink);background:white;border:1px solid var(--line);border-radius:7px;padding:8px 12px;cursor:pointer}
 .country-search-results button:focus-visible{outline:3px solid #769641;outline-offset:2px}
+
+/* Search catalog: one query with optional, shareable filters. */
+.explore-heading{max-width:780px;margin-bottom:28px}
+.explore-heading h1{margin-bottom:14px}
+.anime-search-filters{padding:28px;border:1px solid var(--line);border-radius:18px;background:#eef3e5;margin:28px 0 40px}
+.explore-query>label{display:block;font-weight:600;margin-bottom:10px}
+.explore-query>div{display:flex;gap:12px}
+.explore-query input{flex:1;min-width:0}
+.explore-query p{font-size:14px;color:var(--muted);margin:10px 0 24px}
+.anime-search-filters input,.anime-search-filters select{font:inherit;color:var(--ink);width:100%;min-height:48px;padding:12px 14px;background:white;border:1px solid #c5d1ba;border-radius:9px}
+.anime-search-filters input:focus-visible,.anime-search-filters select:focus-visible{outline:3px solid #769641;outline-offset:3px}
+.anime-search-filters fieldset{margin:0;padding:0;border:0;min-width:0}
+.anime-search-filters legend{font-weight:600;margin-bottom:14px}
+.explore-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.explore-fields label{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+.explore-fields input,.explore-fields select{font-weight:400}
+.explore-actions{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:22px;font-size:13px;color:var(--muted)}
+.explore-actions a{white-space:nowrap;text-decoration:underline;color:var(--ink)}
+.explore-results-heading{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin:22px 0}
+.explore-results-heading h2{font-size:28px;margin:0}
+.explore-results-heading>span{font-size:14px;color:var(--muted);white-space:nowrap}
+@media(max-width:850px){.explore-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.anime-search-filters{padding:20px}.explore-query>div{flex-direction:column}.explore-query .button{width:100%}.explore-actions,.explore-results-heading{align-items:flex-start;flex-direction:column}.explore-results-heading>span{white-space:normal}}

@@ -16,7 +16,7 @@ export interface AnimeCandidate {
   averageScore?: number | null;
 }
 export function normalizeTitle(title: string): string {
-  return title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  return title.normalize('NFKC').replaceAll('×', 'x').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
 // Prefer the original title, then the closest year. Equally good distinct IDs
 // are ambiguous, so leave the rating unavailable instead of guessing.
