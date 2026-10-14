@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 vi.mock('server-only', () => ({}));
 const { upstream } = vi.hoisted(() => ({ upstream: vi.fn() }));
 vi.mock('@/lib/rate-limited-fetch', () => ({ throttle: () => upstream }));
@@ -23,7 +24,8 @@ describe('personal anime feature gate', () => {
     [{}, { enabled: false, trakt: false, mal: false }],
     [{ TRAKT_CLIENT_ID: 'id', TRAKT_CLIENT_SECRET: 'secret', MAL_CLIENT_ID: 'id' }, { enabled: false, trakt: false, mal: false }],
     [{ AUTH_COOKIE_SECRET: 'secret' }, { enabled: false, trakt: false, mal: false }],
-    [{ AUTH_COOKIE_SECRET: 'secret', TRAKT_CLIENT_ID: 'id' }, { enabled: false, trakt: false, mal: false }],
+    [{ AUTH_COOKIE_SECRET: 'secret', TRAKT_CLIENT_ID: 'id' }, { enabled: true, trakt: true, mal: false }],
+    [{ AUTH_COOKIE_SECRET: 'secret', TRAKT_CLIENT_ID: ' ', TRAKT_CLIENT_SECRET: 'secret' }, { enabled: false, trakt: false, mal: false }],
     [{ AUTH_COOKIE_SECRET: 'secret', TRAKT_CLIENT_ID: 'id', TRAKT_CLIENT_SECRET: 'secret' }, { enabled: true, trakt: true, mal: false }],
     [{ AUTH_COOKIE_SECRET: 'secret', MAL_CLIENT_ID: 'id' }, { enabled: true, trakt: false, mal: true }],
     [{ AUTH_COOKIE_SECRET: ' ', MAL_CLIENT_ID: 'id' }, { enabled: false, trakt: false, mal: false }],
@@ -52,17 +54,17 @@ describe('encrypted cookies and OAuth flow', () => {
     expect(readToken('mal', encoded)).toBeNull();
     expect(readToken('trakt', 'bad')).toBeNull();
   });
-  it('creates unique random states and MAL plain PKCE verifiers of valid length', () => {
-    const flow = createOAuthFlow('mal', 1000), other = createOAuthFlow('mal', 1000);
+  it.each(['trakt', 'mal'] as const)('creates unique random %s states and PKCE verifiers of valid length', provider => {
+    const flow = createOAuthFlow(provider, 1000), other = createOAuthFlow(provider, 1000);
     expect(flow.state).not.toEqual(other.state); expect(flow.verifier).not.toEqual(other.verifier);
     expect(flow.verifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);
-    expect(createOAuthFlow('trakt').verifier).toBeUndefined();
-    expect(validOAuthState(flow, flow.state, 'mal', 1001)).toBe(true);
-    expect(validOAuthState(flow, flow.state, 'mal', 601000)).toBe(false);
-    expect(validOAuthState(flow, 'different', 'mal', 1001)).toBe(false);
-    expect(validOAuthState({ ...flow, verifier: 'short' }, flow.state, 'mal', 1001)).toBe(false);
+    expect(validOAuthState(flow, flow.state, provider, 1001)).toBe(true);
+    expect(validOAuthState(flow, flow.state, provider, 601000)).toBe(false);
+    expect(validOAuthState(flow, 'different', provider, 1001)).toBe(false);
+    expect(validOAuthState({ ...flow, verifier: 'short' }, flow.state, provider, 1001)).toBe(false);
   });
-  it.each(['trakt', 'mal'] as const)('sets a secure encrypted state cookie and exact %s authorize parameters', provider => {
+  it.each([['trakt', undefined], ['trakt', 'trakt-secret'], ['mal', undefined]] as const)('sets a secure encrypted state cookie and exact %s authorize parameters with secret %j', (provider, secret) => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', secret);
     const response = oauthLogin(new Request(`${origin}/api/auth/${provider}/login`), provider);
     const url = new URL(response.headers.get('location')!);
     expect(url.origin).toBe(provider === 'trakt' ? 'https://trakt.tv' : 'https://myanimelist.net');
@@ -72,9 +74,18 @@ describe('encrypted cookies and OAuth flow', () => {
     expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', maxAge: 600 });
     const flow = decryptCookie<OAuthFlow>(cookie.value, cookie.name)!;
     expect(flow.state).toBe(url.searchParams.get('state'));
+    expect(flow.verifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);
+    expect(cookie.value).not.toContain(flow.verifier);
+    expect(url.searchParams.has('client_secret')).toBe(false);
     if (provider === 'mal') {
       expect(url.searchParams.get('code_challenge')).toBe(flow.verifier);
       expect(url.searchParams.get('code_challenge_method')).toBe('plain');
+    } else {
+      expect(url.searchParams.get('code_challenge')).toBe(createHash('sha256').update(flow.verifier!).digest('base64url'));
+      expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+      expect(url.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(url.searchParams.get('code_challenge')).not.toBe(flow.verifier);
+      expect(url.searchParams.has('code_verifier')).toBe(false);
     }
   });
   it.each(['trakt', 'mal'] as const)('rejects a %s callback state mismatch before exchanging a code', async provider => {
@@ -84,7 +95,8 @@ describe('encrypted cookies and OAuth flow', () => {
     expect(response.cookies.get(flowCookie(provider))?.maxAge).toBe(0);
     expect(response.cookies.get(tokenCookie(provider))).toBeUndefined();
   });
-  it.each(['trakt', 'mal'] as const)('exchanges %s codes with the correct payload and saves only encrypted tokens', async provider => {
+  it.each([['trakt', undefined], ['trakt', ''], ['trakt', 'trakt-secret'], ['mal', undefined]] as const)('exchanges %s codes with secret %j and saves only encrypted tokens', async (provider, secret) => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', secret);
     const flow = createOAuthFlow(provider);
     upstream.mockResolvedValue(Response.json({ access_token: 'access', refresh_token: 'refresh', expires_in: 3600 }));
     const response = await oauthCallback(new Request(`${origin}/api/auth/${provider}/callback?code=code&state=${flow.state}`), provider, reader(provider, flow));
@@ -93,9 +105,10 @@ describe('encrypted cookies and OAuth flow', () => {
     expect(url).toBe(provider === 'trakt' ? 'https://api.trakt.tv/oauth/token' : 'https://myanimelist.net/v1/oauth2/token');
     expect(init.cache).toBe('no-store');
     const payload = provider === 'trakt' ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));
-    expect(payload).toMatchObject({ grant_type: 'authorization_code', code: 'code', redirect_uri: `${origin}/api/auth/${provider}/callback` });
-    if (provider === 'mal') { expect(payload.code_verifier).toBe(flow.verifier); expect(payload.client_secret).toBeUndefined(); }
-    else expect(payload.client_secret).toBe('trakt-secret');
+    expect(payload).toMatchObject({ grant_type: 'authorization_code', code: 'code', code_verifier: flow.verifier,
+      client_id: `${provider}-id`, redirect_uri: `${origin}/api/auth/${provider}/callback` });
+    if (provider === 'trakt' && secret) expect(payload.client_secret).toBe(secret);
+    else expect(payload).not.toHaveProperty('client_secret');
     const cookie = response.cookies.get(tokenCookie(provider))!;
     expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
     expect(readToken(provider, cookie.value)).toMatchObject({ accessToken: 'access', refreshToken: 'refresh' });
@@ -115,6 +128,35 @@ describe('encrypted cookies and OAuth flow', () => {
     expect((await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=c&state=${flow.state}`), 'trakt', cookies)).status).toBe(400);
     expect(upstream).not.toHaveBeenCalled();
   });
+  it.each([undefined, 'short', 'a'.repeat(129), '!'.repeat(43)])('rejects a Trakt flow with missing or invalid verifier %j before exchanging a code', async verifier => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', undefined);
+    const flow = { ...createOAuthFlow('trakt'), verifier };
+    const response = await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=c&state=${flow.state}`), 'trakt', reader('trakt', flow));
+    expect(response.status).toBe(400);
+    expect(response.cookies.get(flowCookie('trakt'))?.maxAge).toBe(0);
+    expect(response.cookies.get(tokenCookie('trakt'))).toBeUndefined();
+    expect(upstream).not.toHaveBeenCalled();
+  });
+  it('fails a Trakt callback when the verifier does not match the authorized challenge', async () => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', undefined);
+    const login = oauthLogin(new Request(`${origin}/api/auth/trakt/login`), 'trakt');
+    const challenge = new URL(login.headers.get('location')!).searchParams.get('code_challenge');
+    const cookie = login.cookies.get(flowCookie('trakt'))!;
+    const flow = decryptCookie<OAuthFlow>(cookie.value, cookie.name)!;
+    // Model provider-side S256 validation against the original authorization.
+    upstream.mockImplementation(async (_url, init) => {
+      const payload = JSON.parse(init.body);
+      return createHash('sha256').update(payload.code_verifier).digest('base64url') === challenge
+        ? Response.json({ access_token: 'access', refresh_token: 'refresh', expires_in: 3600 })
+        : Response.json({ error: 'invalid_grant' }, { status: 400 });
+    });
+    const mismatched = { ...flow, verifier: createOAuthFlow('trakt').verifier };
+    const response = await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=c&state=${flow.state}`), 'trakt', reader('trakt', mismatched));
+    expect(upstream).toHaveBeenCalledOnce();
+    expect(response.headers.get('location')).toBe(`${origin}/my-anime?auth=error`);
+    expect(response.cookies.get(flowCookie('trakt'))?.maxAge).toBe(0);
+    expect(response.cookies.get(tokenCookie('trakt'))).toBeUndefined();
+  });
   it('shows a graceful connection error after an upstream failure or user denial', async () => {
     const flow = createOAuthFlow('mal'); upstream.mockRejectedValue(new Error('offline'));
     const response = await oauthCallback(new Request(`${origin}/api/auth/mal/callback?code=c&state=${flow.state}`), 'mal', reader('mal', flow));
@@ -127,8 +169,9 @@ describe('encrypted cookies and OAuth flow', () => {
 });
 
 describe('refresh and logout', () => {
-  it.each(['trakt', 'mal'] as const)('refreshes expired %s sessions and persists rotated tokens', async provider => {
-    const token = { accessToken: 'expired', refreshToken: `rotate-${provider}`, expiresAt: Date.now() - 1 };
+  it.each([['trakt', undefined], ['trakt', 'trakt-secret'], ['mal', undefined]] as const)('refreshes expired %s sessions with secret %j and persists rotated tokens', async (provider, secret) => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', secret);
+    const token = { accessToken: 'expired', refreshToken: `rotate-${provider}-${secret}`, expiresAt: Date.now() - 1 };
     const cookies = { get: () => ({ value: encryptCookie(token, tokenCookie(provider)) }) };
     upstream.mockResolvedValue(Response.json({ access_token: 'new-access', refresh_token: 'new-refresh', expires_in: 3600 }));
     const response = await oauthRefresh(new Request(`${origin}/api/auth/${provider}/refresh`), provider, cookies);
@@ -136,6 +179,9 @@ describe('refresh and logout', () => {
     const init = upstream.mock.calls[0][1];
     const payload = provider === 'trakt' ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));
     expect(payload).toMatchObject({ grant_type: 'refresh_token', refresh_token: token.refreshToken });
+    expect(payload).not.toHaveProperty('code_verifier');
+    if (provider === 'trakt' && secret) expect(payload.client_secret).toBe(secret);
+    else expect(payload).not.toHaveProperty('client_secret');
   });
   it('clears a failed refresh to avoid redirect loops', async () => {
     upstream.mockRejectedValue(new Error('offline'));
@@ -148,13 +194,19 @@ describe('refresh and logout', () => {
     const response = await oauthLogout(new Request(`${origin}/api/auth/trakt/logout`, { method: 'POST', headers: originHeader ? { Origin: originHeader } : {} }), 'trakt', { get: vi.fn() });
     expect(response.status).toBe(403); expect(response.cookies.getAll()).toEqual([]); expect(upstream).not.toHaveBeenCalled();
   });
-  it('rejects GET logout and succeeds locally even when Trakt revocation fails', async () => {
+  it.each([undefined, 'trakt-secret'])('rejects GET logout and succeeds locally when Trakt revocation fails with secret %j', async secret => {
+    vi.stubEnv('TRAKT_CLIENT_SECRET', secret);
     const cookies = { get: () => ({ value: encryptCookie({ accessToken: 'a', refreshToken: 'r', expiresAt: Date.now() + 3600000 }, tokenCookie('trakt')) }) };
     expect((await oauthLogout(new Request(`${origin}/api/auth/trakt/logout`), 'trakt', cookies)).status).toBe(405);
     upstream.mockRejectedValue(new Error('offline'));
     const response = await oauthLogout(new Request(`${origin}/api/auth/trakt/logout`, { method: 'POST', headers: { Origin: origin } }), 'trakt', cookies);
     expect(response.cookies.get(tokenCookie('trakt'))).toMatchObject({ maxAge: 0, secure: true, httpOnly: true });
     expect(upstream.mock.calls[0][0]).toBe('https://api.trakt.tv/oauth/revoke');
+    const payload = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(payload).toMatchObject({ token: 'a', client_id: 'trakt-id' });
+    expect(payload).not.toHaveProperty('code_verifier');
+    if (secret) expect(payload.client_secret).toBe(secret);
+    else expect(payload).not.toHaveProperty('client_secret');
     expect(response.headers.get('location')).toBe(`${origin}/my-anime`);
   });
 });

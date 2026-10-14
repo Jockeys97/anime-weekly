@@ -349,6 +349,7 @@
     "remove": "Rimuovi dalla mia lista",
     "saved": "Nella mia lista",
     "onlyWatchlist": "Solo la mia lista",
+    "showStreaming": "Mostra dove guardarlo",
     "genre": "Genere",
     "platform": "Piattaforma",
     "all": "Tutti",
@@ -359,7 +360,6 @@
     "noRatedEpisodes": "Nessun episodio già uscito questa settimana ha un voto IMDb verificato disponibile.",
     "episodesPending": "La classifica di questa settimana non è ancora stata aggiornata.",
     "episodesUnavailable": "I voti IMDb degli episodi sono temporaneamente non disponibili.",
-    "episodesPartial": "Classifica parziale: alcuni voti IMDb non sono ancora disponibili.",
-    "showStreaming": "Mostra dove guardarlo"
+    "episodesPartial": "Classifica parziale: alcuni voti IMDb non sono ancora disponibili."
   }
 }

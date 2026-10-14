@@ -349,6 +349,7 @@
     "remove": "Remover da minha lista",
     "saved": "Na minha lista",
     "onlyWatchlist": "Só a minha lista",
+    "showStreaming": "Mostrar onde assistir",
     "genre": "Género",
     "platform": "Plataforma",
     "all": "Todos",
@@ -359,7 +360,6 @@
     "noRatedEpisodes": "Nenhum episódio já lançado esta semana tem uma avaliação verificada do IMDb disponível.",
     "episodesPending": "A classificação desta semana ainda não foi atualizada.",
     "episodesUnavailable": "As avaliações de episódios no IMDb estão temporariamente indisponíveis.",
-    "episodesPartial": "Classificação parcial: algumas avaliações do IMDb ainda não estão disponíveis.",
-    "showStreaming": "Mostrar onde assistir"
+    "episodesPartial": "Classificação parcial: algumas avaliações do IMDb ainda não estão disponíveis."
   }
 }

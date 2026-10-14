@@ -42,13 +42,13 @@ export function readToken(provider: AnimeProvider, value?: string): AuthToken | 
     && typeof token.refreshToken === 'string' && token.refreshToken.length > 0
     && Number.isSafeInteger(token.expiresAt) ? token : null;
 }
-export function createOAuthFlow(provider: AnimeProvider, now = Date.now()): OAuthFlow {
+export function createOAuthFlow(_provider: AnimeProvider, now = Date.now()): OAuthFlow {
   return { state: randomBytes(32).toString('base64url'), expiresAt: now + 600000,
-    ...(provider === 'mal' ? { verifier: randomBytes(64).toString('base64url') } : {}) };
+    verifier: randomBytes(64).toString('base64url') };
 }
-export function validOAuthState(flow: OAuthFlow | null, state: string | null, provider: AnimeProvider, now = Date.now()): boolean {
+export function validOAuthState(flow: OAuthFlow | null, state: string | null, _provider: AnimeProvider, now = Date.now()): boolean {
   if (!flow || !Number.isSafeInteger(flow.expiresAt) || flow.expiresAt <= now || typeof flow.state !== 'string'
-    || !state || state.length > 128 || (provider === 'mal' && !/^[A-Za-z0-9._~-]{43,128}$/.test(flow.verifier ?? ''))) return false;
+    || !state || state.length > 128 || typeof flow.verifier !== 'string' || !/^[A-Za-z0-9._~-]{43,128}$/.test(flow.verifier)) return false;
   const expected = Buffer.from(flow.state), actual = Buffer.from(state);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
@@ -85,7 +85,8 @@ export function oauthLogin(request: Request, provider: AnimeProvider) {
   const url = new URL(provider === 'trakt' ? 'https://trakt.tv/oauth/authorize' : 'https://myanimelist.net/v1/oauth2/authorize');
   url.search = new URLSearchParams({ response_type: 'code', client_id: provider === 'trakt' ? process.env.TRAKT_CLIENT_ID! : process.env.MAL_CLIENT_ID!,
     redirect_uri: callbackUri(origin, provider), state: flow.state,
-    ...(provider === 'mal' ? { code_challenge: flow.verifier!, code_challenge_method: 'plain' } : {}) }).toString();
+    code_challenge: provider === 'trakt' ? createHash('sha256').update(flow.verifier!).digest('base64url') : flow.verifier!,
+    code_challenge_method: provider === 'trakt' ? 'S256' : 'plain' }).toString();
   const response = privateResponse(NextResponse.redirect(url));
   response.cookies.set(flowCookie(provider), encryptCookie(flow, flowCookie(provider)), { ...secureCookie, path: flowPath(provider), maxAge: 600 });
   return response;
@@ -93,7 +94,7 @@ export function oauthLogin(request: Request, provider: AnimeProvider) {
 
 async function exchangeToken(provider: AnimeProvider, origin: string, grant: Record<string, string>, previousRefresh?: string): Promise<AuthToken> {
   const credentials = provider === 'trakt'
-    ? { client_id: process.env.TRAKT_CLIENT_ID!, client_secret: process.env.TRAKT_CLIENT_SECRET! }
+    ? { client_id: process.env.TRAKT_CLIENT_ID!, ...(process.env.TRAKT_CLIENT_SECRET?.trim() ? { client_secret: process.env.TRAKT_CLIENT_SECRET } : {}) }
     : { client_id: process.env.MAL_CLIENT_ID!, ...(process.env.MAL_CLIENT_SECRET ? { client_secret: process.env.MAL_CLIENT_SECRET } : {}) };
   const payload = { ...credentials, redirect_uri: callbackUri(origin, provider), ...grant };
   const response = await (provider === 'trakt' ? traktFetch : malFetch)(provider === 'trakt'
@@ -126,7 +127,7 @@ export async function oauthCallback(request: Request, provider: AnimeProvider, c
   if (!code || url.searchParams.has('error')) return response;
   try {
     saveToken(response, provider, await exchangeToken(provider, url.origin, { grant_type: 'authorization_code', code,
-      ...(provider === 'mal' ? { code_verifier: flow!.verifier! } : {}) }));
+      code_verifier: flow!.verifier! }));
     return response;
   } catch { const failed = returnToPage(url.origin, true); clearFlow(failed, provider); return failed; }
 }
@@ -167,7 +168,8 @@ export async function oauthLogout(request: Request, provider: AnimeProvider, coo
     try {
       await traktFetch('https://api.trakt.tv/oauth/revoke', { method: 'POST', cache: 'no-store', next: undefined,
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token.accessToken,
-          client_id: process.env.TRAKT_CLIENT_ID, client_secret: process.env.TRAKT_CLIENT_SECRET }) }, 5000);
+          client_id: process.env.TRAKT_CLIENT_ID,
+          ...(process.env.TRAKT_CLIENT_SECRET?.trim() ? { client_secret: process.env.TRAKT_CLIENT_SECRET } : {}) }) }, 5000);
     } catch { /* Local logout succeeds even when remote revocation fails. */ }
   }
   return response;

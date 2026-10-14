@@ -355,6 +355,7 @@
     "remove": "Remove from my list",
     "saved": "In my list",
     "onlyWatchlist": "Only my watchlist",
+    "showStreaming": "Show where to watch",
     "genre": "Genre",
     "platform": "Platform",
     "all": "All",
@@ -365,7 +366,6 @@
     "noRatedEpisodes": "No episode released this week has a verified IMDb rating available yet.",
     "episodesPending": "This week’s episode ranking has not been updated yet.",
     "episodesUnavailable": "IMDb episode ratings are temporarily unavailable.",
-    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet.",
-    "showStreaming": "Show where to watch"
+    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet."
   }
 }

@@ -66,12 +66,14 @@ Configura le seguenti variabili sul server (mai con prefisso `NEXT_PUBLIC_`):
 | Variabile | Uso |
 | --- | --- |
 | `AUTH_COOKIE_SECRET` | Obbligatoria: segreto casuale lungo, almeno 32 byte consigliati, per derivare la chiave AES-256-GCM. |
-| `TRAKT_CLIENT_ID` | ID dell'applicazione Trakt. |
-| `TRAKT_CLIENT_SECRET` | Segreto Trakt; necessario insieme al client ID. |
+| `TRAKT_CLIENT_ID` | ID dell'applicazione Trakt; abilita il pulsante Trakt. |
+| `TRAKT_CLIENT_SECRET` | Facoltativo: le applicazioni Trakt solo PKCE non lo richiedono. Se configurato, viene inviato insieme a PKCE. |
 | `MAL_CLIENT_ID` | ID dell'applicazione MyAnimeList; abilita il pulsante MAL. |
 | `MAL_CLIENT_SECRET` | Facoltativo, per applicazioni MAL che richiedono un segreto. |
 
 La funzionalità richiede `AUTH_COOKIE_SECRET` e almeno un provider configurato.
+Per Trakt basta `TRAKT_CLIENT_ID`, anche senza `TRAKT_CLIENT_SECRET`; MAL rimane
+nascosto finché non viene configurato `MAL_CLIENT_ID`.
 In caso contrario, `/my-anime` e gli endpoint di autenticazione restituiscono
 404 e il menu nasconde il link. Ogni pulsante appare solo con le credenziali del
 relativo provider. Ridistribuisci l'app dopo aver modificato la configurazione,
@@ -85,8 +87,12 @@ sostituendo `https://example.com` con l'origine dell'app:
 
 I redirect vengono calcolati dall'origine della richiesta. Usa HTTPS anche per
 lo sviluppo OAuth: i cookie sono sempre `Secure`, `HttpOnly` e `SameSite=Lax`.
-Trakt usa authorization code con stato casuale; MAL usa authorization code con
-PKCE e metodo `plain`, come richiesto dal servizio. Lo stato scade dopo 10 minuti.
+Trakt usa sempre authorization code con stato casuale e PKCE `S256`, con o senza
+client secret; MAL usa PKCE con metodo `plain`, come richiesto dal servizio.
+Il `code_verifier` casuale (43–128 caratteri) viene cifrato insieme allo stato nel
+cookie `HttpOnly`: l'autorizzazione invia il `code_challenge`, lo scambio del codice
+invia il verifier. Stato e verifier scadono dopo 10 minuti. Senza segreto Trakt,
+scambio del codice, refresh e revoca omettono `client_secret`.
 Token di accesso e refresh sono cifrati in cookie separati per provider, con durata
 massima di 90 giorni. Le route `/api/auth/{provider}/refresh` rinnovano i token in
 scadenza e aggiornano i cookie; se il rinnovo fallisce, chiedono di ricollegare
