@@ -178,3 +178,26 @@ it.each([null, {}, { ratings: [], sources: {} }, { ratings: {}, sources: null },
   expect(revalidateTag).not.toHaveBeenCalled();
 
 });
+
+it('repairs a legacy episode failure without spending more series-rating quota', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [], episodes: { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-14T10:00:00Z' } };
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
+  const episodes = { entries: [], status: 'ready' as const, collectorVersion: 2, updatedAt: '2026-10-14T12:00:00Z' };
+  vi.mocked(primeWeeklyEpisodes).mockResolvedValue(episodes);
+  await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  await finishBackground();
+  expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string).snapshot).toEqual({ ...previous, episodes });
+});
+
+it('reuses the completed daily job without invalidation, persistence or vendor calls on manual repeats', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 2, updatedAt: '2026-10-14T06:00:00Z' } });
+  const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(await response.json()).toMatchObject({ cached: true, episodeStatus: 'ready' });
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
+  expect(revalidateTag).not.toHaveBeenCalled();
+  expect(after).not.toHaveBeenCalled();
+});

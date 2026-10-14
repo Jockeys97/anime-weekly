@@ -16,6 +16,9 @@ export interface WeeklyEpisodes {
   entries: WeeklyEpisode[];
   status: 'pending' | 'ready' | 'partial' | 'unavailable';
   updatedAt?: string;
+  collectorVersion?: number;
+  reason?: 'quota' | 'authentication' | 'source' | 'metadata';
+  coverage?: { eligible: number; matched: number; rated: number; unrated: number; failed: number };
 }
 export function japanDate(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -33,4 +36,9 @@ export function topWeeklyEpisodes(entries: readonly WeeklyEpisode[], slug: strin
     if (!previous || entry.votes >= previous.votes) unique.set(entry.imdbId, entry);
   }
   return [...unique.values()].sort((a, b) => b.score - a.score || b.votes - a.votes || a.imdbId.localeCompare(b.imdbId)).slice(0, 5);
+}
+
+export const EPISODE_COLLECTOR_VERSION = 2;
+export function needsEpisodeRepair(previous?: WeeklyEpisodes, today = japanDate()): boolean {
+  return Boolean(previous?.updatedAt && Number.isFinite(Date.parse(previous.updatedAt)) && japanDate(new Date(previous.updatedAt)) === today && previous.collectorVersion !== EPISODE_COLLECTOR_VERSION);
 }

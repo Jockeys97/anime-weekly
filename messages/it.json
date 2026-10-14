@@ -357,9 +357,13 @@
     "noMatches": "Nessun titolo corrisponde ai filtri.",
     "storageError": "Impossibile salvare la lista in questo browser.",
     "episodeLabel": "Stagione {season} · Episodio {episode}",
-    "noRatedEpisodes": "Nessun episodio già uscito questa settimana ha un voto IMDb verificato disponibile.",
+    "noRatedEpisodes": "Nessun episodio già uscito questa settimana ha un voto IMDb verificabile tramite OMDb. Nuovo controllo al prossimo aggiornamento giornaliero.",
     "episodesPending": "La classifica di questa settimana non è ancora stata aggiornata.",
     "episodesUnavailable": "I voti IMDb degli episodi sono temporaneamente non disponibili.",
-    "episodesPartial": "Classifica parziale: alcuni voti IMDb non sono ancora disponibili."
+    "episodesPartial": "Classifica parziale: alcuni voti IMDb non sono ancora disponibili.",
+    "episodesSourceUnavailable": "OMDb non riesce ancora a recuperare i voti dei nuovi episodi. Nuovo tentativo al prossimo aggiornamento giornaliero.",
+    "episodesQuotaUnavailable": "La quota giornaliera OMDb è esaurita. I voti già raccolti restano salvati; nuovo tentativo al prossimo aggiornamento giornaliero.",
+    "episodesAuthenticationUnavailable": "La chiave OMDb non è configurata o non viene accettata dal servizio.",
+    "episodesMetadataUnavailable": "Le date o gli identificativi di alcuni episodi non sono ancora disponibili. Nuovo controllo al prossimo aggiornamento giornaliero."
   }
 }

@@ -4,11 +4,10 @@ import { unstable_cache } from 'next/cache';
 
 export interface ImdbEpisodeScore { title: string; season: number; episode: number; score: number; votes: number }
 export class EpisodeLookupError extends Error {
-  constructor(readonly reason: 'quota' | 'authentication' | 'network') { super(`Episode ratings unavailable: ${reason}`); }
+  constructor(readonly reason: 'quota' | 'authentication' | 'network' | 'source') { super(`Episode ratings unavailable: ${reason}`); }
 }
 interface OmdbEpisode { Response?: string; Error?: string; Type?: string; imdbID?: string; seriesID?: string; Title?: string; Season?: string; Episode?: string; imdbRating?: string; imdbVotes?: string }
 export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string): ImdbEpisodeScore | null {
-  // An exact ID and matching parent are required. Never substitute a series rating.
   if (data.Response !== 'True' || data.Type !== 'episode' || data.imdbID !== id || data.seriesID !== seriesId) return null;
   const score = Number(data.imdbRating), votes = Number(data.imdbVotes?.replace(/,/g, ''));
   const season = Number(data.Season), episode = Number(data.Episode);
@@ -16,28 +15,54 @@ export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string)
     || !data.Season?.trim() || !Number.isSafeInteger(season) || season < 0 || !Number.isSafeInteger(episode) || episode <= 0) return null;
   return { title: data.Title === 'N/A' ? '' : data.Title?.trim() ?? '', season, episode, score, votes };
 }
-class UnratedEpisode extends Error {}
-// Only the authenticated cron imports this writer. Valid episode results have
-// a separate cache from series scores; N/A and vendor failures are never stored.
-const episodeScore = unstable_cache(async (id: string, seriesId: string, day: string): Promise<ImdbEpisodeScore> => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new EpisodeLookupError('network');
+export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating'; details?: { score?: string; votes?: string; season?: string; episode?: string; type?: string; parentMatches: boolean } } | { state: 'error'; reason: 'quota' | 'authentication' | 'network' | 'source'; status?: number };
+// Persist the daily attempt, including outages and N/A. A second job cannot
+// silently spend quota again after a failure; a new day has a new cache key.
+async function fetchEpisodeAttempt(id: string, seriesId: string, day: string, coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> {
+  if (!/^tt\d+$/.test(id) || !/^tt\d+$/.test(seriesId) || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { state: 'unrated', cause: 'invalid-episode' };
+  if (coordinates && (!Number.isSafeInteger(coordinates.season) || coordinates.season < 0 || !Number.isSafeInteger(coordinates.episode) || coordinates.episode <= 0)) return { state: 'unrated', cause: 'invalid-episode' };
   const key = process.env.OMDB_API_KEY?.trim();
-  if (!key) throw new EpisodeLookupError('authentication');
+  if (!key) return { state: 'error', reason: 'authentication' };
   const url = new URL('https://www.omdbapi.com/');
-  url.searchParams.set('i', id); url.searchParams.set('type', 'episode'); url.searchParams.set('apikey', key);
+  url.searchParams.set('i', coordinates ? seriesId : id); url.searchParams.set('type', 'episode'); url.searchParams.set('apikey', key);
+  if (coordinates) { url.searchParams.set('Season', String(coordinates.season)); url.searchParams.set('Episode', String(coordinates.episode)); }
   let response: Response;
   try { response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(5000) }); }
-  catch { throw new EpisodeLookupError('network'); }
+  catch { return { state: 'error', reason: 'network' }; }
   const data = await response.json().catch(() => ({})) as OmdbEpisode;
-  if (/limit|quota/i.test(data.Error ?? '') || response.status === 429) throw new EpisodeLookupError('quota');
-  if (/key|auth/i.test(data.Error ?? '') || response.status === 401) throw new EpisodeLookupError('authentication');
-  if (!response.ok || (data.Response !== 'True' && !/not found/i.test(data.Error ?? ''))) throw new EpisodeLookupError('network');
-  const result = readImdbEpisode(data, id, seriesId);
-  if (!result) throw new UnratedEpisode();
-  return result;
-}, ['imdb-episode-score-v1'], { revalidate: 172800, tags: ['imdb-episode-scores'] });
-export async function primeImdbEpisode(id: string, seriesId: string, day = japanDate()): Promise<ImdbEpisodeScore | null> {
-  if (!/^tt\d+$/.test(id) || !/^tt\d+$/.test(seriesId)) return null;
-  try { return await episodeScore(id, seriesId, day); }
-  catch (error) { if (error instanceof UnratedEpisode) return null; throw error; }
+  if (/limit|quota/i.test(data.Error ?? '') || response.status === 429) return { state: 'error', reason: 'quota', status: response.status };
+  if (/key|auth/i.test(data.Error ?? '') || response.status === 401) return { state: 'error', reason: 'authentication', status: response.status };
+  if (!response.ok || (data.Response !== 'True' && !/not found|incorrect imdb id/i.test(data.Error ?? ''))) return { state: 'error', reason: response.ok ? 'source' : 'network', status: response.status };
+  if (data.Response !== 'True') return { state: 'unrated', cause: 'not-found' };
+  const details = { score: data.imdbRating, votes: data.imdbVotes, season: data.Season, episode: data.Episode, type: data.Type, parentMatches: data.seriesID === seriesId };
+  if (data.Type !== 'episode' || data.imdbID !== id || data.seriesID !== seriesId) return { state: 'unrated', cause: 'invalid-episode', details };
+  const rating = readImdbEpisode(data, id, seriesId);
+  return rating ? { state: 'rated', rating } : { state: 'unrated', cause: 'missing-rating', details };
+}
+class ColdEpisodeAttempt extends Error {}
+function attemptCache(populate: boolean) {
+  const loader = async (id: string, seriesId: string, day: string, coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> => {
+    if (!populate) throw new ColdEpisodeAttempt();
+    return fetchEpisodeAttempt(id, seriesId, day, coordinates);
+  };
+  Object.defineProperty(loader, 'toString', { value: () => 'imdb-episode-daily-attempt-loader-v3' });
+  return unstable_cache(loader, ['imdb-episode-daily-attempt-v3'], { revalidate: 172800, tags: ['imdb-episode-attempts'] });
+}
+export function inspectImdbEpisode(id: string, seriesId: string, day = japanDate(), coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt> {
+  return attemptCache(true)(id, seriesId, day, coordinates);
+}
+export async function readImdbEpisodeAttempt(id: string, seriesId: string, day = japanDate(), coordinates?: { season: number; episode: number }): Promise<EpisodeAttempt | null> {
+  try { return await attemptCache(false)(id, seriesId, day, coordinates); }
+  catch { return null; }
+}
+export async function primeImdbEpisode(id: string, seriesId: string, day = japanDate(), coordinates?: { season: number; episode: number }): Promise<ImdbEpisodeScore | null> {
+  let result = await inspectImdbEpisode(id, seriesId, day);
+  // OMDb sometimes cannot resolve a new episode directly. Try its parent and
+  // TMDB coordinates once, but accept only the originally verified IMDb IDs.
+  // A real unrated response needs no second request; quota/auth never retry.
+  if (coordinates && ((result.state === 'unrated' && result.cause === 'not-found') || (result.state === 'error' && (result.reason === 'source' || result.reason === 'network')))) {
+    result = await inspectImdbEpisode(id, seriesId, day, coordinates);
+  }
+  if (result.state === 'error') throw new EpisodeLookupError(result.reason);
+  return result.state === 'rated' ? result.rating : null;
 }
