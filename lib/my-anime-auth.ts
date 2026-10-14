@@ -79,6 +79,27 @@ function returnToPage(origin: string, failed = false) {
 }
 type CookieReader = { get(name: string): { value: string } | undefined };
 
+const oauthErrorCodes = new Set(['invalid_request', 'invalid_client', 'invalid_grant', 'unauthorized_client',
+  'unsupported_grant_type', 'invalid_scope', 'access_denied', 'redirect_uri_mismatch', 'invalid_redirect_uri',
+  'temporarily_unavailable', 'server_error']);
+function safeProviderError(value: unknown): string {
+  // Vendor descriptions can echo credentials or codes. Log known OAuth error
+  // identifiers only; never log response bodies or arbitrary exception text.
+  return typeof value === 'string' && oauthErrorCodes.has(value) ? value : 'unknown_provider_error';
+}
+class OAuthExchangeError extends Error {
+  constructor(readonly diagnostic: { stage: string; httpStatus?: number; providerError?: string; responseType?: string; challenge?: boolean }) {
+    super('OAuth token exchange failed');
+  }
+}
+function logOAuthFailure(provider: AnimeProvider, operation: 'callback' | 'refresh', origin: string,
+  error: unknown, stage = 'session_cookie_write_failed') {
+  console.error('[my-anime-auth] OAuth failure', {
+    provider, operation, redirectUri: callbackUri(origin, provider),
+    ...(error instanceof OAuthExchangeError ? error.diagnostic : { stage }),
+  });
+}
+
 export function oauthLogin(request: Request, provider: AnimeProvider) {
   if (!myAnimeConfig()[provider]) return errorResponse(404);
   const flow = createOAuthFlow(provider), origin = new URL(request.url).origin;
@@ -97,20 +118,31 @@ async function exchangeToken(provider: AnimeProvider, origin: string, grant: Rec
     ? { client_id: process.env.TRAKT_CLIENT_ID!, ...(process.env.TRAKT_CLIENT_SECRET?.trim() ? { client_secret: process.env.TRAKT_CLIENT_SECRET } : {}) }
     : { client_id: process.env.MAL_CLIENT_ID!, ...(process.env.MAL_CLIENT_SECRET ? { client_secret: process.env.MAL_CLIENT_SECRET } : {}) };
   const payload = { ...credentials, redirect_uri: callbackUri(origin, provider), ...grant };
-  const response = await (provider === 'trakt' ? traktFetch : malFetch)(provider === 'trakt'
+  let response: Response;
+  try { response = await (provider === 'trakt' ? traktFetch : malFetch)(provider === 'trakt'
     ? 'https://api.trakt.tv/oauth/token' : 'https://myanimelist.net/v1/oauth2/token', {
     method: 'POST', cache: 'no-store', next: undefined,
     headers: { 'Content-Type': provider === 'trakt' ? 'application/json' : 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: provider === 'trakt' ? JSON.stringify(payload) : new URLSearchParams(payload).toString(),
-  }, 12000);
-  if (!response.ok) throw new Error('Token exchange failed');
-  const data = await response.json() as { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown; created_at?: unknown };
+  }, 12000); }
+  catch (error) {
+    throw new OAuthExchangeError({ stage: error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name)
+      ? 'token_request_timeout' : 'token_request_failed' });
+  }
+  const contentType = response.headers.get('content-type') ?? '';
+  const responseType = contentType.includes('json') ? 'json' : contentType.includes('html') ? 'html' : 'other';
+  const diagnostic = { httpStatus: response.status, responseType };
+  const body: unknown = await response.json().catch(() => null);
+  const data = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
+  if (!response.ok) throw new OAuthExchangeError({ ...diagnostic, stage: 'token_http_error', providerError: safeProviderError(data?.error),
+    challenge: response.headers.get('cf-mitigated') === 'challenge' });
+  if (!data) throw new OAuthExchangeError({ ...diagnostic, stage: 'token_response_not_json_object' });
   const refreshToken = data.refresh_token ?? previousRefresh;
   if (typeof data.access_token !== 'string' || !data.access_token || typeof refreshToken !== 'string' || !refreshToken
-    || typeof data.expires_in !== 'number' || !Number.isSafeInteger(data.expires_in) || data.expires_in <= 0) throw new Error('Invalid token response');
+    || typeof data.expires_in !== 'number' || !Number.isSafeInteger(data.expires_in) || data.expires_in <= 0) throw new OAuthExchangeError({ ...diagnostic, stage: 'token_response_invalid_fields' });
   const issuedAt = provider === 'trakt' && typeof data.created_at === 'number' ? data.created_at * 1000 : Date.now();
   const token = { accessToken: data.access_token, refreshToken, expiresAt: Math.floor(issuedAt + data.expires_in * 1000) };
-  if (!Number.isSafeInteger(token.expiresAt) || token.expiresAt <= Date.now()) throw new Error('Expired token response');
+  if (!Number.isSafeInteger(token.expiresAt) || token.expiresAt <= Date.now()) throw new OAuthExchangeError({ ...diagnostic, stage: 'token_response_expired' });
   return token;
 }
 export async function oauthCallback(request: Request, provider: AnimeProvider, cookies: CookieReader) {
@@ -119,17 +151,23 @@ export async function oauthCallback(request: Request, provider: AnimeProvider, c
   const flow = decryptCookie<OAuthFlow>(cookies.get(flowCookie(provider))?.value, flowCookie(provider));
   // Reject before any upstream request; consume the flow even on failure.
   if (!validOAuthState(flow, url.searchParams.get('state'), provider)) {
+    logOAuthFailure(provider, 'callback', url.origin, null, !flow ? 'state_cookie_missing_or_unreadable'
+      : flow.expiresAt <= Date.now() ? 'state_expired' : 'state_invalid');
     const response = errorResponse(400); clearFlow(response, provider); return response;
   }
   const code = url.searchParams.get('code');
   const response = returnToPage(url.origin, !code || url.searchParams.has('error'));
   clearFlow(response, provider);
-  if (!code || url.searchParams.has('error')) return response;
+  if (!code || url.searchParams.has('error')) {
+    logOAuthFailure(provider, 'callback', url.origin, new OAuthExchangeError({ stage: !code ? 'authorization_code_missing' : 'authorization_rejected',
+      ...(url.searchParams.has('error') ? { providerError: safeProviderError(url.searchParams.get('error')) } : {}) }));
+    return response;
+  }
   try {
     saveToken(response, provider, await exchangeToken(provider, url.origin, { grant_type: 'authorization_code', code,
       code_verifier: flow!.verifier! }));
     return response;
-  } catch { const failed = returnToPage(url.origin, true); clearFlow(failed, provider); return failed; }
+  } catch (error) { logOAuthFailure(provider, 'callback', url.origin, error); const failed = returnToPage(url.origin, true); clearFlow(failed, provider); return failed; }
 }
 
 // Coalesce rotating refresh tokens within one server instance, including brief
@@ -149,13 +187,13 @@ export async function oauthRefresh(request: Request, provider: AnimeProvider, co
   if (!myAnimeConfig()[provider]) return errorResponse(404);
   const origin = new URL(request.url).origin;
   const token = readToken(provider, cookies.get(tokenCookie(provider))?.value);
-  if (!token) { const response = returnToPage(origin, true); clearToken(response, provider); return response; }
+  if (!token) { logOAuthFailure(provider, 'refresh', origin, null, 'session_missing_or_unreadable'); const response = returnToPage(origin, true); clearToken(response, provider); return response; }
   if (!tokenNeedsRefresh(token)) return returnToPage(origin);
   try {
     const response = returnToPage(origin);
     saveToken(response, provider, await refreshToken(provider, origin, token));
     return response;
-  } catch { const response = returnToPage(origin, true); clearToken(response, provider); return response; }
+  } catch (error) { logOAuthFailure(provider, 'refresh', origin, error); const response = returnToPage(origin, true); clearToken(response, provider); return response; }
 }
 export async function oauthLogout(request: Request, provider: AnimeProvider, cookies: CookieReader) {
   if (!myAnimeConfig()[provider]) return errorResponse(404);

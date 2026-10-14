@@ -26,3 +26,11 @@ it('explains an OMDb source error without claiming that the API quota was exhaus
   expect(html).not.toContain('quota giornaliera');
   expect(render({ entries: [], status: 'unavailable', reason: 'quota' })).toContain('quota giornaliera');
 });
+
+it('credits the official dataset and distinguishes its failure from an OMDb failure', () => {
+  const html = render({ entries: [], status: 'unavailable', reason: 'source', source: 'imdb-datasets', dataUpdatedAt: '2026-10-14T00:00:00Z' });
+  expect(html).toContain('I dataset IMDb sono temporaneamente');
+  expect(html).toContain('https://data.imdb.com/non-commercial-datasets/');
+  expect(html).not.toContain('OMDb non riesce');
+  expect(render({ entries: [], status: 'ready', source: 'imdb-datasets' })).toContain('voto nei dataset IMDb');
+});

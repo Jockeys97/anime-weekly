@@ -183,7 +183,7 @@ it('repairs a legacy episode failure without spending more series-rating quota',
   vi.stubEnv('CRON_SECRET', 'fixture');
   const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [], episodes: { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-14T10:00:00Z' } };
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
-  const episodes = { entries: [], status: 'ready' as const, collectorVersion: 2, updatedAt: '2026-10-14T12:00:00Z' };
+  const episodes = { entries: [], status: 'ready' as const, collectorVersion: 3, updatedAt: '2026-10-14T12:00:00Z' };
   vi.mocked(primeWeeklyEpisodes).mockResolvedValue(episodes);
   await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ it('repairs a legacy episode failure without spending more series-rating quota',
 
 it('reuses the completed daily job without invalidation, persistence or vendor calls on manual repeats', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
-  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 2, updatedAt: '2026-10-14T06:00:00Z' } });
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 3, updatedAt: '2026-10-14T06:00:00Z' } });
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(await response.json()).toMatchObject({ cached: true, episodeStatus: 'ready' });
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
