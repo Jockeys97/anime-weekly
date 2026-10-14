@@ -129,3 +129,10 @@ it('uses the confirmed original series score when a separate season has an IMDb 
   vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt200', imdbStatus: 'unavailable' } }).mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt100', imdbRating: '8.2', imdbStatus: 'ready' } });
   expect((await getDetailAvailability(current)).ratings).toEqual({ imdbId: 'tt100', imdbRating: '8.2', imdbStatus: 'ready', imdbSeriesTitle: 'Example' });
 });
+
+it('preserves the confirmed series IMDb ID and an upstream error instead of reporting an unmatched season', async () => {
+  const first = anime(1, 'Example', 2023), current = anime(2, 'Example Season 2', 2026); prequel(current, first);
+  vi.mocked(getAnime).mockResolvedValue(first);
+  vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, ratings:{ imdbStatus:'unmatched' } }).mockResolvedValueOnce({ ...empty, ratings:{ imdbId:'tt100', imdbStatus:'error' } });
+  expect((await getDetailAvailability(current)).ratings).toEqual({ imdbId:'tt100', imdbStatus:'error', imdbSeriesTitle:'Example' });
+});

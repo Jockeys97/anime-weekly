@@ -71,7 +71,7 @@ export async function getDetailAvailability(anime: AniListAnime, fresh = false):
   // when the chosen country has no direct offers, without claiming season coverage.
   return {
     ...direct,
-    ratings: (!direct.ratings.imdbId || !hasImdbScore(direct.ratings)) && hasImdbScore(original.ratings)
+    ratings: original.ratings.imdbId && (!direct.ratings.imdbId || (!hasImdbScore(direct.ratings) && hasImdbScore(original.ratings)))
       ? { ...direct.ratings, ...original.ratings, imdbSeriesTitle: animeName(series) }
       : direct.ratings,
     ...(original.match?.kind === 'tv' && original.match.id !== direct.match?.id ? {
