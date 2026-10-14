@@ -2,6 +2,7 @@ import 'server-only';
 import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
 import { animeSearchTitles, chooseAnimeMatch, type AnimeCandidate, type AnimeSearch } from '@/lib/anime-match';
 import type { Ratings } from '@/lib/ratings';
+import { withTimeout } from '@/lib/async-timeout';
 
 import { anilistFetch as anilist, throttle } from '@/lib/rate-limited-fetch';
 // Below both Jikan's 60/minute and 3/second limits, including retries.
@@ -19,8 +20,19 @@ const query = `query ($search: String!, $formats: [MediaFormat]) {
 export async function getAnimeRatings(search: AnimeSearch): Promise<Ratings> {
   return (await lookupAnimeRatings(search)).ratings;
 }
-export async function lookupAnimeRatings(search: AnimeSearch, options: { weekly?: boolean } = {}): Promise<{ ratings: Ratings; unavailable: boolean }> {
+interface AnimeRatingOptions {
+  weekly?: boolean;
+  existing?: Ratings;
+  skipJikan?: boolean;
+  onJikanTimeout?: () => void;
+}
+export async function lookupAnimeRatings(search: AnimeSearch, options: AnimeRatingOptions = {}): Promise<{ ratings: Ratings; unavailable: boolean }> {
   const deadline = Date.now() + 12000;
+  const existing = options.existing;
+  const needsMal = existing?.malScore == null && !options.skipJikan;
+  if (existing?.anilistScore != null && (!needsMal || existing.malId)) {
+    return { ratings: needsMal ? await getAnimeRatingsById(existing.malId, existing.anilistScore, CACHE_SECONDS, 6000, options.weekly, options.onJikanTimeout) : {}, unavailable: false };
+  }
   const candidates: AnimeCandidate[] = [];
   let unavailable = false;
   try {
@@ -45,20 +57,31 @@ export async function lookupAnimeRatings(search: AnimeSearch, options: { weekly?
     if (!match) return { ratings: {}, unavailable };
     const fallback: Ratings = { anilistId: match.id, anilistScore: match.averageScore };
     if (Number.isSafeInteger(match.idMal) && match.idMal! > 0) fallback.malId = match.idMal!;
-    if (Date.now() >= deadline) return { ratings: fallback, unavailable: false };
-    return { ratings: { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore, options.weekly ? CACHE_SECONDS : JIKAN_REVALIDATE, Math.max(0, deadline - Date.now()), options.weekly) }, unavailable: false };
+    if (!needsMal || Date.now() >= deadline) return { ratings: fallback, unavailable: false };
+    return { ratings: { ...fallback, ...await getAnimeRatingsById(match.idMal, match.averageScore, options.weekly ? CACHE_SECONDS : JIKAN_REVALIDATE, Math.max(0, deadline - Date.now()), options.weekly, options.onJikanTimeout) }, unavailable: false };
   } catch { return { ratings: {}, unavailable: true }; }
 }
 
 // Details already have an exact MAL ID, so reuse Jikan without another title lookup.
-export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE, maxWaitMs?: number, weekly = false): Promise<Ratings> {
+export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE, maxWaitMs?: number, weekly = false, onTimeout?: () => void): Promise<Ratings> {
   const fallback: Ratings = { anilistScore: averageScore };
   if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
   fallback.malId = idMal!;
+  const started = Date.now();
   try {
-    const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, weekly ? { cache: 'no-store', next: undefined } : { next: { revalidate, tags: [CACHE_TAG] } }, maxWaitMs);
-    if (!response.ok) return fallback;
-    const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
-    return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
-  } catch { return fallback; }
+    const lookup = async (): Promise<Ratings> => {
+      const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, weekly ? { cache: 'no-store', next: undefined } : { next: { revalidate, tags: [CACHE_TAG] } }, maxWaitMs);
+      if (!response.ok) {
+        if (maxWaitMs != null && Date.now() - started >= maxWaitMs) onTimeout?.();
+        return fallback;
+      }
+      const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
+      return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
+    };
+    // Include response bodies in the cron timeout as well as the service queue.
+    return await (weekly ? withTimeout(lookup(), maxWaitMs ?? 6000) : lookup());
+  } catch (error) {
+    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError' || /timed out/i.test(error.message))) onTimeout?.();
+    return fallback;
+  }
 }
