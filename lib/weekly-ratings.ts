@@ -1,5 +1,5 @@
 import 'server-only';
-import { unstable_cache } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 import { CACHE_SECONDS } from '@/lib/config';
 import { lookupAnimeRatings } from '@/lib/anime-ratings';
 import { getRatings, getWeeklyRatingSources } from '@/lib/tmdb';
@@ -21,60 +21,18 @@ export interface WeeklyRatings {
 class ColdWeeklyRatings extends Error {}
 const empty = (): WeeklyRatings => ({ titles: {}, events: [] });
 
-// The closure is deliberately absent from the cache key: readers and cron use
-// identical function source, key parts and arguments. Only cron may populate a
-// miss. A reader throws instead of persisting an empty snapshot or calling APIs.
+// Only the cron writer can expose a precomputed value to the shared loader.
+let pendingSnapshot: { slug: string; snapshot: WeeklyRatings } | undefined;
 function snapshotCache(canPopulate: boolean) {
   const loader = async (slug: string): Promise<WeeklyRatings> => {
-    if (!canPopulate) throw new ColdWeeklyRatings();
-    const week = parseWeek(slug);
-    if (!week) throw new Error('Invalid week');
-    const deadline = Date.now() + 260000; // Leave room within Hobby's 300s limit.
-    const sources = await getWeeklyRatingSources(week);
-    const snapshot = empty();
-    let completed = 0;
-    let omdbAvailable = true;
-    const imdb = new Map<string, Ratings>();
-    for (const source of sources) {
-      if (Date.now() > deadline - 18000) break;
-      const [external, anime] = await Promise.all([
-        withTimeout(getRatings(source.kind, source.id), 13000).catch(() => ({} as Ratings)),
-        withTimeout(lookupAnimeRatings(source, { weekly: true }), 16000).catch(() => ({ ratings: {}, unavailable: true })),
-      ]);
-      let score: Ratings = {};
-      if (external.imdbId) {
-        score = imdb.get(external.imdbId) || {};
-        if (!imdb.has(external.imdbId) && omdbAvailable) {
-          score = await primeImdbScore(external.imdbId, slug);
-          imdb.set(external.imdbId, score);
-          if (score.imdbErrorReason === 'quota' || score.imdbErrorReason === 'authentication' || score.imdbStatus === 'unconfigured') omdbAvailable = false;
-        }
-      }
-      // Store confirmed matches and successful scores only, never upstream
-      // error bodies/statuses. Missing sources render as neutral n/a.
-      const ratings: Ratings = { ...anime.ratings };
-      if (!anime.unavailable || score.imdbStatus === 'ready') completed++;
-      if (external.imdbId) ratings.imdbId = external.imdbId;
-      if (score.imdbStatus === 'ready') {
-        ratings.imdbRating = score.imdbRating;
-        ratings.imdbVotes = score.imdbVotes;
-        ratings.imdbStatus = 'ready';
-      }
-      snapshot.titles[`${source.kind}:${source.id}`] = ratings;
-    }
-    const ids = Object.values(snapshot.titles).flatMap(rating => rating.anilistId ? [rating.anilistId] : []);
-    const airings = await withTimeout(getWeekAirings(ids, week, Math.max(0, Math.min(12000, deadline - Date.now())), true, true), 12000)
-      .catch(() => ({ events: [], unavailable: true }));
-    snapshot.events = airings.events;
-    // A wholly failed job must remain retryable rather than cache an outage.
-    if (sources.length && !completed) throw new Error('Weekly ratings unavailable');
-    return snapshot;
+    if (!canPopulate || pendingSnapshot?.slug !== slug) throw new ColdWeeklyRatings();
+    return pendingSnapshot.snapshot;
   };
   // unstable_cache keys include cb.toString(), which differs between the cron
   // route bundle and page bundles after minification. Pin it so the page reads
   // exactly the entry the cron wrote.
   Object.defineProperty(loader, 'toString', { value: () => 'weekly-ratings-snapshot-loader' });
-  return unstable_cache(loader, ['weekly-ratings-snapshot-v1'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
+  return unstable_cache(loader, ['weekly-ratings-snapshot-v2'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
 }
 
 export async function readWeeklyRatingsSnapshot(slug: string): Promise<WeeklyRatings> {
@@ -84,7 +42,6 @@ export async function readWeeklyRatingsSnapshot(slug: string): Promise<WeeklyRat
 
 export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (!host || process.env.VERCEL_ENV !== 'production') console.error('[weekly-ratings] no read endpoint', Boolean(host), process.env.VERCEL_ENV);
   if (host && process.env.VERCEL_ENV === 'production') {
     try {
       const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 900, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
@@ -98,7 +55,70 @@ export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
   try { return await snapshotCache(false)(slug); }
   catch (e) { console.error("[weekly-ratings] read miss", slug, (e as Error)?.constructor?.name); return empty(); }
 }
-// Authenticated cron only. The shared cache also deduplicates repeat cron runs.
-export function primeWeeklyRatings(slug: string): Promise<WeeklyRatings> {
-  return snapshotCache(true)(slug);
+export function isWeeklyRatingComplete(rating: Ratings): boolean {
+  return rating.malScore != null && Boolean(rating.imdbRating) && rating.anilistScore != null;
+}
+
+// Compute before invalidating: provider failures must never erase a good snapshot.
+export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings): Promise<WeeklyRatings & { total: number }> {
+  const week = parseWeek(slug);
+  if (!week) throw new Error('Invalid week');
+  const old = previous ?? await readWeeklyRatingsSnapshot(slug);
+  const deadline = Date.now() + 260000;
+  const sources = await getWeeklyRatingSources(week);
+  const snapshot: WeeklyRatings = { titles: { ...old.titles }, events: [...old.events] };
+  let omdbAvailable = true;
+  let jikanAvailable = true;
+  let completed = Object.values(old.titles).filter(rating => rating.imdbRating || rating.anilistScore != null || rating.malScore != null).length;
+  const imdb = new Map<string, Ratings>();
+  for (const source of sources) {
+    const key = `${source.kind}:${source.id}`;
+    const existing = snapshot.titles[key] ?? {};
+    if (isWeeklyRatingComplete(existing)) continue;
+    if (Date.now() > deadline - 18000) break;
+    const [external, anime] = await Promise.all([
+      !existing.imdbRating && omdbAvailable && !existing.imdbId
+        ? withTimeout(getRatings(source.kind, source.id), 13000).catch(() => ({} as Ratings))
+        : Promise.resolve({} as Ratings),
+      existing.anilistScore == null || (existing.malScore == null && jikanAvailable)
+        ? withTimeout(lookupAnimeRatings(source, {
+          weekly: true, existing, skipJikan: !jikanAvailable,
+          onJikanTimeout: () => { jikanAvailable = false; },
+        }), 16000).catch(() => ({ ratings: {}, unavailable: true }))
+        : Promise.resolve({ ratings: {}, unavailable: false }),
+    ]);
+    const imdbId = existing.imdbId ?? external.imdbId;
+    let score: Ratings = {};
+    if (!existing.imdbRating && imdbId && omdbAvailable) {
+      score = imdb.get(imdbId) ?? await primeImdbScore(imdbId, slug);
+      imdb.set(imdbId, score);
+      if (score.imdbErrorReason === 'quota' || score.imdbErrorReason === 'authentication' || score.imdbStatus === 'unconfigured') omdbAvailable = false;
+    }
+    const ratings: Ratings = { ...existing };
+    // Never merge null/undefined fallbacks or upstream error statuses.
+    for (const [field, value] of Object.entries(anime.ratings)) {
+      if (value != null && existing[field as keyof Ratings] == null) Object.assign(ratings, { [field]: value });
+    }
+    if (imdbId) ratings.imdbId = imdbId;
+    if (score.imdbStatus === 'ready') {
+      ratings.imdbRating = score.imdbRating ?? existing.imdbRating;
+      ratings.imdbVotes = score.imdbVotes ?? existing.imdbVotes;
+      ratings.imdbStatus = 'ready';
+    }
+    if (!anime.unavailable || score.imdbStatus === 'ready') completed++;
+    snapshot.titles[key] = ratings;
+  }
+  const ids = Object.values(snapshot.titles).flatMap(rating => rating.anilistId ? [rating.anilistId] : []);
+  const airings = await withTimeout(getWeekAirings(ids, week, Math.max(0, Math.min(12000, deadline - Date.now())), true, true), 12000)
+    .catch(() => ({ events: [], unavailable: true }));
+  const events = new Map(old.events.map(event => [event.id, event]));
+  for (const event of airings.events) events.set(event.id, event);
+  snapshot.events = [...events.values()];
+  if (sources.length && !completed) throw new Error('Weekly ratings unavailable');
+
+  revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
+  pendingSnapshot = { slug, snapshot };
+  try { await snapshotCache(true)(slug); }
+  finally { pendingSnapshot = undefined; }
+  return { ...snapshot, total: sources.length };
 }

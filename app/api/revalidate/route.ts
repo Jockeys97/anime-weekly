@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
-import { primeWeeklyRatings, readWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
+import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
 import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { getDictionary } from '@/lib/i18n';
@@ -23,12 +23,17 @@ export async function GET(request: Request) {
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
   revalidateTag(CACHE_TAG, { expire: 0 });
   const week = isoWeek(new Date());
+  let total = 0;
+  let complete = false;
   let populated = 0;
   let unavailable = 0;
   try {
-    const snapshot = await primeWeeklyRatings(formatWeek(week));
+    const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
+    const snapshot = await primeWeeklyRatings(formatWeek(week), previous);
+    total = snapshot.total;
+    complete = Object.keys(snapshot.titles).length >= total && Object.values(snapshot.titles).every(isWeeklyRatingComplete);
     populated = Object.values(snapshot.titles).filter(ratings => ratings.imdbRating || ratings.anilistScore != null || ratings.malScore != null).length;
-    unavailable = Object.keys(snapshot.titles).length - populated;
+    unavailable = Math.max(0, total - populated);
   } catch {
     // Still refresh discovery/page paths if optional rating services fail.
     // Failed loaders never replace a successful snapshot with an error.
@@ -37,5 +42,5 @@ export async function GET(request: Request) {
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.
   revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
-  return Response.json({ revalidated: true, week: formatWeek(week), populated, unavailable });
+  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete });
 }
