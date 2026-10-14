@@ -11,13 +11,14 @@ const origin = 'https://anime.example';
 const reader = (provider: 'trakt' | 'mal', flow: OAuthFlow) => ({ get: (name: string) => name === flowCookie(provider)
   ? { value: encryptCookie(flow, name) } : undefined });
 beforeEach(() => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   vi.stubEnv('AUTH_COOKIE_SECRET', 'offline-secret-with-at-least-thirty-two-bytes');
   vi.stubEnv('TRAKT_CLIENT_ID', 'trakt-id'); vi.stubEnv('TRAKT_CLIENT_SECRET', 'trakt-secret');
   vi.stubEnv('MAL_CLIENT_ID', 'mal-id'); vi.stubEnv('MAL_CLIENT_SECRET', '');
   upstream.mockReset();
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Tests must stay offline'); }));
 });
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe('personal anime feature gate', () => {
   it.each([
@@ -208,5 +209,52 @@ describe('refresh and logout', () => {
     if (secret) expect(payload.client_secret).toBe(secret);
     else expect(payload).not.toHaveProperty('client_secret');
     expect(response.headers.get('location')).toBe(`${origin}/my-anime`);
+  });
+});
+
+describe('safe OAuth diagnostics', () => {
+  const forbidden = ['private-code', 'private-access', 'private-refresh', 'trakt-secret', 'offline-secret-with-at-least-thirty-two-bytes'];
+  const assertNoSecrets = () => {
+    const logged = JSON.stringify(vi.mocked(console.error).mock.calls);
+    for (const secret of forbidden) expect(logged).not.toContain(secret);
+  };
+  it.each(['invalid_client', 'invalid_grant', 'unknown-error-with-private-code'])('records an upstream rejection (%s) without echoing provider descriptions or request credentials', async error => {
+    const flow = createOAuthFlow('trakt');
+    upstream.mockResolvedValue(Response.json({ error, error_description: forbidden.join(' '), access_token: 'private-access', refresh_token: 'private-refresh' }, { status: 400 }));
+    const response = await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=private-code&state=${flow.state}`), 'trakt', reader('trakt', flow));
+    expect(response.headers.get('location')).toBe(`${origin}/my-anime?auth=error`);
+    expect(console.error).toHaveBeenCalledExactlyOnceWith('[my-anime-auth] OAuth failure', {
+      provider: 'trakt', operation: 'callback', redirectUri: `${origin}/api/auth/trakt/callback`, stage: 'token_http_error',
+      httpStatus: 400, responseType: 'json', challenge: false, providerError: error.startsWith('unknown') ? 'unknown_provider_error' : error,
+    });
+    assertNoSecrets();
+  });
+  it('identifies HTML challenge responses without logging their bodies', async () => {
+    const flow = createOAuthFlow('trakt');
+    upstream.mockResolvedValue(new Response(`<html>${forbidden.join(' ')}</html>`, { status: 403, headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' } }));
+    await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=private-code&state=${flow.state}`), 'trakt', reader('trakt', flow));
+    expect(vi.mocked(console.error).mock.calls[0][1]).toMatchObject({ httpStatus: 403, responseType: 'html', challenge: true });
+    assertNoSecrets();
+  });
+  it.each([
+    [null, 'token_response_not_json_object'],
+    [{ access_token: 'private-access', refresh_token: 'private-refresh', expires_in: 'bad' }, 'token_response_invalid_fields'],
+    [{ access_token: 'private-access', refresh_token: 'private-refresh', expires_in: 1, created_at: 1 }, 'token_response_expired'],
+  ])('diagnoses malformed or expired successful responses without logging the token data', async (body, stage) => {
+    const flow = createOAuthFlow('trakt'); upstream.mockResolvedValue(Response.json(body));
+    await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=private-code&state=${flow.state}`), 'trakt', reader('trakt', flow));
+    expect(vi.mocked(console.error).mock.calls[0][1]).toMatchObject({ stage, httpStatus: 200 });
+    assertNoSecrets();
+  });
+  it('does not log network exception text that may contain secrets', async () => {
+    const flow = createOAuthFlow('trakt'); upstream.mockRejectedValue(new Error(forbidden.join(' ')));
+    await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=private-code&state=${flow.state}`), 'trakt', reader('trakt', flow));
+    expect(vi.mocked(console.error).mock.calls[0][1]).toMatchObject({ stage: 'token_request_failed' });
+    assertNoSecrets();
+  });
+  it('distinguishes missing OAuth state without writing the callback URL or cookies', async () => {
+    await oauthCallback(new Request(`${origin}/api/auth/trakt/callback?code=private-code&state=private-refresh`), 'trakt', { get: () => undefined });
+    expect(vi.mocked(console.error).mock.calls[0][1]).toMatchObject({ stage: 'state_cookie_missing_or_unreadable' });
+    expect(upstream).not.toHaveBeenCalled(); assertNoSecrets();
   });
 });
