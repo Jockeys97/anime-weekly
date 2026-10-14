@@ -1,8 +1,5 @@
 import type { WeeklyRatings } from '@/lib/weekly-ratings';
-import { topFive } from '@/lib/top-five';
-export function snapshotTopFive(snapshot: WeeklyRatings) {
-  return topFive(Object.entries(snapshot.titles).flatMap(([key, ratings]) => {
-    const name = snapshot.names?.[key];
-    return name ? [{ key, name, ratings }] : [];
-  }));
+import { topWeeklyEpisodes } from '@/lib/weekly-episodes';
+export function snapshotTopFive(snapshot: WeeklyRatings, slug: string) {
+  return topWeeklyEpisodes(snapshot.episodes?.entries ?? [], slug).map(episode => ({ ...episode, key: episode.imdbId, name: `${episode.seriesName} · S${episode.season} E${episode.episode}` }));
 }

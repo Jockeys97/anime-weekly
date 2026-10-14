@@ -192,3 +192,9 @@
 .title-filters select { max-width: 15rem; padding: .5rem; border-radius: 8px; background: #fff; color: inherit; border: 1px solid currentColor; }
 .anime-grid > [hidden] { display: none; }
 .anime-grid > div > .anime-card { height: 100%; }
+
+.top-five-episode{display:block;margin-top:8px;font-size:12px;font-weight:600;line-height:1.4}
+.top-five-episode-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px;line-height:1.5;color:var(--muted);margin-top:3px}
+.top-five-winner .top-five-episode-name{color:#d6e2d9}
+.top-five-source{flex-wrap:wrap}
+@media(max-width:640px){.top-five-episode{font-size:10px;margin-top:5px}.top-five-episode-name{font-size:10px}.top-five-card,.top-five-winner .top-five-card{align-items:center}.top-five-title,.top-five-winner .top-five-title{font-size:13px}.top-five-score strong,.top-five-winner .top-five-score strong{font-size:23px}}

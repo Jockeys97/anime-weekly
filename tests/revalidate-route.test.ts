@@ -4,6 +4,8 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('next/server', () => ({ after: vi.fn((callback: () => Promise<void>) => { background.tasks.push(callback()); }) }));
 vi.mock('../lib/weekly-ratings', () => ({ WEEKLY_PAGE_TAG: 'weekly-page-output', WEEKLY_RATINGS_TAG: 'weekly-ratings', primeWeeklyRatings: vi.fn(), readWeeklyRatingsSnapshot: vi.fn(), storeWeeklyRatingsSnapshot: vi.fn(), isWeeklyRatingComplete: (rating: { malScore?: number; anilistScore?: number; imdbRating?: string }) => rating.malScore != null && rating.anilistScore != null && Boolean(rating.imdbRating) }));
+vi.mock('../lib/weekly-episode-ratings', () => ({ primeWeeklyEpisodes: vi.fn() }));
+import { primeWeeklyEpisodes } from '../lib/weekly-episode-ratings';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { after } from 'next/server';
 import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot } from '../lib/weekly-ratings';
@@ -139,4 +141,25 @@ it('stores an authenticated POST snapshot and refreshes page output after storag
   expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
   expect(after).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it('reads episode rankings without warming IMDb, and does not substitute series scores', async () => {
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'tv:1': { imdbRating: '9.9', anilistScore: 95 } }, events: [] });
+  const response = await GET(new Request('https://example.test/api/revalidate?episodes=2026-42'));
+  expect(await response.json()).toEqual({ entries: [], status: 'pending' });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+});
+it('preserves series ratings and publishes episodes even when series warming fails', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [] };
+  const episodes = { entries: [], status: 'ready' as const, updatedAt: '2026-10-14T12:00:00Z' };
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
+  vi.mocked(primeWeeklyRatings).mockRejectedValue(new Error('Quota'));
+  vi.mocked(primeWeeklyEpisodes).mockResolvedValue(episodes);
+  await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  await finishBackground();
+  expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual({ ...previous, episodes });
 });
