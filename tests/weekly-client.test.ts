@@ -17,3 +17,20 @@ it('rejects stale responses that would replace cached scores with per-visit rati
   const { loadWeeklyLookup } = await import('../lib/weekly-client');
   await expect(loadWeeklyLookup('/api/weekly-title?week=2026-42&kind=tv&id=1', new AbortController().signal)).rejects.toThrow('Invalid weekly lookup');
 });
+
+it('starts the full calendar even when both streaming slots are stalled', async () => {
+  const fetchMock = vi.fn(async (input: string) => {
+    if (input.startsWith('/api/weekly-calendar?')) return Response.json({ events: [], episodeDates: [{ seriesId: 1, season: 1, episode: 2, date: '2026-10-14' }], anilistIds: {}, unavailable: false });
+    return new Promise<Response>(() => {});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { loadWeeklyLookup } = await import('../lib/weekly-client');
+  const controller = new AbortController();
+  const watch = [1, 2, 3].map(id => loadWeeklyLookup(`/api/weekly-title?week=2026-42&kind=tv&id=${id}`, controller.signal).catch(error => error));
+  const calendar = await loadWeeklyLookup('/api/weekly-calendar?week=2026-42', controller.signal);
+  expect(calendar).toMatchObject({ episodeDates: [{ seriesId: 1, episode: 2 }] });
+  expect(fetchMock).toHaveBeenCalledTimes(3); // Two watch requests and one independent calendar request.
+  controller.abort();
+  await Promise.all(watch);
+  await vi.runAllTimersAsync();
+});

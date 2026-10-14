@@ -8,12 +8,12 @@ import type { EpisodeDate } from '@/lib/episode-dates';
 import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
 import type { ISOWeek } from '@/lib/week';
 
-export function WeeklyCalendarContent({ titles, week, events, episodeDates = [], unavailable = false, locale = 'it', renderCard }: {
-  titles: AnimeTitle[]; week: ISOWeek; events: Parameters<typeof buildWeeklyCalendar>[1]; episodeDates?: EpisodeDate[]; unavailable?: boolean; locale?: Locale; renderCard?: (anime: AnimeTitle) => ReactNode;
+export function WeeklyCalendarContent({ titles, week, events, episodeDates = [], anilistIds = {}, unavailable = false, locale = 'it', renderCard }: {
+  titles: AnimeTitle[]; week: ISOWeek; events: Parameters<typeof buildWeeklyCalendar>[1]; episodeDates?: EpisodeDate[]; anilistIds?: Record<string, number>; unavailable?: boolean; locale?: Locale; renderCard?: (anime: AnimeTitle) => ReactNode;
 }) {
   const d = getDictionary(locale);
   const { timeZone } = useVisitorTime();
-  const { days, undated } = buildWeeklyCalendar(titles, events, week, episodeDates, timeZone);
+  const { days, undated } = buildWeeklyCalendar(titles, events, week, episodeDates, timeZone, anilistIds);
   const releaseCount = (count: number) => `${count} ${count === 1 ? d.calendar.release : d.calendar.releases}`;
   const weekday = (date: string, short = false) => <VisitorDate value={date} options={{ weekday: short ? 'short' : 'long' }} />;
   const dayDate = (date: string) => <VisitorDate value={date} options={{ month: 'short', day: 'numeric' }} />;

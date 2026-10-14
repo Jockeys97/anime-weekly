@@ -6,7 +6,7 @@ import type { AiringEvent } from '@/lib/airing-schedule';
 import { weekRange, type ISOWeek } from '@/lib/week';
 export interface CalendarRelease { anime: AnimeTitle; date: string; airingAt?: number; episode?: number; season?: number; source?: 'tmdb' | 'official'; sourceUrl?: string }
 export interface CalendarDay { date: string; releases: CalendarRelease[] }
-export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[], week: ISOWeek, episodeDates: EpisodeDate[] = [], timeZone = DEFAULT_TIME_ZONE) {
+export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[], week: ISOWeek, episodeDates: EpisodeDate[] = [], timeZone = DEFAULT_TIME_ZONE, anilistIds: Record<string, number> = {}) {
   const { monday } = weekRange(week);
   const start = monday.getTime();
   const days: CalendarDay[] = Array.from({ length: 7 }, (_, index) => ({ date: new Date(start + index * 86400000).toISOString().slice(0, 10), releases: [] }));
@@ -29,8 +29,9 @@ export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[],
       found = true;
     }
     if (found) continue;
+    const anilistId = anilistIds[`${anime.kind}:${anime.id}`] ?? anime.ratings.anilistId;
     for (const event of events) {
-      if (!Number.isSafeInteger(anime.ratings.anilistId) || anime.ratings.anilistId! <= 0 || event.mediaId !== anime.ratings.anilistId || !Number.isSafeInteger(event.airingAt)
+      if (!Number.isSafeInteger(anilistId) || anilistId! <= 0 || event.mediaId !== anilistId || !Number.isSafeInteger(event.airingAt)
         || !Number.isSafeInteger(event.episode) || event.episode <= 0) continue;
       const day = days.find(day => day.date === calendarDate(event.airingAt * 1000, timeZone));
       if (!day) continue;

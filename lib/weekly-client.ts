@@ -1,20 +1,23 @@
 'use client';
 import { withTimeout } from '@/lib/async-timeout';
-import type { WeeklyTitleDetails, WeeklySchedule } from '@/lib/weekly-details';
+import type { WeeklyTitleDetails, WeeklySchedule, WeeklyCalendarSchedule } from '@/lib/weekly-details';
 interface Entry { promise: Promise<unknown>; controller: AbortController; settled: boolean; subscribers: number; expires: number }
 const entries = new Map<string, Entry>();
-const queue: { entry: Entry; run: () => Promise<void> }[] = [];
-let active = 0;
+const queue: { entry: Entry; calendar: boolean; run: () => Promise<void> }[] = [];
+const active = { details: 0, calendar: 0 };
 function pump() {
-  while (active < 2 && queue.length) {
-    const task = queue.shift()!;
+  while (queue.length) {
+    const index = queue.findIndex(task => task.calendar ? active.calendar < 1 : active.details < 2);
+    if (index < 0) break;
+    const task = queue.splice(index, 1)[0];
     if (task.entry.controller.signal.aborted) continue;
-    active++;
-    void task.run().finally(() => { active--; pump(); });
+    const lane = task.calendar ? 'calendar' : 'details';
+    active[lane]++;
+    void task.run().finally(() => { active[lane]--; pump(); });
   }
 }
 export function invalidateWeeklyLookup(url: string) { entries.delete(url); }
-export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule>(url: string, signal: AbortSignal): Promise<T> {
+export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule | WeeklyCalendarSchedule>(url: string, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new DOMException('Cancelled', 'AbortError'));
   let entry = entries.get(url);
   if (!entry || entry.expires <= Date.now()) {
@@ -30,7 +33,7 @@ export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule>(
       reject(new Error('Lookup timed out'));
     }, 60000);
     void promise.finally(() => { clearTimeout(timer); current.settled = true; }).catch(() => {});
-    queue.push({ entry: current, run: async () => {
+    queue.push({ entry: current, calendar: url.startsWith('/api/weekly-calendar?'), run: async () => {
       try {
         const result = await withTimeout((async () => {
           const response = await fetch(url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(28000)]) });
@@ -38,7 +41,8 @@ export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule>(
           const data = await response.json();
           const valid = url.startsWith('/api/weekly-title?')
             ? Number.isSafeInteger(data.id) && data.providers && typeof data.providersUnavailable === 'boolean' && !('ratings' in data)
-            : Array.isArray(data.events) && Array.isArray(data.episodeDates) && typeof data.unavailable === 'boolean';
+            : Array.isArray(data.events) && Array.isArray(data.episodeDates) && typeof data.unavailable === 'boolean'
+              && (!url.startsWith('/api/weekly-calendar?') || (data.anilistIds && typeof data.anilistIds === 'object' && !Array.isArray(data.anilistIds)));
           if (!valid) throw new Error('Invalid weekly lookup');
           return data;
         })(), 28000);

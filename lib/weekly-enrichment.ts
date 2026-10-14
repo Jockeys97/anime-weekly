@@ -1,11 +1,12 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
-import { getWeeklySource, getWeeklyRelated, getWeeklyProviders, getTMDBWeekEpisodes } from '@/lib/tmdb';
+import { getQuickWeekData, getWeeklySource, getWeeklyRelated, getWeeklyProviders, getTMDBWeekEpisodes } from '@/lib/tmdb';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
-import type { WeeklyTitleDetails, WeeklySchedule } from '@/lib/weekly-details';
+import type { WeeklyTitleDetails, WeeklySchedule, WeeklyCalendarSchedule } from '@/lib/weekly-details';
+import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
 class PartialDetails extends Error { constructor(readonly result: WeeklyTitleDetails) { super('Weekly enrichment incomplete'); } }
 const cachedTitle = unstable_cache(async (week: string, kind: 'tv' | 'movie', id: number): Promise<WeeklyTitleDetails | null> => {
   const raw = await getWeeklySource(parseWeek(week)!, kind, id);
@@ -41,4 +42,49 @@ export async function getWeeklyTitleSchedule(week: string, kind: 'tv' | 'movie',
   // Do not cache a cold ratings snapshot inside the hourly schedule cache.
   try { return await cachedEpisodes(week, id); }
   catch (error) { if (error instanceof PartialSchedule) return error.result; throw error; }
+}
+
+// Resolve the whole calendar without waiting for viewport-based watch lookups
+// or a successful ratings cron. Cached TMDB episode dates remain available
+// when the AniList snapshot is cold; no rating provider is called here.
+export async function getWeeklyCalendarSchedule(slug: string): Promise<WeeklyCalendarSchedule> {
+  const deadline = Date.now() + 23000;
+  const week = parseWeek(slug);
+  if (!week) throw new Error('Invalid week');
+  const [catalog, snapshot] = await withTimeout(Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(slug)]), 10000);
+  if (catalog.status !== 'ready') throw new Error('Weekly source unavailable');
+  const anilistIds: Record<string, number> = {};
+  const titles = catalog.titles.map(title => {
+    const key = `${title.kind}:${title.id}`;
+    const id = snapshot.titles[key]?.anilistId;
+    if (title.kind === 'tv' && Number.isSafeInteger(id) && id! > 0) anilistIds[key] = id!;
+    return { ...title, ratings: snapshot.titles[key] ?? title.ratings };
+  });
+  const ids = new Set(Object.values(anilistIds));
+  const result: WeeklyCalendarSchedule = {
+    anilistIds, events: snapshot.events.filter(event => ids.has(event.mediaId)), episodeDates: [], unavailable: Boolean(catalog.partial),
+  };
+  // Check all timezone edges: a cached event outside Rome can still fall in
+  // this week for another visitor, who needs the TMDB date fallback as well.
+  const zones = ['UTC', 'Pacific/Kiritimati', 'Etc/GMT+12'];
+  const missing = new Map(zones.flatMap(zone => buildWeeklyCalendar(titles, result.events, week, [], zone).undated)
+    .filter(title => title.kind === 'tv').map(title => [title.id, title]));
+  const pending = [...missing.values()];
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
+    while (cursor < pending.length) {
+      const title = pending[cursor++];
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) { result.unavailable = true; break; }
+      try {
+        const schedule = await withTimeout(cachedEpisodes(slug, title.id), remaining);
+        result.episodeDates.push(...schedule.episodeDates);
+        result.unavailable ||= schedule.unavailable;
+      } catch (error) {
+        if (error instanceof PartialSchedule) result.episodeDates.push(...error.result.episodeDates);
+        result.unavailable = true;
+      }
+    }
+  }));
+  return result;
 }
