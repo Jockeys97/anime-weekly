@@ -7,6 +7,7 @@ import { filterOptions, filterTitles } from '@/lib/title-filters';
 import { mergePlatformSnapshot, type PlatformSnapshot } from '@/lib/platform-data';
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { CatalogWatchProvider } from '@/components/CatalogWatchContext';
 export function SeasonContent({ entries, locale, providerUrl }: { entries: { id: number; genres: string[]; card: ReactNode }[]; locale: Locale; providerUrl: string }) {
   const { region, platformFilter: platform, setPlatformFilter: setPlatform } = useStreamingCountry(); const watchlist = useWatchlist();
   const [genre, setGenre] = useState(''); const [onlyWatchlist, setOnlyWatchlist] = useState(false);
@@ -28,6 +29,6 @@ export function SeasonContent({ entries, locale, providerUrl }: { entries: { id:
   const visible = new Set(filterTitles(titles, { genre, platform, region, onlyWatchlist, watchlist }).map(title => title.id));
   return <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={setPlatform} onWatchlist={setOnlyWatchlist} platformsPending={pending} platformsFailed={incomplete} onRetryPlatforms={() => { setPending(true); retry(value => value + 1); }} />
     {!visible.size && (!platform || (!pending && !incomplete)) && <p role="status">{getDictionary(locale).features.noMatches}</p>}
-    <div className="anime-grid">{entries.map(entry => <div key={entry.id} hidden={!visible.has(entry.id)}>{entry.card}</div>)}</div>
+    <CatalogWatchProvider snapshot={providers}><div className="anime-grid">{entries.map(entry => <div key={entry.id} hidden={!visible.has(entry.id)}>{entry.card}</div>)}</div></CatalogWatchProvider>
   </>;
 }

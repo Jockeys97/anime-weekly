@@ -1,5 +1,10 @@
 import type { AnimeTitle } from '@/lib/tmdb';
-export interface PlatformMetadata { providers: AnimeTitle['providers']; providersUnavailable: boolean }
+import type { CatalogCardSummary } from '@/lib/catalog-card-summary';
+export interface PlatformMetadata {
+  providers: AnimeTitle['providers'];
+  providersUnavailable: boolean;
+  match?: CatalogCardSummary['availability']['match'];
+}
 export interface PlatformSnapshot { titles: Record<string, PlatformMetadata>; unavailable: boolean }
 export function mergePlatformSnapshot(previous: PlatformSnapshot | null, next: PlatformSnapshot): PlatformSnapshot {
   const titles = { ...previous?.titles };

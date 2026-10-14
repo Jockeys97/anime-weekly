@@ -45,7 +45,7 @@ it('loads a canonical season page once and explicitly requests provider-only mat
   vi.mocked(getSeason).mockResolvedValue({ media: [{ id: 178533, title: { english: 'Ranma ½ (2024)', romaji: null, native: 'らんま1/2' }, startDate: { year: 2024 }, format: 'TV' } as AniListAnime], pageInfo: { currentPage: 1, hasNextPage: false } });
   vi.mocked(getAnimeAvailability).mockResolvedValue({ ...available, match: { id: 259140, kind: 'tv' }, ratings: {} });
   const data = await getSeasonPlatformMetadata(2024, 'fall', 1);
-  expect(data.titles['anilist:178533']).toEqual(available);
+  expect(data.titles['anilist:178533']).toEqual({ ...available, match: { id: 259140, kind: 'tv' } });
   expect(getSeason).toHaveBeenCalledExactlyOnceWith(2024, 'fall', 1);
   expect(getAnimeAvailability).toHaveBeenCalledExactlyOnceWith(['Ranma ½', 'らんま1/2'], 2024, 'tv', false, true);
   expect(getWeeklyProviders).not.toHaveBeenCalled();

@@ -14,7 +14,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const watch = await getCachedDetailAvailability(anime);
     const summary: CatalogCardSummary = {
       ratings: { ...watch.ratings, anilistScore: anime.averageScore, anilistId: anime.id },
-      availability: { match: watch.match, providers: watch.providers, providersUnavailable: watch.providersUnavailable,
+      availability: {
+        match: watch.match, providers: watch.providers, providersUnavailable: watch.providersUnavailable,
         ...(watch.seriesWatch ? { seriesWatch: watch.seriesWatch } : {}),
       },
     };

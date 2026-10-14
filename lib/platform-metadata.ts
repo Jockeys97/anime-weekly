@@ -16,8 +16,8 @@ const weeklyProviders = unstable_cache(async (kind: 'tv' | 'movie', id: number):
 const seasonProviders = unstable_cache(async (aliases: string[], year?: number, kind?: 'tv' | 'movie'): Promise<PlatformMetadata> => {
   const result = await getAnimeAvailability(aliases, year, kind, false, true);
   if (result.providersUnavailable || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured') throw new MissingProviders();
-  return { providers: result.providers, providersUnavailable: false };
-}, ['season-filter-providers-v1'], { revalidate: 3600, tags: [CACHE_TAG] });
+  return { match: result.match, providers: result.providers, providersUnavailable: false };
+}, ['season-filter-providers-v2-card-source'], { revalidate: 3600, tags: [CACHE_TAG] });
 
 async function collect(entries: { key: string; load: () => Promise<PlatformMetadata> }[], deadline: number, partial = false): Promise<PlatformSnapshot> {
   const result: PlatformSnapshot = { titles: {}, unavailable: partial };
