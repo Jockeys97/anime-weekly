@@ -67,12 +67,13 @@ export async function getDetailAvailability(anime: AniListAnime, fresh = false):
   ]);
   if (!resolved) return direct;
   const { series, original } = resolved;
+  const seriesRatingKnown = Boolean(original.ratings.imdbId || (original.match && ['error', 'unconfigured'].includes(original.ratings.imdbStatus || '')));
   // Keep exact-season providers separate. The client selects a series reference only
   // when the chosen country has no direct offers, without claiming season coverage.
   return {
     ...direct,
-    ratings: original.ratings.imdbId && (!direct.ratings.imdbId || (!hasImdbScore(direct.ratings) && hasImdbScore(original.ratings)))
-      ? { ...direct.ratings, ...original.ratings, imdbSeriesTitle: animeName(series) }
+    ratings: !hasImdbScore(direct.ratings) && seriesRatingKnown
+      ? { ...original.ratings, imdbSeriesTitle: animeName(series) }
       : direct.ratings,
     ...(original.match?.kind === 'tv' && original.match.id !== direct.match?.id ? {
       seriesWatch: { id: original.match.id, kind: 'tv' as const, name: animeName(series), providers: original.providers, providersUnavailable: original.providersUnavailable },
@@ -91,7 +92,7 @@ const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
     || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured'
     || (result.ratings.imdbId && !hasImdbScore(result.ratings))) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v4-expanded-series'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v5-series-error-state'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }

@@ -29,7 +29,9 @@ const cachedScore = unstable_cache(async (id: string): Promise<Ratings> => {
           await new Promise(resolve => setTimeout(resolve, Math.max(250, Number.isFinite(seconds) ? seconds * 1000 : 0)));
           continue;
         }
-        throw new UncachedImdb({ ...base, imdbStatus: 'error' });
+        let message = '';
+        try { message = ((await response.json()) as { Error?: string }).Error || ''; } catch { /* A gateway may return non-JSON. */ }
+        throw new UncachedImdb({ ...base, imdbStatus: 'error', imdbErrorReason: /limit|quota/i.test(message) ? 'quota' : /key|auth/i.test(message) || response.status === 401 ? 'authentication' : 'upstream' });
       }
       const data = await response.json() as { Response?: string; Error?: string; imdbRating?: string; imdbVotes?: string };
       if (data.Response !== 'True') {
