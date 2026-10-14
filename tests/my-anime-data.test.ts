@@ -62,7 +62,10 @@ describe('private personalized data', () => {
     expect(urls).toContain('https://api.trakt.tv/calendars/my/shows/2026-10-18/1');
     expect(urls).toContain('https://api.trakt.tv/users/me/watching');
     expect(urls.some(url => url.includes('/users/me/watchlist/shows?'))).toBe(true);
-    for (const [, init] of trakt.mock.calls) expect(init).toMatchObject({ cache: 'no-store', headers: { Authorization: 'Bearer trakt-access', 'trakt-api-version': '2', 'trakt-api-key': 'offline-client' } });
+    for (const [, init] of trakt.mock.calls) expect(init).toMatchObject({ cache: 'no-store', headers: {
+      Authorization: 'Bearer trakt-access', 'trakt-api-version': '2', 'trakt-api-key': 'offline-client',
+      'Content-Type': 'application/json', 'User-Agent': 'AnimeWeekly/0.1.0 (+https://anime-weekly.vercel.app)',
+    } });
     expect(mal).not.toHaveBeenCalled();
   });
   it('paginates MAL without following untrusted next URLs', async () => {
