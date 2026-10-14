@@ -52,3 +52,11 @@ it('does not retry before a long Retry-After or send a request with missing conf
   vi.stubEnv('OMDB_API_KEY', ''); expect((await getImdbScore('tt7')).imdbStatus).toBe('unconfigured');
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+it('identifies quota errors returned with a non-success HTTP status', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(Response.json({ Response: 'False', Error: 'Request limit reached!' }, { status: 401 }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getImdbScore } = await import('../lib/imdb');
+  expect(await getImdbScore('ttquota')).toMatchObject({ imdbStatus: 'unmatched' });
+  expect(await getImdbScore('tt9')).toMatchObject({ imdbStatus: 'error', imdbErrorReason: 'quota' });
+});
