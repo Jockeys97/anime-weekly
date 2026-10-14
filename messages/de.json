@@ -339,8 +339,8 @@
     "weekLabel": "Dein Wochenkalender"
   },
   "features": {
-    "topFive": "Top 5 der Woche",
-    "topFiveDescription": "Die bestbewerteten Titel, mit Bewertungen auf einer Skala von 10.",
+    "topFive": "Top 5 Episoden der Woche",
+    "topFiveDescription": "Die diese Woche erschienenen Episoden mit den höchsten IMDb-Bewertungen. Täglich aktualisiert.",
     "share": "Teilen",
     "copied": "Link kopiert",
     "copyLink": "Link kopieren",
@@ -355,6 +355,11 @@
     "all": "Alle",
     "noScores": "Keine Bewertungen im Cache verfügbar.",
     "noMatches": "Keine Titel entsprechen den Filtern.",
-    "storageError": "Die Liste kann in diesem Browser nicht gespeichert werden."
+    "storageError": "Die Liste kann in diesem Browser nicht gespeichert werden.",
+    "episodeLabel": "Staffel {season} · Episode {episode}",
+    "noRatedEpisodes": "Für diese Woche erschienene Episoden ist noch keine verifizierte IMDb-Bewertung verfügbar.",
+    "episodesPending": "Die Rangliste dieser Woche wurde noch nicht aktualisiert.",
+    "episodesUnavailable": "IMDb-Bewertungen der Episoden sind vorübergehend nicht verfügbar.",
+    "episodesPartial": "Unvollständige Rangliste: Einige IMDb-Bewertungen sind noch nicht verfügbar."
   }
 }

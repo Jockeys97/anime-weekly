@@ -339,8 +339,8 @@
     "weekLabel": "Votre calendrier hebdomadaire"
   },
   "features": {
-    "topFive": "Top 5 de la semaine",
-    "topFiveDescription": "Les titres les mieux notés, avec des notes sur 10.",
+    "topFive": "Top 5 des épisodes de la semaine",
+    "topFiveDescription": "Les épisodes sortis cette semaine les mieux notés sur IMDb. Mise à jour quotidienne.",
     "share": "Partager",
     "copied": "Lien copié",
     "copyLink": "Copier le lien",
@@ -355,6 +355,11 @@
     "all": "Tous",
     "noScores": "Aucune note en cache.",
     "noMatches": "Aucun titre ne correspond aux filtres.",
-    "storageError": "Impossible de sauvegarder la liste dans ce navigateur."
+    "storageError": "Impossible de sauvegarder la liste dans ce navigateur.",
+    "episodeLabel": "Saison {season} · Épisode {episode}",
+    "noRatedEpisodes": "Aucun épisode déjà sorti cette semaine ne dispose encore d’une note IMDb vérifiée.",
+    "episodesPending": "Le classement de cette semaine n’a pas encore été mis à jour.",
+    "episodesUnavailable": "Les notes IMDb des épisodes sont temporairement indisponibles.",
+    "episodesPartial": "Classement partiel : certaines notes IMDb ne sont pas encore disponibles."
   }
 }

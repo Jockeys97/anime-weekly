@@ -2,9 +2,11 @@ import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
 import { after } from 'next/server';
 import { CACHE_TAG } from '@/lib/config';
-import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings, type RatingsStore } from '@/lib/weekly-ratings';
+import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings, type RatingsStore } from '@/lib/weekly-ratings';
 import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
+import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
+import { topWeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
 export const maxDuration = 300;
 function authorized(request: Request): boolean {
@@ -44,6 +46,15 @@ export async function GET(request: Request) {
   // Public read-only mode: serve the cron-written snapshot from this same
   // bundle (unstable_cache entries are only reliably readable here). Never
   // calls rating APIs; a cold cache returns an empty snapshot.
+  const episodeWeek = new URL(request.url).searchParams.get('episodes');
+  if (episodeWeek !== null) {
+    if (!parseWeek(episodeWeek)) return Response.json({ error: 'invalid week' }, { status: 400 });
+    const snapshot = await readWeeklyRatingsSnapshot(episodeWeek);
+    const episodes = snapshot.episodes ?? { entries: [], status: 'pending' as const };
+    return Response.json({ ...episodes, entries: topWeeklyEpisodes(episodes.entries, episodeWeek) }, {
+      headers: { 'cache-control': episodes.status === 'ready' ? 'public, max-age=60, s-maxage=300' : 'no-store' },
+    });
+  }
   const read = new URL(request.url).searchParams.get('ratings');
   if (read !== null) {
     if (!parseWeek(read)) return Response.json({ error: 'invalid week' }, { status: 400 });
@@ -64,7 +75,14 @@ export async function GET(request: Request) {
   let storeHits = 0;
   try {
     const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
-    const snapshot = await primeWeeklyRatings(formatWeek(week), previous);
+    const [ratings, episodes] = await Promise.allSettled([
+      primeWeeklyRatings(formatWeek(week), previous),
+      primeWeeklyEpisodes(formatWeek(week), previous.episodes),
+    ]);
+    if (ratings.status === 'rejected' && (episodes.status === 'rejected' || !episodes.value)) throw new Error('Weekly updates unavailable');
+    const snapshot = ratings.status === 'fulfilled' ? ratings.value : { ...previous, total: Object.keys(previous.titles).length, store: await readRatingsStore(), storeHits: 0 };
+    if (episodes.status === 'fulfilled' && episodes.value) snapshot.episodes = episodes.value;
+    else if (previous.episodes) snapshot.episodes = { ...previous.episodes, status: previous.episodes.entries.length ? 'partial' : 'unavailable' };
     const slug = formatWeek(week);
     const { total: _total, store, storeHits: hits, ...toStore } = snapshot;
     void _total;

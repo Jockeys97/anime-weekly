@@ -339,8 +339,8 @@
     "weekLabel": "Seu calendário semanal"
   },
   "features": {
-    "topFive": "Top 5 da semana",
-    "topFiveDescription": "Os títulos mais bem avaliados, com pontuações de 0 a 10.",
+    "topFive": "Top 5 episódios da semana",
+    "topFiveDescription": "Os episódios lançados esta semana com as melhores avaliações no IMDb. Atualização diária.",
     "share": "Partilhar",
     "copied": "Link copiado",
     "copyLink": "Copiar link",
@@ -355,6 +355,11 @@
     "all": "Todos",
     "noScores": "Sem pontuações em cache.",
     "noMatches": "Nenhum título corresponde aos filtros.",
-    "storageError": "Não é possível guardar a lista neste navegador."
+    "storageError": "Não é possível guardar a lista neste navegador.",
+    "episodeLabel": "Temporada {season} · Episódio {episode}",
+    "noRatedEpisodes": "Nenhum episódio já lançado esta semana tem uma avaliação verificada do IMDb disponível.",
+    "episodesPending": "A classificação desta semana ainda não foi atualizada.",
+    "episodesUnavailable": "As avaliações de episódios no IMDb estão temporariamente indisponíveis.",
+    "episodesPartial": "Classificação parcial: algumas avaliações do IMDb ainda não estão disponíveis."
   }
 }

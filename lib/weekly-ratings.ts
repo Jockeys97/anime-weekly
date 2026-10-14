@@ -9,6 +9,7 @@ import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
 import { displayTitle } from '@/lib/title-text';
 import type { Ratings } from '@/lib/ratings';
+import type { WeeklyEpisodes } from '@/lib/weekly-episodes';
 
 export const WEEKLY_RATINGS_TAG = 'weekly-ratings';
 export const WEEKLY_PAGE_TAG = 'weekly-page-output';
@@ -19,6 +20,7 @@ export interface WeeklyRatings {
   titles: Record<string, Ratings>;
   events: AiringEvent[];
   names?: Record<string, string>;
+  episodes?: WeeklyEpisodes;
 }
 const DAY_MS = 86400000;
 const MAX_RATING_AGE = 30 * DAY_MS;
@@ -112,7 +114,7 @@ export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
       const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 900, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
       if (res.ok) {
         const data = await res.json() as WeeklyRatings;
-        if (data && data.titles && Object.keys(data.titles).length) return data;
+        if (data && data.titles && (Object.keys(data.titles).length || data.episodes)) return data;
         console.error('[weekly-ratings] endpoint empty', slug);
       } else console.error('[weekly-ratings] endpoint status', res.status);
     } catch (e) { console.error('[weekly-ratings] endpoint error', (e as Error)?.message); }
@@ -137,7 +139,7 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
   const deadline = Date.now() + 260000;
   const sources = await getWeeklyRatingSources(week);
   const names = { ...old.names };
-  const snapshot: WeeklyRatings = { titles: { ...old.titles }, events: [...old.events], names };
+  const snapshot: WeeklyRatings = { ...old, titles: { ...old.titles }, events: [...old.events], names };
   let storeHits = 0;
   // Populate every source before completed ratings or the time budget skip it.
   for (const source of sources) {
