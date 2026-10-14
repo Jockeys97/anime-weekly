@@ -84,7 +84,7 @@ async function DetailAvailability({ availability, name, locale, id }: { availabi
   const watch = await availability;
   return <StreamingAvailability locale={locale} followLocale collapsible={false} recoveryId={id} seriesWatch={watch.seriesWatch} anime={{
     id: watch.match?.id ?? 0, kind: watch.match?.kind ?? 'tv', name,
-    providers: watch.match ? watch.providers : {}, providersUnavailable: watch.providersUnavailable,
+    providers: watch.providers, providersUnavailable: watch.providersUnavailable,
   }} />;
 }
 
