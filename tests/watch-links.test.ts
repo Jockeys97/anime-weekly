@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('server-only', () => ({}));
+vi.mock('next/cache', async () => import('./helpers/next-cache'));
 import { findProviderOffer, parseWatchTarget, providerWatchLink, regionalWatchPage, type WatchTarget } from '../lib/watch-links';
 import { GET } from '../app/api/watch/route';
 
@@ -8,7 +10,11 @@ function offer({ provider = 8, country = 'it', type = 'flatrate', destination = 
   return `https://click.justwatch.com/a?${new URLSearchParams({ cx, r: destination, uct_country: country })}`;
 }
 const anchor = (href: string) => `<a class="relative" href="${href.replaceAll('&', '&amp;')}">Watch</a>`;
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(async () => {
+  (await import('./helpers/next-cache')).clearNextCache();
+  vi.stubEnv('TMDB_READ_TOKEN', ''); vi.stubEnv('TMDB_API_KEY', '');
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('country and provider offer selection', () => {
   it('selects the exact provider in the displayed country and preserves its click-out', () => {
@@ -51,7 +57,7 @@ describe('streaming redirect route', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(offer());
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(fetchMock).toHaveBeenCalledWith(regionalWatchPage(target), expect.objectContaining({ cache: 'force-cache', next: { revalidate: 604800, tags: ['anime-week'] }, redirect: 'error' }));
+    expect(fetchMock).toHaveBeenCalledWith(regionalWatchPage(target), expect.objectContaining({ cache: 'force-cache', next: { revalidate: 3600, tags: ['anime-week'] }, redirect: 'error' }));
   });
   it.each(['blocked', 'offline', 'no-match', 'wrong-content'])('falls back to the same title and country on %s', async scenario => {
     vi.stubGlobal('fetch', vi.fn(async () => {
