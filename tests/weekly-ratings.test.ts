@@ -11,12 +11,14 @@ beforeEach(async () => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 async function storePrimedSnapshot(slug: string, primed: Awaited<ReturnType<typeof import('../lib/weekly-ratings').primeWeeklyRatings>>) {
   const { revalidateTag } = await import('next/cache');
-  const { storeWeeklyRatingsSnapshot, WEEKLY_RATINGS_TAG } = await import('../lib/weekly-ratings');
-  const { total, ...snapshot } = primed;
+  const { storeWeeklyRatingsSnapshot, storeRatingsStore, WEEKLY_RATINGS_TAG } = await import('../lib/weekly-ratings');
+  const { total, store, storeHits, ...snapshot } = primed;
   void total;
+  void storeHits;
   // The cron invalidates the previous entry before its separate storage request.
   revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
   await storeWeeklyRatingsSnapshot(slug, snapshot);
+  await storeRatingsStore(store);
 }
 function fixtureFetch(imdbFailure = false, animeFailure = false) {
   return vi.fn(async (input: string | URL, init?: RequestInit) => {
@@ -49,11 +51,13 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   expect(primed.events).toHaveLength(1);
   expect(primed.names).toEqual({ 'tv:1': 'Ranma ½' });
   const calls = fetchMock.mock.calls.length;
-  const { total, ...snapshot } = primed;
+  const { total, store, storeHits, ...snapshot } = primed;
+  void store;
+  expect(storeHits).toBe(0);
   expect(total).toBe(1);
   expect(await getWeeklyRatings('2026-42')).toEqual(snapshot);
   const repeated = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
-  expect(await repeated).toEqual(primed);
+  expect(await repeated).toMatchObject({ ...snapshot, total, storeHits: 1 });
   expect(await getWeeklyRatings('2026-43')).toEqual({ titles: {}, events: [] });
   expect(fetchMock).toHaveBeenCalledTimes(calls + 3); // Discovery and airing schedules refresh; completed rating sources do not.
   for (const [input, init] of fetchMock.mock.calls) if (/anilist|jikan|omdbapi/.test(String(input))) {
@@ -116,7 +120,7 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   });
   vi.stubGlobal('fetch', fetchMock);
   const { primeWeeklyRatings, readWeeklyRatingsSnapshot } = await import('../lib/weekly-ratings');
-  const previous = { titles: { 'tv:1': { anilistId: 123, malId: 456, anilistScore: 81, imdbId: 'tt123', imdbRating: '8.1' } }, events: [{ id: 4, mediaId: 123, episode: 2, airingAt: 1791990000 }] };
+  const previous = { titles: { 'tv:1': { anilistId: 123, malId: 456, anilistScore: 81, imdbId: 'tt123', imdbRating: '8.1', imdbVotes: '2,123' } }, events: [{ id: 4, mediaId: 123, episode: 2, airingAt: 1791990000 }] };
   const first = primeWeeklyRatings('2026-42', previous); await vi.runAllTimersAsync();
   await storePrimedSnapshot('2026-42', await first);
   expect(await readWeeklyRatingsSnapshot('2026-42')).toEqual({ ...previous, names: { 'tv:1': 'Ranma ½' } });
@@ -192,4 +196,138 @@ it('merges display names for completed TV and movie sources and retains undiscov
   expect(fetchMock).not.toHaveBeenCalled();
   await storePrimedSnapshot('2026-42', result);
   expect((await readWeeklyRatingsSnapshot('2026-42')).names).toEqual(result.names);
+});
+
+it('reuses stable ratings across weeks without OMDb, AniList score, Jikan or ID lookups', async () => {
+  const fetchMock = fixtureFetch(); vi.stubGlobal('fetch', fetchMock);
+  const { primeWeeklyRatings, readRatingsStore, getWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  await storePrimedSnapshot('2026-42', primed);
+  const saved = await readRatingsStore();
+  expect(saved.ratings).toMatchObject({
+    'imdb:tt123': { values: { imdbRating: '8.1', imdbVotes: '2,123' }, fetchedAt: expect.any(Number) },
+    'anilist:123': { values: { anilistScore: 81 } },
+    'mal:456': { values: { malScore: 8.25 } },
+  });
+  expect(saved.sources['tv:1']).toMatchObject({ imdbId: 'tt123', anilistId: 123, malId: 456 });
+  vi.setSystemTime(Date.now() + 7 * 86400000);
+  fetchMock.mockClear();
+  const second = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync();
+  const reused = await second;
+  expect(reused.titles).toEqual(primed.titles);
+  expect(reused.storeHits).toBe(1);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|jikan|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(reused.store.ratings['imdb:tt123'].fetchedAt).toBe(saved.ratings['imdb:tt123'].fetchedAt);
+  expect(saved.ratings['imdb:tt123'].lastSeenAt).toBeLessThan(reused.store.ratings['imdb:tt123'].lastSeenAt);
+  await storePrimedSnapshot('2026-43', reused);
+  expect((await getWeeklyRatings('2026-43')).titles).toEqual(primed.titles);
+});
+
+it('refreshes values older than 30 days and overwrites scores only on success', async () => {
+  vi.stubGlobal('fetch', fixtureFetch());
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  await storePrimedSnapshot('2026-42', primed);
+  vi.setSystemTime(Date.now() + 31 * 86400000);
+  const base = fixtureFetch();
+  const refreshedFetch = vi.fn(async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('omdbapi')) return Response.json({ Response: 'True', imdbRating: '8.8', imdbVotes: '3,456' });
+    if (url.includes('jikan')) return Response.json({ data: { score: 8.75, members: 2000 } });
+    const response = await base(input, init);
+    if (url.includes('anilist') && !String(init?.body).includes('airingSchedules')) {
+      const body = await response.json(); body.data.Page.media[0].averageScore = 88;
+      return Response.json(body);
+    }
+    return response;
+  });
+  vi.stubGlobal('fetch', refreshedFetch);
+  // Even a completed same-week snapshot must not bypass the store's age check.
+  const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const result = await pending;
+  expect(result.titles['tv:1']).toMatchObject({ imdbRating: '8.8', imdbVotes: '3,456', anilistScore: 88, malScore: 8.75 });
+  expect(result.storeHits).toBe(0);
+  expect(refreshedFetch.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
+  expect(refreshedFetch.mock.calls.some(([url]) => String(url).includes('/external_ids'))).toBe(false);
+  for (const key of ['imdb:tt123', 'anilist:123', 'mal:456']) expect(result.store.ratings[key].fetchedAt).toBeGreaterThan(primed.store.ratings[key].fetchedAt);
+});
+
+it('keeps stale scores and fetchedAt timestamps when refreshes fail, then retries', async () => {
+  vi.stubGlobal('fetch', fixtureFetch());
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  await storePrimedSnapshot('2026-42', primed);
+  vi.setSystemTime(Date.now() + 31 * 86400000);
+  const failedBase = fixtureFetch(true, true);
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL, init?: RequestInit) => {
+    if (String(input).includes('jikan')) throw new Error('offline');
+    return failedBase(input, init);
+  }));
+  const failed = primeWeeklyRatings('2026-47'); await vi.runAllTimersAsync();
+  const retained = await failed;
+  expect(retained.titles).toEqual(primed.titles);
+  for (const key of Object.keys(primed.store.ratings)) {
+    expect(retained.store.ratings[key].values).toEqual(primed.store.ratings[key].values);
+    expect(retained.store.ratings[key].fetchedAt).toBe(primed.store.ratings[key].fetchedAt);
+  }
+  await storePrimedSnapshot('2026-47', retained);
+  vi.setSystemTime(Date.now() + 60001);
+  const retryFetch = fixtureFetch(); vi.stubGlobal('fetch', retryFetch);
+  const retry = primeWeeklyRatings('2026-47'); await vi.runAllTimersAsync();
+  expect((await retry).store.ratings['imdb:tt123'].fetchedAt).toBeGreaterThan(primed.store.ratings['imdb:tt123'].fetchedAt);
+  expect(retryFetch.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
+});
+
+it('drops ratings and source mappings unseen for 120 days but retains active stale entries', async () => {
+  vi.stubGlobal('fetch', fixtureFetch());
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  const expired = Date.now() - 121 * 86400000;
+  primed.store.ratings['imdb:tt999'] = { values: { imdbRating: '9' }, fetchedAt: expired, lastSeenAt: expired };
+  primed.store.sources['movie:999'] = { imdbId: 'tt999', fetchedAt: expired, lastSeenAt: expired };
+  primed.store.ratings['mal:789'] = { values: { malScore: 8 }, fetchedAt: expired, lastSeenAt: Date.now() - 119 * 86400000 };
+  primed.store.ratings['imdb:tt123'].lastSeenAt = expired;
+  await storePrimedSnapshot('2026-42', primed);
+  const second = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync();
+  const result = await second;
+  expect(result.store.ratings).not.toHaveProperty('imdb:tt999');
+  expect(result.store.sources).not.toHaveProperty('movie:999');
+  expect(result.store.ratings).toHaveProperty('mal:789');
+  expect(result.store.ratings).toHaveProperty('imdb:tt123');
+});
+
+it('refreshes only stale MAL and does not renew the AniList fallback timestamp', async () => {
+  vi.stubGlobal('fetch', fixtureFetch());
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  primed.store.ratings['mal:456'].fetchedAt = Date.now() - 31 * 86400000;
+  await storePrimedSnapshot('2026-42', primed);
+  const fetchMock = fixtureFetch(); vi.stubGlobal('fetch', fetchMock);
+  const pending = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync();
+  const refreshed = await pending;
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('omdbapi') || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(refreshed.store.ratings['anilist:123'].fetchedAt).toBe(primed.store.ratings['anilist:123'].fetchedAt);
+  expect(refreshed.store.ratings['mal:456'].fetchedAt).toBeGreaterThan(primed.store.ratings['mal:456'].fetchedAt);
+});
+
+it('fetches missing IMDb votes without refetching completed anime scores', async () => {
+  vi.stubGlobal('fetch', fixtureFetch());
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const primed = await first;
+  delete primed.titles['tv:1'].imdbVotes;
+  delete primed.store.ratings['imdb:tt123'].values.imdbVotes;
+  await storePrimedSnapshot('2026-42', primed);
+  const fetchMock = fixtureFetch(); vi.stubGlobal('fetch', fetchMock);
+  const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  const result = await pending;
+  expect(result.titles['tv:1'].imdbVotes).toBe('2,123');
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(0);
 });

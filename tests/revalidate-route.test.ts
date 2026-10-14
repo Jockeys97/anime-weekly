@@ -3,10 +3,10 @@ const background = vi.hoisted(() => ({ tasks: [] as Promise<void>[] }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('next/server', () => ({ after: vi.fn((callback: () => Promise<void>) => { background.tasks.push(callback()); }) }));
-vi.mock('../lib/weekly-ratings', () => ({ WEEKLY_PAGE_TAG: 'weekly-page-output', WEEKLY_RATINGS_TAG: 'weekly-ratings', primeWeeklyRatings: vi.fn(), readWeeklyRatingsSnapshot: vi.fn(), storeWeeklyRatingsSnapshot: vi.fn(), isWeeklyRatingComplete: (rating: { malScore?: number; anilistScore?: number; imdbRating?: string }) => rating.malScore != null && rating.anilistScore != null && Boolean(rating.imdbRating) }));
+vi.mock('../lib/weekly-ratings', () => ({ WEEKLY_PAGE_TAG: 'weekly-page-output', WEEKLY_RATINGS_TAG: 'weekly-ratings', primeWeeklyRatings: vi.fn(), readWeeklyRatingsSnapshot: vi.fn(), storeWeeklyRatingsSnapshot: vi.fn(), storeRatingsStore: vi.fn(), isWeeklyRatingComplete: (rating: { malScore?: number; anilistScore?: number; imdbRating?: string }) => rating.malScore != null && rating.anilistScore != null && Boolean(rating.imdbRating) }));
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { after } from 'next/server';
-import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot } from '../lib/weekly-ratings';
+import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore } from '../lib/weekly-ratings';
 import { GET, POST, maxDuration } from '../app/api/revalidate/route';
 beforeEach(() => {
   vi.useFakeTimers();
@@ -32,13 +32,14 @@ it('requires the existing cron secret before doing work', async () => {
 });
 it('computes ratings, invalidates their tag, then stores through a separate POST after the response', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
+  const store = { ratings: { 'anilist:123': { values: { anilistScore: 81 }, fetchedAt: Date.now(), lastSeenAt: Date.now() } }, sources: { 'tv:1': { anilistId: 123, fetchedAt: Date.now(), lastSeenAt: Date.now() } } };
   const snapshot = { titles: { 'tv:1': { anilistId: 123, anilistScore: 81, malScore: 8, imdbRating: '8.1' } }, events: [], names: { 'tv:1': 'Ranma ½' } };
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
-  vi.mocked(primeWeeklyRatings).mockResolvedValue({ total: 1, ...snapshot });
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ total: 1, store, storeHits: 1, ...snapshot });
   vi.mocked(fetch).mockImplementation(async (input, init) => POST(new Request(input, init)));
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ revalidated: true, week: '2026-42', total: 1, populated: 1, unavailable: 0, complete: true });
+  expect(await response.json()).toMatchObject({ revalidated: true, week: '2026-42', total: 1, populated: 1, unavailable: 0, complete: true, storeHits: 1 });
   expect(maxDuration).toBe(300);
   expect(revalidatePath).not.toHaveBeenCalled();
   expect(revalidateTag).toHaveBeenNthCalledWith(1, 'anime-week', { expire: 0 });
@@ -51,9 +52,10 @@ it('computes ratings, invalidates their tag, then stores through a separate POST
   expect(storeWeeklyRatingsSnapshot).not.toHaveBeenCalled();
   await finishBackground();
   expect(fetch).toHaveBeenCalledExactlyOnceWith('https://example.test/api/revalidate?store=2026-42', {
-    method: 'POST', headers: { authorization: 'Bearer fixture', 'content-type': 'application/json' }, body: JSON.stringify(snapshot),
+    method: 'POST', headers: { authorization: 'Bearer fixture', 'content-type': 'application/json' }, body: JSON.stringify({ snapshot, store }),
   });
   expect(storeWeeklyRatingsSnapshot).toHaveBeenCalledExactlyOnceWith('2026-42', snapshot);
+  expect(storeRatingsStore).toHaveBeenCalledExactlyOnceWith(store);
   expect(revalidateTag).toHaveBeenNthCalledWith(4, 'weekly-page-output', { expire: 0 });
   expect(vi.mocked(storeWeeklyRatingsSnapshot).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidateTag).mock.invocationCallOrder[3]);
 });
@@ -72,13 +74,13 @@ it('reports incomplete snapshots including titles omitted by the job budget', as
   vi.stubEnv('CRON_SECRET', 'fixture');
   const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [] };
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
-  vi.mocked(primeWeeklyRatings).mockResolvedValue({ ...previous, total: 3 });
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ ...previous, total: 3, store: { ratings: {}, sources: {} }, storeHits: 0 });
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(await response.json()).toMatchObject({ total: 3, populated: 1, unavailable: 2, complete: false });
   expect(primeWeeklyRatings).toHaveBeenCalledWith('2026-42', previous);
   expect(revalidateTag).toHaveBeenCalledTimes(3);
   await finishBackground();
-  expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual(previous);
+  expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual({ snapshot: previous, store: { ratings: {}, sources: {} } });
 });
 it('preserves the ratings tag and skips storage when computation fails', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
@@ -139,4 +141,15 @@ it('stores an authenticated POST snapshot and refreshes page output after storag
   expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
   expect(after).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it.each([null, {}, { ratings: [], sources: {} }, { ratings: {}, sources: null }, { ratings: { 'imdb:tt123': { values: {}, fetchedAt: 'invalid', lastSeenAt: 0 } }, sources: {} }])('rejects an invalid cross-week store before writing either cache (%j)', async store => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const body = JSON.stringify({ snapshot: { titles: {}, events: [] }, store });
+  const response = await POST(storeRequest('2026-42', body, 'Bearer fixture'));
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: 'invalid store' });
+  expect(storeWeeklyRatingsSnapshot).not.toHaveBeenCalled();
+  expect(storeRatingsStore).not.toHaveBeenCalled();
+  expect(revalidateTag).not.toHaveBeenCalled();
 });
