@@ -51,6 +51,14 @@ it('loads a canonical season page once and explicitly requests provider-only mat
   expect(getWeeklyProviders).not.toHaveBeenCalled();
 });
 
+it('includes verified Steel Ball Run offers in seasonal filters without rating or title-search requests', async () => {
+  vi.mocked(getSeason).mockResolvedValue({ media: [{ id: 210482, format: 'ONA', startDate: { year: 2026 }, title: { english: "STEEL BALL RUN JoJo's Bizarre Adventure 2nd - 3rd STAGE", romaji: null, native: null } } as AniListAnime], pageInfo: { currentPage: 1, hasNextPage: false } });
+  const data = await getSeasonPlatformMetadata(2026, 'fall', 1);
+  expect(data.titles['anilist:210482'].providers.US?.providers[0].watch_url).toBe('https://www.netflix.com/title/82116553');
+  expect(data.titles['anilist:210482'].providers.IT?.providers[0].provider_name).toBe('Netflix');
+  expect(getAnimeAvailability).not.toHaveBeenCalled();
+});
+
 it('rejects invalid route parameters before calling any sources', async () => {
   expect((await weeklyGet(new Request('https://example.test/api/weekly-providers?week=nope'))).status).toBe(400);
   expect((await seasonGet(new Request('https://example.test/api/season-providers?year=2026&season=fall&page=0'))).status).toBe(400);
