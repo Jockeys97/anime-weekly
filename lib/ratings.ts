@@ -1,4 +1,4 @@
-export interface Ratings { imdbErrorReason?: 'quota' | 'authentication' | 'network' | 'upstream'; imdbStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error' | 'unconfigured'; imdbSeriesTitle?: string; imdbId?: string; anilistId?: number; malId?: number; imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
+export interface Ratings { animeStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error'; imdbErrorReason?: 'quota' | 'authentication' | 'network' | 'upstream'; imdbStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error' | 'unconfigured'; imdbSeriesTitle?: string; imdbId?: string; anilistId?: number; malId?: number; imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
 export function formatMembers(value: number | null | undefined): string {
   if (value == null || !Number.isSafeInteger(value) || value < 0) return 'n/a';
   return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);

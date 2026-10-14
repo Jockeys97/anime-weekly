@@ -34,3 +34,17 @@ it('starts the full calendar even when both streaming slots are stalled', async 
   await Promise.all(watch);
   await vi.runAllTimersAsync();
 });
+
+it('recovers anime scores independently of stalled streaming and calendar requests', async () => {
+  const fetchMock = vi.fn(async (input: string) => {
+    if (input.startsWith('/api/weekly-ratings?')) return Response.json({ titles: { 'tv:1': { anilistId: 101, anilistScore: 88 } }, unavailable: false });
+    return new Promise<Response>(() => {});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { loadWeeklyLookup } = await import('../lib/weekly-client');
+  const controller = new AbortController();
+  const stalled = ['/api/weekly-title?id=1', '/api/weekly-title?id=2', '/api/weekly-calendar?week=2026-42'].map(url => loadWeeklyLookup(url, controller.signal).catch(error => error));
+  expect(await loadWeeklyLookup('/api/weekly-ratings?week=2026-42', controller.signal)).toMatchObject({ titles: { 'tv:1': { anilistScore: 88 } } });
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  controller.abort(); await Promise.all(stalled); await vi.runAllTimersAsync();
+});
