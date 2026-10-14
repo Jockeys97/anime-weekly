@@ -35,7 +35,7 @@ it('joins exact episode IDs, skips future releases and uses IMDb numbering even 
 it('keeps unmapped and unrated episodes out and never borrows a series score', async () => {
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue(null);
   expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
-  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledWith([], '2026-10-14');
   vi.mocked(getTMDBEpisodeIdentity).mockResolvedValue({ imdbId: 'tt1', seriesImdbId: 'tt100' });
   vi.mocked(primeImdbDatasetEpisodes).mockResolvedValue({ status: 'ready', ratings: {}, updatedAt: '2026-10-14T12:00:00Z' });
   expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
@@ -85,14 +85,14 @@ it('saves discovery failure as a daily attempt and keeps confirmed ratings intac
   expect(result).toMatchObject({ entries: [entry()], status: 'partial', reason: 'metadata', collectorVersion: EPISODE_COLLECTOR_VERSION });
   expect(await primeWeeklyEpisodes('2026-42', result)).toBe(result);
   expect(getQuickWeekData).toHaveBeenCalledTimes(1);
-  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledExactlyOnceWith([], '2026-10-14');
 });
 it('excludes movies and does not manufacture a weekday or episode identity for an unmapped title', async () => {
   const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
   vi.mocked(getQuickWeekData).mockResolvedValue({ ...catalog, titles: [{ ...catalog.titles[0], kind: 'movie' }] });
   expect((await primeWeeklyEpisodes('2026-42')).entries).toEqual([]);
   expect(getTMDBWeekEpisodes).not.toHaveBeenCalled();
-  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledWith([], '2026-10-14');
 });
 it('does not choose between conflicting parent identities for one IMDb episode', async () => {
   const catalog = await getQuickWeekData({ year: 2026, week: 42 }, 'en');
@@ -102,7 +102,7 @@ it('does not choose between conflicting parent identities for one IMDb episode',
   const result = await primeWeeklyEpisodes('2026-42');
   expect(result.entries).toEqual([]);
   expect(result.reason).toBe('metadata');
-  expect(primeImdbDatasetEpisodes).not.toHaveBeenCalled();
+  expect(primeImdbDatasetEpisodes).toHaveBeenCalledWith([], '2026-10-14');
 });
 
 it('drops a formerly rated candidate when a complete daily dataset can no longer verify its vote', async () => {

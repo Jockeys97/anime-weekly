@@ -28,7 +28,12 @@ export async function primeWeeklyEpisodes(slug: string, previous?: WeeklyEpisode
   try {
     catalog = await withTimeout(getQuickWeekData(week, 'en'), 10000);
     if (catalog.status !== 'ready') throw new Error('Weekly source unavailable');
-  } catch { reason = 'metadata'; coverage.failed++; return finish(true); }
+  } catch {
+    reason = 'metadata'; coverage.failed++;
+    // A metadata outage must not prevent the global title-score cache refresh.
+    await primeImdbDatasetEpisodes([], today).catch(() => undefined);
+    return finish(true);
+  }
   const candidates = new Map<string, { seriesImdbId: string; entry: Omit<WeeklyEpisode, 'score' | 'votes'> }>();
   const ambiguous = new Set<string>();
   const sources = catalog.titles.filter(title => title.kind === 'tv');
@@ -65,18 +70,16 @@ export async function primeWeeklyEpisodes(slug: string, previous?: WeeklyEpisode
     }
   }));
   coverage.matched = candidates.size;
-  if (candidates.size) {
-    let dataset: Awaited<ReturnType<typeof primeImdbDatasetEpisodes>>;
-    try { dataset = await primeImdbDatasetEpisodes([...candidates].map(([imdbId, candidate]) => ({ imdbId, seriesImdbId: candidate.seriesImdbId })), today); }
-    catch { reason = 'source'; coverage.failed += candidates.size; return finish(true); }
-    if (dataset.status === 'unavailable') { reason = 'source'; coverage.failed += candidates.size; return finish(true); }
-    for (const [id, candidate] of candidates) {
-      const rating = dataset.ratings[id];
-      if (!rating) { coverage.unrated++; entries.delete(id); continue; }
-      coverage.rated++;
-      entries.set(id, { ...candidate.entry, ...rating, source: 'imdb-datasets' });
-    }
-    return finish(failed, dataset.dataUpdatedAt ?? null);
+  // Also populate series/movie scores when no episode has aired yet.
+  let dataset: Awaited<ReturnType<typeof primeImdbDatasetEpisodes>>;
+  try { dataset = await primeImdbDatasetEpisodes([...candidates].map(([imdbId, candidate]) => ({ imdbId, seriesImdbId: candidate.seriesImdbId })), today); }
+  catch { reason = 'source'; coverage.failed += candidates.size; return finish(true); }
+  if (dataset.status === 'unavailable') { reason = 'source'; coverage.failed += candidates.size; return finish(true); }
+  for (const [id, candidate] of candidates) {
+    const rating = dataset.ratings[id];
+    if (!rating) { coverage.unrated++; entries.delete(id); continue; }
+    coverage.rated++;
+    entries.set(id, { ...candidate.entry, ...rating, source: 'imdb-datasets' });
   }
-  return finish(failed);
+  return finish(failed, dataset.dataUpdatedAt ?? null);
 }

@@ -41,7 +41,7 @@ export function topWeeklyEpisodes(entries: readonly WeeklyEpisode[], slug: strin
   return [...unique.values()].sort((a, b) => b.score - a.score || b.votes - a.votes || a.imdbId.localeCompare(b.imdbId)).slice(0, 5);
 }
 
-export const EPISODE_COLLECTOR_VERSION = 3;
+export const EPISODE_COLLECTOR_VERSION = 4;
 export function needsEpisodeRepair(previous?: WeeklyEpisodes, today = japanDate()): boolean {
   return Boolean(previous?.updatedAt && Number.isFinite(Date.parse(previous.updatedAt)) && japanDate(new Date(previous.updatedAt)) === today && previous.collectorVersion !== EPISODE_COLLECTOR_VERSION);
 }

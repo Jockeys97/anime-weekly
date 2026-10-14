@@ -137,7 +137,7 @@
     "tmdbBadge": "TMDB",
     "tmdb": "Este producto utiliza la API de TMDB, pero TMDB no lo avala ni certifica.",
     "justwatch": "Datos de streaming de JustWatch",
-    "omdb": "Puntuaciones IMDb de series proporcionadas por OMDb",
+    "omdb": "Puntuaciones IMDb: datasets diarios IMDb · OMDb como alternativa",
     "anilist": "Identificación de anime y puntuaciones alternativas de AniList",
     "mal": "Puntuaciones MyAnimeList mediante Jikan",
     "note": "Las fechas y la disponibilidad proceden de las fuentes indicadas. No se estiman valoraciones."

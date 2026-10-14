@@ -34,7 +34,7 @@ Optionally get a free OMDb key at [omdbapi.com/apikey.aspx](https://www.omdbapi.
 
 The home and week routes use static/ISR output with a seven-day interval; historical routes generate on demand. Their render path never reads request cookies, headers or search parameters. Language/country selection and visitor date formatting run in the browser, with Italian and Europe/Rome defaults. The server sends one compact title list (synopses capped at 900 characters), rather than repeating complete titles and provider maps through nested RSC boundaries. Streaming providers, recommendations and translated text load separately after hydration.
 
-The authenticated Monday cron precomputes IMDb, AniList and MAL scores plus confirmed AniList IDs and broadcast schedules in one weekly `unstable_cache` snapshot, with `revalidate: 604800` and the independent `weekly-ratings` tag. OMDb successful scores also remain readable by catalog/detail pages through their independent weekly cache. Weekly pages read snapshots only: neither page rendering, scrolling nor retries call a rating provider. A cold snapshot shows neutral `n/a`; only cron fills it. No new credentials or paid services are needed. Failed raw rating responses are fetched without caching, and error bodies/statuses are never stored in the snapshot. Valid AniList fallback scores survive Jikan failures; quota errors leave IMDb neutral.
+The authenticated daily cron precomputes IMDb, AniList and MAL scores plus confirmed AniList IDs and broadcast schedules in one weekly `unstable_cache` snapshot, with `revalidate: 604800` and the independent `weekly-ratings` tag. All catalog, search and detail pages read IMDb scores by exact ID from the shared daily IMDb dataset index, then the preserved cross-week/OMDb cache. Cache keys are independent of the interface language and selected week. Weekly pages read snapshots only: neither page rendering, scrolling nor retries call a rating provider. A cold snapshot shows neutral `n/a`; only cron fills it. A missing exact IMDb match or genuinely unrated title can still have no score. No new credentials or paid services are needed. Failed raw rating responses are fetched without caching, and error bodies/statuses are never stored in the snapshot. Valid AniList fallback scores survive Jikan failures; quota errors leave IMDb neutral.
 
 Import this repository into Vercel: the Next.js defaults require no custom build configuration. Set credentials and a long random `CRON_SECRET` in **Vercel Project Settings > Environment Variables**, or with:
 
@@ -252,7 +252,7 @@ The weekly Top 5 uses confirmed episodes already released in Japan during the
 selected week. TMDB supplies exact episode and parent-series IMDb IDs, episode
 release dates, English episode names where available and posters. A daily job
 streams IMDb's official `title.ratings.tsv.gz` and `title.episode.tsv.gz` files,
-retaining only rows for up to 60 selected episode IDs. An episode rating requires
+retaining episode identities for up to 60 selected episode IDs and indexing validated score/vote pairs for every rated IMDb title. An episode rating requires
 an exact matching parent in `title.episode`, a valid score and positive vote
 count. IMDb's season/episode numbering is used; series ratings, movies, future
 episodes and unverified identities cannot fill missing positions.
@@ -260,7 +260,7 @@ episodes and unverified identities cannot fill missing positions.
 The authenticated job runs daily at `0 6 * * *`. Metadata collection is bounded
 to 60 seconds, 60 matched targets and 120 identity attempts. The two parallel gzip
 streams have a 45-second deadline and a 1 GiB decompressed limit per file; the
-complete IMDb database is never loaded into memory or stored in Next's cache.
+full TSV files and title metadata are never stored in Next's cache. Only compact score/vote pairs are divided into 256 private cache partitions, each capped at 1 MiB (below Next's 2 MiB entry limit). Readers load one partition for the exact IMDb ID. A completion marker is published only after the full gzip passes integrity checks and all partitions are written; the last complete index remains readable for up to seven days during an outage.
 Header changes, duplicate target rows and corrupt/truncated gzip data fail the
 attempt instead of publishing a partially parsed dataset.
 
@@ -275,9 +275,8 @@ a complete daily file removes a matched candidate whose rating cannot be verifie
 
 Episode ranking consumes **zero OMDb requests**. Public pages, language changes
 and filters read the weekly snapshot and never download either IMDb file.
-Series IMDb scores continue using the existing independent OMDb/cross-week
-cache. A same-day snapshot from the previous collector can be migrated once
-without warming series scores again.
+Series and movie IMDb scores now use the same daily dataset index, even for titles outside the weekly catalog. The preserved OMDb/cross-week cache remains a fallback. Reads never download a dataset or fill a missing rating through OMDb. A cache-only endpoint in the collector bundle covers route-isolated Vercel caches. A same-day snapshot from the previous collector can be migrated once
+without warming OMDb scores again. The first collector-version migration initializes the new index once; manual repeats reuse it.
 
 Official data source and conditions:
 [IMDb Non-Commercial Datasets](https://data.imdb.com/non-commercial-datasets/),

@@ -63,13 +63,14 @@ it('handles TSV headers and rows split across compressed response chunks and a f
   }));
   expect((await primeImdbDatasetEpisodes([target], '2026-10-14')).ratings.tt1).toMatchObject({ score: 8.2, votes: 37 });
 });
-it('makes no request for an empty or ambiguous target list and bounds IDs before downloading', async () => {
+it('indexes title ratings once even without eligible episodes and bounds IDs before downloading', async () => {
   const fetch = mockFiles();
   expect((await primeImdbDatasetEpisodes([], '2026-10-14')).ratings).toEqual({});
   expect((await primeImdbDatasetEpisodes([target, { ...target, seriesImdbId: 'tt200' }], '2026-10-14')).ratings).toEqual({});
   await expect(primeImdbDatasetEpisodes([{ ...target, imdbId: 'bad' }], '2026-10-14')).rejects.toThrow();
   await expect(primeImdbDatasetEpisodes(Array.from({ length: 61 }, () => target), '2026-10-14')).rejects.toThrow();
-  expect(fetch).not.toHaveBeenCalled();
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch.mock.calls[0][0]).toContain('title.ratings');
 });
 
 it('does not download again for a different candidate list or accept a different parent on a cache hit', async () => {

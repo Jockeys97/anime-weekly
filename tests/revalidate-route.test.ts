@@ -4,8 +4,10 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('next/server', () => ({ after: vi.fn((callback: () => Promise<void>) => { background.tasks.push(callback()); }) }));
 vi.mock('../lib/weekly-ratings', () => ({ WEEKLY_PAGE_TAG: 'weekly-page-output', WEEKLY_RATINGS_TAG: 'weekly-ratings', primeWeeklyRatings: vi.fn(), readWeeklyRatingsSnapshot: vi.fn(), storeWeeklyRatingsSnapshot: vi.fn(), storeRatingsStore: vi.fn(), readRatingsStore: vi.fn(), isWeeklyRatingComplete: (rating: { malScore?: number; anilistScore?: number; imdbRating?: string }) => rating.malScore != null && rating.anilistScore != null && Boolean(rating.imdbRating) }));
+vi.mock('../lib/imdb', () => ({ readSharedImdbScore: vi.fn(), hasImdbScore: (rating: { imdbRating?: string }) => Boolean(rating.imdbRating) }));
 vi.mock('../lib/weekly-episode-ratings', () => ({ primeWeeklyEpisodes: vi.fn() }));
 import { primeWeeklyEpisodes } from '../lib/weekly-episode-ratings';
+import { readSharedImdbScore } from '../lib/imdb';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { after } from 'next/server';
@@ -183,7 +185,7 @@ it('repairs a legacy episode failure without spending more series-rating quota',
   vi.stubEnv('CRON_SECRET', 'fixture');
   const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [], episodes: { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-14T10:00:00Z' } };
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
-  const episodes = { entries: [], status: 'ready' as const, collectorVersion: 3, updatedAt: '2026-10-14T12:00:00Z' };
+  const episodes = { entries: [], status: 'ready' as const, collectorVersion: 4, updatedAt: '2026-10-14T12:00:00Z' };
   vi.mocked(primeWeeklyEpisodes).mockResolvedValue(episodes);
   await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
@@ -193,11 +195,29 @@ it('repairs a legacy episode failure without spending more series-rating quota',
 
 it('reuses the completed daily job without invalidation, persistence or vendor calls on manual repeats', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
-  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 3, updatedAt: '2026-10-14T06:00:00Z' } });
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } });
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(await response.json()).toMatchObject({ cached: true, episodeStatus: 'ready' });
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
   expect(revalidateTag).not.toHaveBeenCalled();
   expect(after).not.toHaveBeenCalled();
+});
+
+it('serves an exact cached IMDb score publicly without calling either writer or a rating vendor', async () => {
+  vi.mocked(readSharedImdbScore).mockResolvedValue({ imdbId: 'tt2560140', imdbRating: '9.1', imdbStatus: 'ready' });
+  const response = await GET(new Request('https://example.test/api/revalidate?imdb=tt2560140'));
+  expect(await response.json()).toMatchObject({ imdbId: 'tt2560140', imdbRating: '9.1' });
+  expect(response.headers.get('cache-control')).toContain('s-maxage=300');
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+});
+it('never caches a missing IMDb value or fills it on a public read', async () => {
+  vi.mocked(readSharedImdbScore).mockResolvedValue({ imdbId: 'tt1', imdbStatus: 'unavailable' });
+  const response = await GET(new Request('https://example.test/api/revalidate?imdb=tt1'));
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(fetch).not.toHaveBeenCalled();
+  expect((await GET(new Request('https://example.test/api/revalidate?imdb=bad'))).status).toBe(400);
+  expect(readSharedImdbScore).toHaveBeenCalledTimes(1);
 });

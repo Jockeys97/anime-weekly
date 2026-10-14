@@ -25,43 +25,8 @@ export interface WeeklyRatings {
 const DAY_MS = 86400000;
 const MAX_RATING_AGE = 30 * DAY_MS;
 const MAX_STORE_AGE = 120 * DAY_MS;
-interface StoredRating {
-  values: Ratings;
-  fetchedAt: number;
-  lastSeenAt: number;
-}
-interface StoredSource {
-  imdbId?: string;
-  anilistId?: number;
-  malId?: number;
-  fetchedAt: number;
-  lastSeenAt: number;
-}
-export interface RatingsStore {
-  ratings: Record<string, StoredRating>;
-  sources: Record<string, StoredSource>;
-}
-const emptyStore = (): RatingsStore => ({ ratings: {}, sources: {} });
-let pendingStore: RatingsStore | undefined;
-function ratingsStoreCache(canPopulate: boolean) {
-  const loader = async (): Promise<RatingsStore> => {
-    if (!canPopulate || !pendingStore) throw new ColdWeeklyRatings();
-    return pendingStore;
-  };
-  Object.defineProperty(loader, 'toString', { value: () => 'cross-week-ratings-store-loader' });
-  // Keep this entry until explicit cron invalidation; freshness and retention
-  // are per entry, not tied to the one-week snapshot cache lifetime.
-  return unstable_cache(loader, ['cross-week-ratings-store-v1'], { revalidate: false, tags: [WEEKLY_RATINGS_TAG] });
-}
-export async function readRatingsStore(): Promise<RatingsStore> {
-  try { return await ratingsStoreCache(false)(); }
-  catch { return emptyStore(); }
-}
-export async function storeRatingsStore(store: RatingsStore): Promise<void> {
-  pendingStore = store;
-  try { await ratingsStoreCache(true)(); }
-  finally { pendingStore = undefined; }
-}
+export { readRatingsStore, storeRatingsStore, type RatingsStore } from '@/lib/ratings-store';
+import { readRatingsStore, type RatingsStore } from '@/lib/ratings-store';
 
 const providers = [
   { prefix: 'imdb', id: 'imdbId', score: 'imdbRating', fields: ['imdbRating', 'imdbVotes', 'imdbStatus'] },
@@ -73,7 +38,7 @@ function saveRatings(store: RatingsStore, key: string, ratings: Ratings, fetched
   const previous = store.sources[key];
   const ids = { imdbId: ratings.imdbId ?? previous?.imdbId, anilistId: ratings.anilistId ?? previous?.anilistId, malId: ratings.malId ?? previous?.malId };
   if (Object.values(ids).some(id => id != null)) {
-    const changed = !previous || Object.entries(ids).some(([field, id]) => id !== previous[field as keyof StoredSource]);
+    const changed = !previous || Object.entries(ids).some(([field, id]) => id !== previous[field as keyof RatingsStore['sources'][string]]);
     store.sources[key] = { ...ids, fetchedAt: changed ? now : previous.fetchedAt, lastSeenAt: now };
   }
   for (const provider of providers) {
