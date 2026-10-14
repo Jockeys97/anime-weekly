@@ -363,9 +363,13 @@
     "noMatches": "No titles match these filters.",
     "storageError": "Unable to save your list in this browser.",
     "episodeLabel": "Season {season} · Episode {episode}",
-    "noRatedEpisodes": "No episode released this week has a verified IMDb rating available yet.",
+    "noRatedEpisodes": "No episode released this week has an IMDb rating verifiable through OMDb yet. We will check again at the next daily update.",
     "episodesPending": "This week’s episode ranking has not been updated yet.",
     "episodesUnavailable": "IMDb episode ratings are temporarily unavailable.",
-    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet."
+    "episodesPartial": "Partial ranking: some IMDb episode ratings are not available yet.",
+    "episodesSourceUnavailable": "OMDb cannot retrieve ratings for the new episodes yet. We will try again at the next daily update.",
+    "episodesQuotaUnavailable": "The daily OMDb quota has been reached. Collected ratings remain cached; we will try again at the next daily update.",
+    "episodesAuthenticationUnavailable": "The OMDb key is missing or was rejected by the service.",
+    "episodesMetadataUnavailable": "Some episode dates or identifiers are not available yet. We will check again at the next daily update."
   }
 }

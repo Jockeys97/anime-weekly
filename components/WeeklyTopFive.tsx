@@ -22,6 +22,10 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
   const data = snapshot?.slug === slug ? snapshot.data : null;
   const top = topWeeklyEpisodes(data?.entries ?? [], slug);
   const pending = !data;
+  const failureMessage = data?.reason === 'quota' ? d.episodesQuotaUnavailable
+    : data?.reason === 'authentication' ? d.episodesAuthenticationUnavailable
+    : data?.reason === 'source' ? d.episodesSourceUnavailable
+    : data?.reason === 'metadata' ? d.episodesMetadataUnavailable : d.episodesUnavailable;
   const [status, setStatus] = useState('');
   async function share() {
     const url = new URL(`/week/${slug}`, window.location.origin).href;
@@ -43,7 +47,7 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
           <span className="top-five-score"><strong>{title.score.toFixed(1)}</strong><span> / 10</span></span>
         </Link>
       </li>;
-    })}</ol> : <div className={`top-five-empty${pending ? ' top-five-pending' : ''}`} role="status"><span aria-hidden="true">✦</span><p>{pending ? dictionary.catalog.loadingRatings : data?.status === 'pending' ? d.episodesPending : data?.status === 'unavailable' ? d.episodesUnavailable : d.noRatedEpisodes}</p></div>}
+    })}</ol> : <div className={`top-five-empty${pending ? ' top-five-pending' : ''}`} role="status"><span aria-hidden="true">✦</span><p>{pending ? dictionary.catalog.loadingRatings : data?.status === 'pending' ? d.episodesPending : data?.status === 'unavailable' ? failureMessage : d.noRatedEpisodes}</p></div>}
     {data?.status === 'partial' && top.length > 0 && <p className="top-five-status" role="status">{d.episodesPartial}</p>}
     {status && <p className="top-five-status" role="status">{status}</p>}
   </section>;

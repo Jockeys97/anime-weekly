@@ -6,7 +6,7 @@ import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, 
 import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
-import { topWeeklyEpisodes } from '@/lib/weekly-episodes';
+import { topWeeklyEpisodes, needsEpisodeRepair, japanDate, EPISODE_COLLECTOR_VERSION, type WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
 export const maxDuration = 300;
 function authorized(request: Request): boolean {
@@ -66,23 +66,31 @@ export async function GET(request: Request) {
   const actual = Buffer.from(request.headers.get('authorization') || '');
   const expected = Buffer.from(`Bearer ${secret}`);
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
-  revalidateTag(CACHE_TAG, { expire: 0 });
   const week = isoWeek(new Date());
+  const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
+  if (previous.episodes?.collectorVersion === EPISODE_COLLECTOR_VERSION && previous.episodes.updatedAt && Number.isFinite(Date.parse(previous.episodes.updatedAt)) && japanDate(new Date(previous.episodes.updatedAt)) === japanDate()) {
+    return Response.json({ revalidated: true, cached: true, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
+  }
+  revalidateTag(CACHE_TAG, { expire: 0 });
   let total = 0;
   let complete = false;
   let populated = 0;
   let unavailable = 0;
   let storeHits = 0;
+  let episodeSnapshot: WeeklyEpisodes | undefined;
   try {
-    const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
     const [ratings, episodes] = await Promise.allSettled([
-      primeWeeklyRatings(formatWeek(week), previous),
+      // Repair a pre-fix episode snapshot once without warming series scores again.
+      needsEpisodeRepair(previous.episodes)
+        ? Promise.resolve({ ...previous, total: Object.keys(previous.titles).length, store: await readRatingsStore(), storeHits: 0 })
+        : primeWeeklyRatings(formatWeek(week), previous),
       primeWeeklyEpisodes(formatWeek(week), previous.episodes),
     ]);
     if (ratings.status === 'rejected' && (episodes.status === 'rejected' || !episodes.value)) throw new Error('Weekly updates unavailable');
     const snapshot = ratings.status === 'fulfilled' ? ratings.value : { ...previous, total: Object.keys(previous.titles).length, store: await readRatingsStore(), storeHits: 0 };
     if (episodes.status === 'fulfilled' && episodes.value) snapshot.episodes = episodes.value;
     else if (previous.episodes) snapshot.episodes = { ...previous.episodes, status: previous.episodes.entries.length ? 'partial' : 'unavailable' };
+    episodeSnapshot = snapshot.episodes;
     const slug = formatWeek(week);
     const { total: _total, store, storeHits: hits, ...toStore } = snapshot;
     void _total;
@@ -107,5 +115,5 @@ export async function GET(request: Request) {
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.
   revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
-  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits });
+  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits, episodeStatus: episodeSnapshot?.status, episodeCoverage: episodeSnapshot?.coverage, episodeReason: episodeSnapshot?.reason });
 }

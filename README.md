@@ -244,10 +244,26 @@ Le fonti attuali non forniscono lingue di doppiaggio o sottotitoli per titolo e 
 
 La watchlist senza account usa `localStorage`, chiave `aw:watchlist`, con ID `anilist:ID` (oppure `tv:ID` / `movie:ID` per titoli settimanali senza abbinamento). La lista resta nel browser e si sincronizza fra le sue schede.
 
-La Top 5 usa esclusivamente i rating dello snapshot cron: MAL, altrimenti AniList diviso 10, altrimenti IMDb. Le immagini Open Graph e `/api/ics/week/[week]` leggono solo lo snapshot; nomi ed eventi diventano disponibili con il successivo cron. Senza cache l'immagine è generica e il calendario settimanale è vuoto. Gli eventi settimanali sono le trasmissioni AniList nella settimana UTC, senza orari inventati per date prive di orario. `/api/ics/anime/[id]` legge gli episodi futuri di AniList con cache di un'ora. I download usano UTC e UID stabili, condivisi tra calendario settimanale e calendario del titolo.
+La Top 5 usa esclusivamente voti IMDb di episodi verificati nello snapshot giornaliero. Le immagini Open Graph e `/api/ics/week/[week]` leggono solo lo snapshot; nomi ed eventi diventano disponibili con il successivo cron. Senza cache l'immagine è generica e il calendario settimanale è vuoto. Gli eventi settimanali sono le trasmissioni AniList nella settimana UTC, senza orari inventati per date prive di orario. `/api/ics/anime/[id]` legge gli episodi futuri di AniList con cache di un'ora. I download usano UTC e UID stabili, condivisi tra calendario settimanale e calendario del titolo.
 
-### Weekly IMDb episode ranking
+## Daily episode ranking
 
-The Top 5 ranks verified individual episodes released in the selected week's TMDB anime catalog, using IMDb votes supplied by OMDb. It requires the exact episode IMDb ID and matching parent series ID; TMDB season numbering is never used to guess an IMDb episode. Movies, future releases, unrated episodes and unverified matches are excluded. Equal ratings are ordered by vote count.
+The weekly Top 5 uses confirmed episodes released by the current Japan calendar
+date, with their own IMDb score and vote count. TMDB resolves an exact episode
+IMDb ID and parent-series IMDb ID. OMDb is queried by episode ID, with at most
+one fallback through the parent and TMDB season/episode coordinates when the
+direct lookup fails. The fallback is accepted only if **both IMDb IDs match**;
+season numbering, series ratings and future episodes cannot substitute for an
+episode rating. OMDb can return `Error getting data.` or `not found` even when
+IMDb itself already has votes. That is a source coverage limitation, not proof
+that the API quota has been exhausted.
 
-The authenticated `/api/revalidate` cron runs once daily. Episode collection is bounded to 110 seconds and 60 distinct rating lookups per run, stops on quota/authentication errors, and preserves successful previous values. Completed daily attempts (including failures) are reused until the next day; successful per-episode values also share a daily cache. Visitors, language changes and filters only read the stored ranking and make no OMDb calls. The ordinary series scores keep their independent cross-week cache. The share image uses the same episode ranking.
+The authenticated job runs daily at `0 6 * * *`. It allows at most 30 distinct
+episode lookups (up to 60 HTTP requests including fallbacks), within 110 seconds.
+Successful, unrated and failed attempts are cached for the date; manual repeats
+reuse the completed daily snapshot, and a new date permits another attempt.
+Previously confirmed ratings survive partial failures. Public page reads,
+language changes and filters never call OMDb. Safe coverage counts and failure
+categories accompany the snapshot; the interface distinguishes quota,
+authentication, metadata and rating-service failures. A pre-fix episode snapshot
+can be repaired once without warming series scores again.

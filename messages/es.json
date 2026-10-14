@@ -357,9 +357,13 @@
     "noMatches": "Ningún título coincide con los filtros.",
     "storageError": "No se puede guardar la lista en este navegador.",
     "episodeLabel": "Temporada {season} · Episodio {episode}",
-    "noRatedEpisodes": "Todavía no hay episodios estrenados esta semana con una valoración verificada de IMDb disponible.",
+    "noRatedEpisodes": "Ningún episodio estrenado esta semana tiene aún una puntuación IMDb verificable mediante OMDb. Nueva comprobación en la próxima actualización diaria.",
     "episodesPending": "La clasificación de esta semana aún no se ha actualizado.",
     "episodesUnavailable": "Las valoraciones de los episodios en IMDb no están disponibles temporalmente.",
-    "episodesPartial": "Clasificación parcial: algunas valoraciones de IMDb aún no están disponibles."
+    "episodesPartial": "Clasificación parcial: algunas valoraciones de IMDb aún no están disponibles.",
+    "episodesSourceUnavailable": "OMDb todavía no puede recuperar las puntuaciones de los nuevos episodios. Volveremos a intentarlo en la próxima actualización diaria.",
+    "episodesQuotaUnavailable": "Se ha agotado la cuota diaria de OMDb. Las puntuaciones obtenidas siguen guardadas; nuevo intento en la próxima actualización diaria.",
+    "episodesAuthenticationUnavailable": "La clave de OMDb no está configurada o el servicio la ha rechazado.",
+    "episodesMetadataUnavailable": "Algunas fechas o identificadores de episodios aún no están disponibles. Nueva comprobación en la próxima actualización diaria."
   }
 }

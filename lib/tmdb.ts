@@ -20,7 +20,6 @@ export interface AnimeTitle { genres?: string[]; id: number; kind: Kind; name: s
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
-export class TMDBRequestError extends Error { constructor(readonly status: number) { super('TMDB request failed'); } }
 async function tmdb<T>(path: string, query: Record<string, string> = {}, revalidate = CACHE_SECONDS, fresh = false): Promise<T> {
   if (!isTMDBConfigured()) throw new Error('TMDB not configured');
   const url = new URL(`https://api.themoviedb.org/3/${path}`);
@@ -28,7 +27,7 @@ async function tmdb<T>(path: string, query: Record<string, string> = {}, revalid
   const token = process.env.TMDB_READ_TOKEN?.trim();
   if (!token) url.searchParams.set('api_key', process.env.TMDB_API_KEY!.trim());
   const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: fresh ? 'no-store' : 'force-cache', next: fresh ? undefined : { revalidate, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(12000) });
-  if (!response.ok) throw new TMDBRequestError(response.status);
+  if (!response.ok) throw new Error('TMDB request failed');
   return response.json() as Promise<T>;
 }
 async function discover(kind: Kind, week: ISOWeek, locale: Locale, englishNames = true): Promise<RawTitle[]> {

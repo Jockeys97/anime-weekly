@@ -19,3 +19,10 @@ it('distinguishes a cold daily snapshot, an upstream failure and episodes withou
   expect(render({ entries: [], status: 'unavailable' })).toContain('temporaneamente non disponibili');
   expect(render({ entries: [], status: 'ready' })).toContain('Nessun episodio già uscito');
 });
+
+it('explains an OMDb source error without claiming that the API quota was exhausted', () => {
+  const html = render({ entries: [], status: 'unavailable', reason: 'source' });
+  expect(html).toContain('OMDb non riesce ancora');
+  expect(html).not.toContain('quota giornaliera');
+  expect(render({ entries: [], status: 'unavailable', reason: 'quota' })).toContain('quota giornaliera');
+});
