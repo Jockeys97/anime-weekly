@@ -218,6 +218,7 @@
     "releases": "releases",
     "titles": "titles",
     "episode": "Episode",
+    "tmdbNumbering": "TMDB numbering",
     "airing": "Broadcast · AniList",
     "movieRelease": "Movie release",
     "timeUnavailable": "Time not provided",

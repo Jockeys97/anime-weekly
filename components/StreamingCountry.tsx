@@ -5,12 +5,13 @@ import { STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
 import { getDictionary } from '@/lib/i18n';
 import { useLocale } from '@/components/LanguageSelector';
 
-const CountryContext = createContext<{ region: StreamingRegion; setRegion: (region: StreamingRegion) => void } | null>(null);
+const CountryContext = createContext<{ region: StreamingRegion; setRegion: (region: StreamingRegion) => void; platformFilter: string; setPlatformFilter: (platform: string) => void } | null>(null);
 export function StreamingCountryProvider({ children }: { children: ReactNode }) {
   const locale = useLocale();
   const [selectedRegion, setRegion] = useState<StreamingRegion | null>(null);
+  const [platformFilter, setPlatformFilter] = useState('');
   const region = selectedRegion ?? (locale === 'it' ? 'IT' : 'US');
-  return <CountryContext.Provider value={{ region, setRegion }}>{children}</CountryContext.Provider>;
+  return <CountryContext.Provider value={{ region, setRegion, platformFilter, setPlatformFilter }}>{children}</CountryContext.Provider>;
 }
 export function useStreamingCountry() {
   const country = useContext(CountryContext);
