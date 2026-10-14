@@ -84,14 +84,16 @@ export async function readWeeklyRatingsSnapshot(slug: string): Promise<WeeklyRat
 
 export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (!host || process.env.VERCEL_ENV !== 'production') console.error('[weekly-ratings] no read endpoint', Boolean(host), process.env.VERCEL_ENV);
   if (host && process.env.VERCEL_ENV === 'production') {
     try {
       const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 900, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
       if (res.ok) {
         const data = await res.json() as WeeklyRatings;
         if (data && data.titles && Object.keys(data.titles).length) return data;
-      }
-    } catch { /* fall back to the local cache read */ }
+        console.error('[weekly-ratings] endpoint empty', slug);
+      } else console.error('[weekly-ratings] endpoint status', res.status);
+    } catch (e) { console.error('[weekly-ratings] endpoint error', (e as Error)?.message); }
   }
   try { return await snapshotCache(false)(slug); }
   catch (e) { console.error("[weekly-ratings] read miss", slug, (e as Error)?.constructor?.name); return empty(); }
