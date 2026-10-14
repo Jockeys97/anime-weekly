@@ -1,11 +1,21 @@
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
-import { primeWeeklyRatings, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
+import { primeWeeklyRatings, readWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
+import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { getDictionary } from '@/lib/i18n';
 export const maxDuration = 300;
 export async function GET(request: Request) {
+  // Public read-only mode: serve the cron-written snapshot from this same
+  // bundle (unstable_cache entries are only reliably readable here). Never
+  // calls rating APIs; a cold cache returns an empty snapshot.
+  const read = new URL(request.url).searchParams.get('ratings');
+  if (read !== null) {
+    if (!parseWeek(read)) return Response.json({ error: 'invalid week' }, { status: 400 });
+    const snapshot = await readWeeklyRatingsSnapshot(read);
+    return Response.json(snapshot, { headers: { 'cache-control': 'public, s-maxage=300' } });
+  }
   const d = getDictionary(); const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) return Response.json({ error: d.api.missingSecret }, { status: 500 });
   const actual = Buffer.from(request.headers.get('authorization') || '');
