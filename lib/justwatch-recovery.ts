@@ -63,7 +63,7 @@ export function parseJustWatchPage(html: string, pageUrl: string, imdbId: string
   } catch { return null; }
 }
 
-export async function recoverJustWatchOffers(name: string, imdbId: string, region: StreamingRegion) {
+export async function recoverJustWatchOffers(name: string, imdbId: string, region: StreamingRegion, kind: 'tv' | 'movie' = 'tv') {
   const slug = name.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   if (!slug || !/^tt\d+$/.test(imdbId)) return null;
   const load = async (url: string) => {
@@ -73,7 +73,7 @@ export async function recoverJustWatchOffers(name: string, imdbId: string, regio
     return html.length <= 2_000_000 ? parseJustWatchPage(html, url, imdbId, region) : null;
   };
   try {
-    const seed = `https://www.justwatch.com/us/tv-show/${slug}`;
+    const seed = `https://www.justwatch.com/us/${kind === 'movie' ? 'movie' : 'tv-show'}/${slug}`;
     const first = await load(seed);
     if (!first) return null;
     if (region === 'US') return { providers: first.providers, link: seed };
