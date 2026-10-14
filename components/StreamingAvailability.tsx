@@ -7,12 +7,14 @@ import { getDictionary } from '@/lib/i18n';
 import type { AnimeTitle } from '@/lib/tmdb';
 import { providerWatchLink } from '@/lib/provider-watch-link';
 import { ProviderLink } from '@/components/ProviderLink';
+import { useStreamingDisplay } from '@/lib/streaming-display';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 
 export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale = 'en', collapsible = true, loading = false, followLocale = false }: { anime: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; seriesWatch?: Pick<AnimeTitle, 'id' | 'kind' | 'name' | 'providers' | 'providersUnavailable'>; recoveryId?: number; locale?: string; collapsible?: boolean; loading?: boolean; followLocale?: boolean }) {
   const selectedLocale = useLocale();
   locale = followLocale ? selectedLocale : locale;
   const { region } = useStreamingCountry();
+  const [showStreaming] = useStreamingDisplay();
   const d = getDictionary(locale);
   const useSeries = !anime.providers[region]?.providers.length && Boolean(seriesWatch?.providers[region]?.providers.length);
   const base = useSeries && seriesWatch ? seriesWatch : anime;
@@ -46,5 +48,5 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
       </ProviderLink>) : <p>{anime.providersUnavailable ? d.state.providersError : d.title.noWatchData}</p>}
     </div></div></div>
   </>;
-  return collapsible ? <details className="streaming"><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
+  return collapsible ? <details className="streaming" open={showStreaming}><summary>{d.title.streaming}<span className="streaming-country-name">{d.regions[region]}</span><span className="streaming-toggle" aria-hidden="true">＋</span></summary>{content}</details> : <div className="streaming streaming-static">{content}</div>;
 }
