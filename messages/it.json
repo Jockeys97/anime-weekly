@@ -283,5 +283,25 @@
       "Supernatural": "Soprannaturale",
       "Thriller": "Thriller"
     }
+  },
+  "newsletter": {
+    "title": "La settimana anime, nella tua inbox",
+    "description": "Un riepilogo settimanale con i titoli da scoprire e i link alla guida.",
+    "email": "Indirizzo email",
+    "consent": "Acconsento a ricevere la newsletter settimanale. Posso cancellarmi in qualsiasi momento.",
+    "website": "Sito web",
+    "submit": "Iscrivimi",
+    "sending": "Iscrizione in corso…",
+    "success": "Iscrizione completata! Riceverai il prossimo riepilogo settimanale.",
+    "comingSoon": "Newsletter in arrivo. Riprova presto!",
+    "invalid": "Inserisci un indirizzo email valido e accetta di ricevere la newsletter.",
+    "rateLimited": "Troppe richieste. Riprova tra qualche minuto.",
+    "error": "Non riusciamo a completare la richiesta. Riprova più tardi.",
+    "unsubscribe": "Cancella iscrizione",
+    "unsubscribed": "Iscrizione cancellata. Non riceverai più la newsletter.",
+    "invalidToken": "Link di cancellazione non valido.",
+    "digestTitle": "Anime della settimana",
+    "digestIntro": "I titoli da scoprire questa settimana, con i link alla guida.",
+    "viewWeek": "Apri la guida settimanale"
   }
 }

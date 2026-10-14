@@ -283,5 +283,25 @@
       "Supernatural": "Übernatürlich",
       "Thriller": "Thriller"
     }
+  },
+  "newsletter": {
+    "title": "Deine Anime-Woche per E-Mail",
+    "description": "Ein wöchentlicher Überblick mit Titeln zum Entdecken und Links zum Guide.",
+    "email": "E-Mail-Adresse",
+    "consent": "Ich stimme dem wöchentlichen Newsletter zu. Ich kann mich jederzeit abmelden.",
+    "website": "Website",
+    "submit": "Anmelden",
+    "sending": "Anmeldung läuft…",
+    "success": "Du bist angemeldet! Der nächste Wochenüberblick kommt per E-Mail.",
+    "comingSoon": "Der Newsletter kommt bald. Versuche es bald erneut!",
+    "invalid": "Gib eine gültige E-Mail-Adresse ein und stimme dem Newsletter zu.",
+    "rateLimited": "Zu viele Anfragen. Versuche es in einigen Minuten erneut.",
+    "error": "Die Anfrage konnte nicht abgeschlossen werden. Versuche es später erneut.",
+    "unsubscribe": "Abmelden",
+    "unsubscribed": "Du bist abgemeldet und erhältst keinen Newsletter mehr.",
+    "invalidToken": "Ungültiger Abmeldelink.",
+    "digestTitle": "Anime der Woche",
+    "digestIntro": "Titel zum Entdecken in dieser Woche, mit Links zum Guide.",
+    "viewWeek": "Wöchentlichen Guide öffnen"
   }
 }

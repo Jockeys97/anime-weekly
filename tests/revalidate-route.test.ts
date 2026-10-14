@@ -19,7 +19,9 @@ it('warms combined ratings within Hobby limits and invalidates HTML without expi
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ revalidated: true, populated: 1 });
   expect(maxDuration).toBe(300);
+  // Path invalidation would also stale the ratings snapshot just populated.
   expect(revalidatePath).not.toHaveBeenCalled();
+  expect(vi.mocked(revalidateTag).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(primeWeeklyRatings).mock.invocationCallOrder[0]);
   expect(revalidateTag).toHaveBeenNthCalledWith(1, 'anime-week', { expire: 0 });
   expect(revalidateTag).toHaveBeenNthCalledWith(2, 'weekly-page-output', { expire: 0 });
 });

@@ -289,5 +289,25 @@
       "Supernatural": "Supernatural",
       "Thriller": "Thriller"
     }
+  },
+  "newsletter": {
+    "title": "Your weekly anime inbox",
+    "description": "A weekly digest of titles to discover, with links to the guide.",
+    "email": "Email address",
+    "consent": "I agree to receive the weekly newsletter. I can unsubscribe at any time.",
+    "website": "Website",
+    "submit": "Subscribe",
+    "sending": "Subscribing…",
+    "success": "You're subscribed! Look out for the next weekly digest.",
+    "comingSoon": "Newsletter coming soon. Please try again soon!",
+    "invalid": "Enter a valid email address and agree to receive the newsletter.",
+    "rateLimited": "Too many requests. Please try again in a few minutes.",
+    "error": "We couldn't complete your request. Please try again later.",
+    "unsubscribe": "Unsubscribe",
+    "unsubscribed": "You've unsubscribed. You will no longer receive the newsletter.",
+    "invalidToken": "Invalid unsubscribe link.",
+    "digestTitle": "Anime this week",
+    "digestIntro": "Titles to discover this week, with links to the guide.",
+    "viewWeek": "Open the weekly guide"
   }
 }
