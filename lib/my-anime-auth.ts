@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEq
 import { NextResponse } from 'next/server';
 import { myAnimeConfig, type AnimeProvider } from '@/lib/my-anime-config';
 import { throttle } from '@/lib/rate-limited-fetch';
+import { traktHeaders } from '@/lib/trakt-headers';
 
 export const traktFetch = throttle(350);
 export const malFetch = throttle(1000);
@@ -122,7 +123,7 @@ async function exchangeToken(provider: AnimeProvider, origin: string, grant: Rec
   try { response = await (provider === 'trakt' ? traktFetch : malFetch)(provider === 'trakt'
     ? 'https://api.trakt.tv/oauth/token' : 'https://myanimelist.net/v1/oauth2/token', {
     method: 'POST', cache: 'no-store', next: undefined,
-    headers: { 'Content-Type': provider === 'trakt' ? 'application/json' : 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    headers: provider === 'trakt' ? traktHeaders() : { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: provider === 'trakt' ? JSON.stringify(payload) : new URLSearchParams(payload).toString(),
   }, 12000); }
   catch (error) {
@@ -205,7 +206,7 @@ export async function oauthLogout(request: Request, provider: AnimeProvider, coo
   if (provider === 'trakt' && token) {
     try {
       await traktFetch('https://api.trakt.tv/oauth/revoke', { method: 'POST', cache: 'no-store', next: undefined,
-        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token.accessToken,
+        headers: traktHeaders(token.accessToken), body: JSON.stringify({ token: token.accessToken,
           client_id: process.env.TRAKT_CLIENT_ID,
           ...(process.env.TRAKT_CLIENT_SECRET?.trim() ? { client_secret: process.env.TRAKT_CLIENT_SECRET } : {}) }) }, 5000);
     } catch { /* Local logout succeeds even when remote revocation fails. */ }

@@ -6,6 +6,7 @@ import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { malFetch, traktFetch, tokenHash, type AuthToken } from '@/lib/my-anime-auth';
 import { buildPersonalReleases, matchMal, weekCandidates, type MalAnime, type PersonalRelease, type TraktRelease, type TraktShow } from '@/lib/my-anime-week';
 import { formatWeek, weekRange, type ISOWeek } from '@/lib/week';
+import { traktHeaders } from '@/lib/trakt-headers';
 
 export interface PersonalWeekData {
   releases: PersonalRelease[]; unmatched: number; followed: number;
@@ -13,7 +14,7 @@ export interface PersonalWeekData {
 }
 async function traktJson<T>(path: string, token: string, maxWaitMs: number): Promise<{ data: T | null; pages: number }> {
   const response = await traktFetch(`https://api.trakt.tv${path}`, { cache: 'no-store', next: undefined,
-    headers: { Authorization: `Bearer ${token}`, 'trakt-api-version': '2', 'trakt-api-key': process.env.TRAKT_CLIENT_ID!, Accept: 'application/json' } }, maxWaitMs);
+    headers: traktHeaders(token) }, maxWaitMs);
   if (!response.ok) throw new Error('Trakt unavailable');
   return { data: response.status === 204 ? null : await response.json() as T,
     pages: Number(response.headers.get('X-Pagination-Page-Count') || 1) };
