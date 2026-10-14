@@ -73,6 +73,18 @@ it('never assigns a later season or a tied adaptation just because its base titl
   expect(result.unavailable).toBe(false);
 });
 
+it('matches a remake year label while rejecting the older adaptation and later season', async () => {
+  vi.mocked(getWeeklyRatingSources).mockResolvedValue([{ kind: 'tv', id: 259140, title: 'Ranma ½', originalTitle: 'らんま1/2', year: 2024 }]);
+  const original = { ...candidate(1), id: 210, title: { english: 'Ranma ½', native: 'らんま1/2' }, startDate: { year: 1989 } };
+  const remake = { ...candidate(1), id: 178533, title: { english: 'Ranma ½ (2024)', native: 'らんま1/2 (2024)' }, startDate: { year: 2024 } };
+  const sequel = { ...remake, id: 185731, title: { english: 'Ranma ½ (2024) Season 2' }, startDate: { year: 2025 } };
+  vi.mocked(anilistFetch).mockImplementation(async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    return Response.json({ data: Object.fromEntries(Object.keys(body.variables).map(key => [key, { media: [original, remake, sequel] }])) });
+  });
+  expect((await getWeeklyAnimeScores('2026-42')).titles['tv:259140']).toMatchObject({ anilistId: 178533, anilistScore: 81, animeStatus: 'ready' });
+});
+
 it('keeps exact source IDs without inventing a score for announced titles', async () => {
   vi.mocked(getWeeklyRatingSources).mockResolvedValue([source(1)]);
   vi.mocked(anilistFetch).mockResolvedValue(Response.json({ data: { s0_0: { media: [{ ...candidate(1), averageScore: null }] } } }));
