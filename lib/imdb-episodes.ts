@@ -15,7 +15,7 @@ export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string)
     || !data.Season?.trim() || !Number.isSafeInteger(season) || season < 0 || !Number.isSafeInteger(episode) || episode <= 0) return null;
   return { title: data.Title === 'N/A' ? '' : data.Title?.trim() ?? '', season, episode, score, votes };
 }
-export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating' } | { state: 'error'; reason: 'quota' | 'authentication' | 'network'; status?: number };
+export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating'; details?: { score?: string; votes?: string; season?: string; episode?: string; type?: string; parentMatches: boolean } } | { state: 'error'; reason: 'quota' | 'authentication' | 'network'; status?: number };
 // Persist the daily attempt, including outages and N/A. A second job cannot
 // silently spend quota again after a failure; a new day has a new cache key.
 async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): Promise<EpisodeAttempt> {
@@ -32,9 +32,10 @@ async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): 
   if (/key|auth/i.test(data.Error ?? '') || response.status === 401) return { state: 'error', reason: 'authentication', status: response.status };
   if (!response.ok || (data.Response !== 'True' && !/not found|incorrect imdb id/i.test(data.Error ?? ''))) return { state: 'error', reason: 'network', status: response.status };
   if (data.Response !== 'True') return { state: 'unrated', cause: 'not-found' };
-  if (data.Type !== 'episode' || data.imdbID !== id || data.seriesID !== seriesId) return { state: 'unrated', cause: 'invalid-episode' };
+  const details = { score: data.imdbRating, votes: data.imdbVotes, season: data.Season, episode: data.Episode, type: data.Type, parentMatches: data.seriesID === seriesId };
+  if (data.Type !== 'episode' || data.imdbID !== id || data.seriesID !== seriesId) return { state: 'unrated', cause: 'invalid-episode', details };
   const rating = readImdbEpisode(data, id, seriesId);
-  return rating ? { state: 'rated', rating } : { state: 'unrated', cause: 'missing-rating' };
+  return rating ? { state: 'rated', rating } : { state: 'unrated', cause: 'missing-rating', details };
 }
 class ColdEpisodeAttempt extends Error {}
 function attemptCache(populate: boolean) {
