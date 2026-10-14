@@ -168,3 +168,13 @@ Every message includes `/api/newsletter/unsubscribe?email=...&token=...&locale=.
 Call `POST /api/newsletter/send` (GET is also supported for future cron use) with the bearer secret. Missing Resend, sender, HMAC or Redis configuration returns `{skipped: "not configured"}` without external requests. Configured sends use the current ISO week's first ten titles from the existing weekly discovery order, each linking to the site's detail/search page, plus the weekly guide and unsubscribe links. Missing, partial or empty weekly data is skipped. Sends use private, individual messages in Resend batches of at most 100 and return accepted `sent` and `failed` counts; provider acceptance does not guarantee inbox delivery. Provider failures return 502 and are not retried automatically. Resend idempotency keys protect identical batch retries within its retention window; this is not a persistent once-per-week delivery ledger. Review results before rerunning a partially failed send, especially after the subscriber list changes.
 
 No newsletter cron is added to `vercel.json`; sending must be triggered manually until scheduling is explicitly configured. Existing revalidation cron behavior is unchanged.
+
+## Filtri
+
+Le pagine settimanali e stagionali filtrano nel browser per genere, piattaforma nel paese selezionato e «Solo la mia lista». I generi provengono dai dati TMDB/AniList disponibili; le piattaforme compaiono quando vengono caricati i provider. Sulle pagine stagionali i filtri si applicano ai titoli della pagina corrente. Cambiare paese azzera il filtro piattaforma.
+
+Le fonti attuali non forniscono lingue di doppiaggio o sottotitoli per titolo e provider: questi filtri non sono disponibili.
+
+La watchlist senza account usa `localStorage`, chiave `aw:watchlist`, con ID `anilist:ID` (oppure `tv:ID` / `movie:ID` per titoli settimanali senza abbinamento). La lista resta nel browser e si sincronizza fra le sue schede.
+
+La Top 5 usa esclusivamente i rating dello snapshot cron: MAL, altrimenti AniList diviso 10, altrimenti IMDb. Le immagini Open Graph e `/api/ics/week/[week]` leggono solo lo snapshot; nomi ed eventi diventano disponibili con il successivo cron. Senza cache l'immagine è generica e il calendario settimanale è vuoto. Gli eventi settimanali sono le trasmissioni AniList nella settimana UTC, senza orari inventati per date prive di orario. `/api/ics/anime/[id]` legge gli episodi futuri di AniList con cache di un'ora. I download usano UTC e UID stabili, condivisi tra calendario settimanale e calendario del titolo.

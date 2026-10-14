@@ -7,6 +7,7 @@ import { primeImdbScore } from '@/lib/imdb';
 import { getWeekAirings, type AiringEvent } from '@/lib/airing-schedule';
 import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
+import { displayTitle } from '@/lib/title-text';
 import type { Ratings } from '@/lib/ratings';
 
 export const WEEKLY_RATINGS_TAG = 'weekly-ratings';
@@ -17,6 +18,7 @@ export const trackWeeklyPage = unstable_cache(async () => null, ['weekly-page-ou
 export interface WeeklyRatings {
   titles: Record<string, Ratings>;
   events: AiringEvent[];
+  names?: Record<string, string>;
 }
 class ColdWeeklyRatings extends Error {}
 const empty = (): WeeklyRatings => ({ titles: {}, events: [] });
@@ -32,6 +34,7 @@ function snapshotCache(canPopulate: boolean) {
     const deadline = Date.now() + 260000; // Leave room within Hobby's 300s limit.
     const sources = await getWeeklyRatingSources(week);
     const snapshot = empty();
+    snapshot.names = Object.fromEntries(sources.map(source => [`${source.kind}:${source.id}`, displayTitle(source.title)]));
     let completed = 0;
     let omdbAvailable = true;
     const imdb = new Map<string, Ratings>();
@@ -74,7 +77,7 @@ function snapshotCache(canPopulate: boolean) {
   // route bundle and page bundles after minification. Pin it so the page reads
   // exactly the entry the cron wrote.
   Object.defineProperty(loader, 'toString', { value: () => 'weekly-ratings-snapshot-loader' });
-  return unstable_cache(loader, ['weekly-ratings-snapshot-v1'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
+  return unstable_cache(loader, ['weekly-ratings-snapshot-v2'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
 }
 
 export async function readWeeklyRatingsSnapshot(slug: string): Promise<WeeklyRatings> {

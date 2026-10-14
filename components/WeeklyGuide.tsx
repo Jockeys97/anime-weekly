@@ -23,5 +23,5 @@ async function WeeklyCatalog({ week }: { week: ISOWeek }) {
   // a cold snapshot never starts enrichment or delays the HTML with rating APIs.
   const [data, snapshot] = await Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(formatWeek(week)), trackWeeklyPage()]);
   const initial = { ...data, titles: data.titles.map(title => ({ ...title, ratings: snapshot.titles[`${title.kind}:${title.id}`] || {} })) };
-  return <WeeklyContent key={`${week.year}-${week.week}`} initial={initial} week={week} />;
+  return <WeeklyContent key={`${week.year}-${week.week}`} initial={initial} week={week} initialEvents={snapshot.events} />;
 }

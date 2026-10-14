@@ -2,7 +2,7 @@ import { getRequestLocale } from '@/lib/request-locale';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { StreamingCountrySelector } from '@/components/StreamingCountry';
+import { SeasonContent } from '@/components/SeasonContent';
 import { CatalogCard } from '@/components/CatalogCard';
 import { getSeason } from '@/lib/anilist';
 import { getDictionary } from '@/lib/i18n';
@@ -61,7 +61,7 @@ export default async function SeasonPage({ params, searchParams }: {
         </div>
       </div>
     </section>
-    {data.media.length ? <><StreamingCountrySelector locale={locale} /><div className="anime-grid">{data.media.map(anime => <CatalogCard key={anime.id} anime={anime} locale={locale} />)}</div></> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

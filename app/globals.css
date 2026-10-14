@@ -128,3 +128,16 @@
 .newsletter button:disabled{opacity:.6;cursor:wait}.newsletter [role=status]{min-height:1.6em;margin-bottom:0}
 .newsletter-trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
 @media(max-width:600px){.newsletter{padding:18px}.newsletter-fields{flex-direction:column}}
+
+.weekly-top-five { margin-bottom: 2rem; padding: 1.5rem; border: 1px solid var(--line); border-radius: 16px; }
+.weekly-top-five h2 { margin-bottom: 1rem; }
+.weekly-top-five ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.weekly-top-five li { padding: .4rem; }
+.weekly-top-five strong { margin-left: .5rem; }
+.watchlist-button { padding: .35rem .6rem; margin-bottom: .5rem; border: 1px solid currentColor; border-radius: 8px; cursor: pointer; }
+.watchlist-button[aria-pressed="true"] { color: #db4570; }
+.title-filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1rem 0 2rem; }
+.title-filters label { display: flex; gap: .5rem; align-items: center; }
+.title-filters select { max-width: 15rem; padding: .5rem; border-radius: 8px; background: #fff; color: inherit; border: 1px solid currentColor; }
+.anime-grid > [hidden] { display: none; }
+.anime-grid > div > .anime-card { height: 100%; }

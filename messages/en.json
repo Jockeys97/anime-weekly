@@ -287,7 +287,20 @@
       "Slice of Life": "Slice of Life",
       "Sports": "Sports",
       "Supernatural": "Supernatural",
-      "Thriller": "Thriller"
+      "Thriller": "Thriller",
+      "Animation": "Animation",
+      "Crime": "Crime",
+      "Documentary": "Documentary",
+      "Family": "Family",
+      "History": "History",
+      "Science Fiction": "Science Fiction",
+      "TV Movie": "TV Movie",
+      "War": "War",
+      "Western": "Western",
+      "Action & Adventure": "Action & Adventure",
+      "Kids": "Kids",
+      "Sci-Fi & Fantasy": "Sci-Fi & Fantasy",
+      "War & Politics": "War & Politics"
     }
   },
   "newsletter": {
@@ -309,5 +322,22 @@
     "digestTitle": "Anime this week",
     "digestIntro": "Titles to discover this week, with links to the guide.",
     "viewWeek": "Open the weekly guide"
+  },
+  "features": {
+    "topFive": "Top 5 this week",
+    "share": "Share",
+    "copied": "Link copied",
+    "copyLink": "Copy link",
+    "calendar": "Add to calendar (.ics)",
+    "save": "Add to my list",
+    "remove": "Remove from my list",
+    "saved": "In my list",
+    "onlyWatchlist": "Only my watchlist",
+    "genre": "Genre",
+    "platform": "Platform",
+    "all": "All",
+    "noScores": "No cached scores available.",
+    "noMatches": "No titles match these filters.",
+    "storageError": "Unable to save your list in this browser."
   }
 }

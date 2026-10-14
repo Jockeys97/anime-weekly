@@ -1,3 +1,4 @@
+import { WatchlistButton } from '@/components/Watchlist';
 import Image from 'next/image';
 import Link from 'next/link';
 import { animeDescription, animeName, type AniListAnime } from '@/lib/anilist';
@@ -15,6 +16,7 @@ export function CatalogCard({ anime, locale = 'en' }: { anime: AniListAnime; loc
       {cover ? <Image src={cover} alt={name} fill sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}
     </Link>
     <div className="card-body">
+      <WatchlistButton id={`anilist:${anime.id}`} />
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={`/anime/${anime.id}`} prefetch={false}>{name}</Link></h3>
       <LocalizedSynopsis anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />

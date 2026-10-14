@@ -11,11 +11,12 @@ import { weekRange, type ISOWeek } from '@/lib/week';
 import { readEpisodeDates, selectEpisodeSeasons, type EpisodeDate, type EpisodeDetails } from '@/lib/episode-dates';
 
 type Kind = 'tv' | 'movie';
-interface RawTitle { id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
+const TMDB_GENRES: Record<number, string> = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western', 10759: 'Action & Adventure', 10762: 'Kids', 10765: 'Sci-Fi & Fantasy', 10768: 'War & Politics' };
+interface RawTitle { genre_ids?: number[]; id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
 interface Page { results: RawTitle[]; total_pages: number }
 export interface Provider { watch_url?: string; provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
-export interface AnimeTitle { id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
+export interface AnimeTitle { genres?: string[]; id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
@@ -95,7 +96,7 @@ export interface AnimeAvailability {
   providersUnavailable: boolean;
 }
 
-export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind, fresh = false): Promise<AnimeAvailability> {
+export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind, fresh = false, providersOnly = false): Promise<AnimeAvailability> {
   const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
   if (!isTMDBConfigured()) return { ...empty, ratings: { imdbStatus: 'unconfigured' } };
   const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))];
@@ -116,7 +117,7 @@ export async function getAnimeAvailability(titles: string[], year?: number, kind
     const match = chooseTMDBMatch(candidates, aliases, year);
     if (!match) continue;
     const [ratings, watch] = await Promise.all([
-      getRatings(kind, match.id, revalidate, fresh),
+      providersOnly ? Promise.resolve({} as Ratings) : getRatings(kind, match.id, revalidate, fresh),
       tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${match.id}/watch/providers`, {}, revalidate).catch(() => null),
     ]);
     return { match: { id: match.id, kind }, ratings, providers: watchProviders(watch), providersUnavailable: watch === null };
@@ -145,6 +146,7 @@ async function quickWeekData(week: ISOWeek, locale: Locale): Promise<WeekData> {
   return { status: selection.status, partial: selection.partial, titles: selection.selected.map(({ raw, kind }) => ({
     id: raw.id, kind, name: displayTitle((raw.name || raw.title)!), overview: cleanSynopsis(raw.overview).slice(0, 900), poster: raw.poster_path || null,
     releaseDate: kind === 'movie' ? raw.release_date || null : null,
+    genres: (raw.genre_ids ?? []).map(id => TMDB_GENRES[id]).filter((value): value is string => Boolean(value)),
     ratings: {}, recommendation: null, providers: {}, providersUnavailable: false,
   })) };
 }

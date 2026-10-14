@@ -107,3 +107,17 @@ it('matches a confirmed nearby premiere year without an exact-year search filter
   const { getAnimeAvailability } = await import('../lib/tmdb');
   expect((await getAnimeAvailability(['Example'], 2026, 'tv')).match?.id).toBe(21);
 });
+
+it('provider-only filtering never calls rating or external-ID endpoints', async () => {
+  const fetchMock = vi.fn(async (url: URL) => {
+    if (url.pathname.endsWith('/search/tv')) return Response.json({ results: [candidate] });
+    if (url.pathname.endsWith('/tv/21/watch/providers')) return Response.json({ results: { IT: { link: link('IT'), flatrate: [netflix] } } });
+    throw new Error(`Unexpected rating request: ${url.pathname}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { getAnimeAvailability } = await import('../lib/tmdb');
+  const result = await getAnimeAvailability(['Example'], 2026, 'tv', false, true);
+  expect(result.ratings).toEqual({});
+  expect(result.providers.IT?.providers).toEqual([netflix]);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});

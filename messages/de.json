@@ -281,7 +281,20 @@
       "Slice of Life": "Alltag",
       "Sports": "Sport",
       "Supernatural": "Übernatürlich",
-      "Thriller": "Thriller"
+      "Thriller": "Thriller",
+      "Animation": "Animation",
+      "Crime": "Krimi",
+      "Documentary": "Dokumentarfilm",
+      "Family": "Familie",
+      "History": "Geschichte",
+      "Science Fiction": "Science-Fiction",
+      "TV Movie": "Fernsehfilm",
+      "War": "Krieg",
+      "Western": "Western",
+      "Action & Adventure": "Action und Abenteuer",
+      "Kids": "Kinder",
+      "Sci-Fi & Fantasy": "Science-Fiction und Fantasy",
+      "War & Politics": "Krieg und Politik"
     }
   },
   "newsletter": {
@@ -303,5 +316,22 @@
     "digestTitle": "Anime der Woche",
     "digestIntro": "Titel zum Entdecken in dieser Woche, mit Links zum Guide.",
     "viewWeek": "Wöchentlichen Guide öffnen"
+  },
+  "features": {
+    "topFive": "Top 5 der Woche",
+    "share": "Teilen",
+    "copied": "Link kopiert",
+    "copyLink": "Link kopieren",
+    "calendar": "Zum Kalender hinzufügen (.ics)",
+    "save": "Zu meiner Liste hinzufügen",
+    "remove": "Aus meiner Liste entfernen",
+    "saved": "In meiner Liste",
+    "onlyWatchlist": "Nur meine Liste",
+    "genre": "Genre",
+    "platform": "Plattform",
+    "all": "Alle",
+    "noScores": "Keine Bewertungen im Cache verfügbar.",
+    "noMatches": "Keine Titel entsprechen den Filtern.",
+    "storageError": "Die Liste kann in diesem Browser nicht gespeichert werden."
   }
 }

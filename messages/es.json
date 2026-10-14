@@ -281,7 +281,20 @@
       "Slice of Life": "Vida cotidiana",
       "Sports": "Deportes",
       "Supernatural": "Sobrenatural",
-      "Thriller": "Suspense"
+      "Thriller": "Suspense",
+      "Animation": "Animación",
+      "Crime": "Crimen",
+      "Documentary": "Documental",
+      "Family": "Familia",
+      "History": "Historia",
+      "Science Fiction": "Ciencia ficción",
+      "TV Movie": "Película de TV",
+      "War": "Guerra",
+      "Western": "Western",
+      "Action & Adventure": "Acción y aventura",
+      "Kids": "Infantil",
+      "Sci-Fi & Fantasy": "Ciencia ficción y fantasía",
+      "War & Politics": "Guerra y política"
     }
   },
   "newsletter": {
@@ -303,5 +316,22 @@
     "digestTitle": "Anime de la semana",
     "digestIntro": "Títulos por descubrir esta semana, con enlaces a la guía.",
     "viewWeek": "Abrir la guía semanal"
+  },
+  "features": {
+    "topFive": "Top 5 de la semana",
+    "share": "Compartir",
+    "copied": "Enlace copiado",
+    "copyLink": "Copiar enlace",
+    "calendar": "Añadir al calendario (.ics)",
+    "save": "Añadir a mi lista",
+    "remove": "Quitar de mi lista",
+    "saved": "En mi lista",
+    "onlyWatchlist": "Solo mi lista",
+    "genre": "Género",
+    "platform": "Plataforma",
+    "all": "Todos",
+    "noScores": "No hay puntuaciones en la caché.",
+    "noMatches": "Ningún título coincide con los filtros.",
+    "storageError": "No se puede guardar la lista en este navegador."
   }
 }
