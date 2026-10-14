@@ -319,6 +319,7 @@
   },
   "features": {
     "topFive": "Top 5 da semana",
+    "topFiveDescription": "Os títulos mais bem avaliados, com pontuações de 0 a 10.",
     "share": "Partilhar",
     "copied": "Link copiado",
     "copyLink": "Copiar link",

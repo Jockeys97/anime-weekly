@@ -325,6 +325,7 @@
   },
   "features": {
     "topFive": "Top 5 this week",
+    "topFiveDescription": "The highest-rated picks, with scores on a 10-point scale.",
     "share": "Share",
     "copied": "Link copied",
     "copyLink": "Copy link",
