@@ -15,7 +15,7 @@ export function readImdbEpisode(data: OmdbEpisode, id: string, seriesId: string)
     || !data.Season?.trim() || !Number.isSafeInteger(season) || season < 0 || !Number.isSafeInteger(episode) || episode <= 0) return null;
   return { title: data.Title === 'N/A' ? '' : data.Title?.trim() ?? '', season, episode, score, votes };
 }
-export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating'; details?: { score?: string; votes?: string; season?: string; episode?: string; type?: string; parentMatches: boolean } } | { state: 'error'; reason: 'quota' | 'authentication' | 'network'; status?: number };
+export type EpisodeAttempt = { state: 'rated'; rating: ImdbEpisodeScore } | { state: 'unrated'; cause: 'not-found' | 'invalid-episode' | 'missing-rating'; details?: { score?: string; votes?: string; season?: string; episode?: string; type?: string; parentMatches: boolean } } | { state: 'error'; reason: 'quota' | 'authentication' | 'network'; status?: number; message?: string };
 // Persist the daily attempt, including outages and N/A. A second job cannot
 // silently spend quota again after a failure; a new day has a new cache key.
 async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): Promise<EpisodeAttempt> {
@@ -30,7 +30,7 @@ async function fetchEpisodeAttempt (id: string, seriesId: string, day: string): 
   const data = await response.json().catch(() => ({})) as OmdbEpisode;
   if (/limit|quota/i.test(data.Error ?? '') || response.status === 429) return { state: 'error', reason: 'quota', status: response.status };
   if (/key|auth/i.test(data.Error ?? '') || response.status === 401) return { state: 'error', reason: 'authentication', status: response.status };
-  if (!response.ok || (data.Response !== 'True' && !/not found|incorrect imdb id/i.test(data.Error ?? ''))) return { state: 'error', reason: 'network', status: response.status };
+  if (!response.ok || (data.Response !== 'True' && !/not found|incorrect imdb id/i.test(data.Error ?? ''))) return { state: 'error', reason: 'network', status: response.status, message: process.env.VERCEL_ENV === 'preview' ? data.Error?.replaceAll(key, '[redacted]').slice(0, 160) : undefined };
   if (data.Response !== 'True') return { state: 'unrated', cause: 'not-found' };
   const details = { score: data.imdbRating, votes: data.imdbVotes, season: data.Season, episode: data.Episode, type: data.Type, parentMatches: data.seriesID === seriesId };
   if (data.Type !== 'episode' || data.imdbID !== id || data.seriesID !== seriesId) return { state: 'unrated', cause: 'invalid-episode', details };
@@ -43,8 +43,8 @@ function attemptCache(populate: boolean) {
     if (!populate) throw new ColdEpisodeAttempt();
     return fetchEpisodeAttempt(id, seriesId, day);
   };
-  Object.defineProperty(loader, 'toString', { value: () => 'imdb-episode-daily-attempt-loader-v2' });
-  return unstable_cache(loader, ['imdb-episode-daily-attempt-v2'], { revalidate: 172800, tags: ['imdb-episode-attempts'] });
+  Object.defineProperty(loader, 'toString', { value: () => 'imdb-episode-daily-attempt-loader-v3' });
+  return unstable_cache(loader, ['imdb-episode-daily-attempt-v3'], { revalidate: 172800, tags: ['imdb-episode-attempts'] });
 }
 export function inspectImdbEpisode(id: string, seriesId: string, day = japanDate()): Promise<EpisodeAttempt> {
   return attemptCache(true)(id, seriesId, day);
