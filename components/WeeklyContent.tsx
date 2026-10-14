@@ -15,7 +15,7 @@ import { VisitorDate } from '@/components/VisitorTime';
 import { getDictionary } from '@/lib/i18n';
 import type { AiringEvent } from '@/lib/airing-schedule';
 import type { AnimeTitle, WeekData } from '@/lib/tmdb';
-import type { WeeklySchedule, WeeklyTitleDetails } from '@/lib/weekly-details';
+import { mergeWeeklyCalendar, type WeeklyCalendarSchedule, type WeeklyTitleDetails } from '@/lib/weekly-details';
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
 import { formatWeek, isoWeek, shiftWeek, weekRange, type ISOWeek } from '@/lib/week';
 const titleKey = (anime: Pick<AnimeTitle, 'kind' | 'id'>) => `${anime.kind}:${anime.id}`;
@@ -27,13 +27,16 @@ export function WeeklyScope() {
   const d = getDictionary(useLocale());
   return <div className="guide-note"><p>{d.week.scope}</p><span>{d.week.cap}</span></div>;
 }
-interface CardState { status: 'loading' | 'ready' | 'error'; details?: WeeklyTitleDetails; schedule?: WeeklySchedule; schedulePending?: boolean }
+interface CardState { status: 'loading' | 'ready' | 'error'; details?: WeeklyTitleDetails }
 export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: WeekData; week: ISOWeek; initialEvents?: AiringEvent[] }) {
   const locale = useLocale(); const d = getDictionary(locale); const range = weekRange(week);
   const container = useRef<HTMLDivElement>(null);
   const started = useRef(new Set<string>());
   const controllers = useRef(new Set<AbortController>());
   const [cards, setCards] = useState<Record<string, CardState>>({});
+  const [calendar, setCalendar] = useState<WeeklyCalendarSchedule | null>(null);
+  const [calendarAttempt, retryCalendar] = useState(0);
+  const [calendarPending, setCalendarPending] = useState(true);
   const [today, setToday] = useState<string | null>(null);
   const slug = formatWeek(week);
   const { region } = useStreamingCountry();
@@ -45,29 +48,39 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
   const [onlyWatchlist, setOnlyWatchlist] = useState(false);
   const urls = useCallback((anime: AnimeTitle) => {
     const query = new URLSearchParams({ week: slug, kind: anime.kind, id: String(anime.id) });
-    return { details: `/api/weekly-title?${query}`, schedule: `/api/weekly-schedule?${query}` };
+    return { details: `/api/weekly-title?${query}` };
   }, [slug]);
   const load = useCallback((anime: AnimeTitle, retry = false) => {
     const key = titleKey(anime);
     if (!retry && started.current.has(key)) return;
     started.current.add(key);
     const url = urls(anime);
-    if (retry) { invalidateWeeklyLookup(url.details); invalidateWeeklyLookup(url.schedule); }
+    if (retry) invalidateWeeklyLookup(url.details);
     const controller = new AbortController(); controllers.current.add(controller);
     setCards(previous => ({ ...previous, [key]: { ...previous[key], status: 'loading' } }));
-    void loadWeeklyLookup<WeeklyTitleDetails>(url.details, controller.signal).then(async details => {
+    void loadWeeklyLookup<WeeklyTitleDetails>(url.details, controller.signal).then(details => {
       if (controller.signal.aborted) return;
       const incomplete = details.providersUnavailable;
-      setCards(previous => ({ ...previous, [key]: { status: incomplete ? 'error' : 'ready', details, schedulePending: anime.kind === 'tv' } }));
-      if (anime.kind === 'tv') {
-        const schedule = await loadWeeklyLookup<WeeklySchedule>(url.schedule, controller.signal)
-          .catch(() => ({ events: [], episodeDates: [], unavailable: true }));
-        if (!controller.signal.aborted) setCards(previous => ({ ...previous, [key]: { ...previous[key], schedule, schedulePending: false } }));
-      }
+      setCards(previous => ({ ...previous, [key]: { status: incomplete ? 'error' : 'ready', details } }));
     }).catch(() => {
-      if (!controller.signal.aborted) setCards(previous => ({ ...previous, [key]: { ...previous[key], status: 'error', schedulePending: false } }));
+      if (!controller.signal.aborted) setCards(previous => ({ ...previous, [key]: { ...previous[key], status: 'error' } }));
     }).finally(() => { controllers.current.delete(controller); });
   }, [urls]);
+  useEffect(() => {
+    if (initial.status !== 'ready' || !initial.titles.length) return;
+    const controller = new AbortController();
+    const url = `/api/weekly-calendar?week=${slug}`;
+    if (calendarAttempt) invalidateWeeklyLookup(url);
+    // All days load eagerly in a separate network lane. Streaming errors,
+    // scrolling and title filters cannot prevent an episode from being dated.
+    void loadWeeklyLookup<WeeklyCalendarSchedule>(url, controller.signal)
+      .then(next => { if (!controller.signal.aborted) setCalendar(previous => mergeWeeklyCalendar(previous, next)); })
+      .catch(() => {
+        if (!controller.signal.aborted) setCalendar(previous => mergeWeeklyCalendar(previous, { events: [], episodeDates: [], anilistIds: {}, unavailable: true }));
+      })
+      .finally(() => { if (!controller.signal.aborted) setCalendarPending(false); });
+    return () => controller.abort();
+  }, [slug, initial.status, initial.titles.length, calendarAttempt]);
   useEffect(() => {
     // Browser time is read after hydration, so the cached markup stays stable.
     const timer = setTimeout(() => setToday(formatWeek(isoWeek(new Date()))), 0);
@@ -103,7 +116,6 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
   const filterable = titles.map(title => ({ ...title, key: watchlistId(title) }));
   const options = filterOptions(filterable, region);
   const visible = filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist });
-  const schedules = Object.values(cards).flatMap(card => card.schedule ? [card.schedule] : []);
   const renderCard = (anime: AnimeTitle) => {
     const card = cards[titleKey(anime)];
     return <AnimeCard anime={anime} locale={locale} loadingDetails={card?.status === 'loading'} enrichmentFailed={card?.status === 'error'} onRetry={() => load(anime, true)} />;
@@ -113,7 +125,7 @@ export function WeeklyContent({ initial, week, initialEvents = [] }: { initial: 
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
     {initial.status === 'unconfigured' ? <div className="empty-state"><span className="state-icon" aria-hidden="true">⌁</span><p className="eyebrow">{d.week.browse}</p><h3>{d.state.unconfigured}</h3><p>{d.state.setup}</p><a className="button" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">{d.state.setupLink}<span aria-hidden="true">↗</span></a></div> : initial.status === 'error' ? <div className="empty-state" role="status"><h3>{d.state.error}</h3><p>{d.state.errorBody}</p></div> : <>
       {initial.partial && <p className="notice" role="status">{d.state.partial}</p>}
-      {titles.length ? <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={value => { setPlatform({ region, value }); initial.titles.forEach(anime => load(anime)); }} onWatchlist={setOnlyWatchlist} />{!visible.length && <p role="status">{d.features.noMatches}</p>}<WeeklyCalendarContent titles={visible} week={week} events={[...initialEvents, ...schedules.flatMap(schedule => schedule.events)]} episodeDates={schedules.flatMap(schedule => schedule.episodeDates)} unavailable={schedules.some(schedule => schedule.unavailable)} locale={locale} renderCard={renderCard} />{schedules.some(schedule => schedule.unavailable) && <button type="button" className="button" onClick={() => initial.titles.forEach(anime => { if (cards[titleKey(anime)]?.schedule?.unavailable) load(anime, true); })}>{d.error.retry}</button>}</> : <div className="empty-state"><span className="state-icon" aria-hidden="true">☾</span><h3>{d.state.empty}</h3><p>{d.state.emptyBody}</p></div>}
+      {titles.length ? <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={value => { setPlatform({ region, value }); initial.titles.forEach(anime => load(anime)); }} onWatchlist={setOnlyWatchlist} />{!visible.length && <p role="status">{d.features.noMatches}</p>}{calendarPending && <p className="calendar-note" role="status">{d.calendar.loading}</p>}<WeeklyCalendarContent titles={visible} week={week} events={[...initialEvents, ...calendar?.events ?? []]} episodeDates={calendar?.episodeDates} anilistIds={calendar?.anilistIds} unavailable={calendar?.unavailable} locale={locale} renderCard={renderCard} />{calendar?.unavailable && <button type="button" className="button" disabled={calendarPending} onClick={() => { setCalendarPending(true); retryCalendar(value => value + 1); }}>{d.error.retry}</button>}</> : <div className="empty-state"><span className="state-icon" aria-hidden="true">☾</span><h3>{d.state.empty}</h3><p>{d.state.emptyBody}</p></div>}
     </>}
   </div>;
 }
