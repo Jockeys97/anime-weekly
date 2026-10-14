@@ -9,6 +9,15 @@ beforeEach(async () => {
   vi.stubEnv('TMDB_API_KEY', 'fixture'); vi.stubEnv('TMDB_READ_TOKEN', ''); vi.stubEnv('OMDB_API_KEY', 'fixture');
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+async function storePrimedSnapshot(slug: string, primed: Awaited<ReturnType<typeof import('../lib/weekly-ratings').primeWeeklyRatings>>) {
+  const { revalidateTag } = await import('next/cache');
+  const { storeWeeklyRatingsSnapshot, WEEKLY_RATINGS_TAG } = await import('../lib/weekly-ratings');
+  const { total, ...snapshot } = primed;
+  void total;
+  // The cron invalidates the previous entry before its separate storage request.
+  revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
+  await storeWeeklyRatingsSnapshot(slug, snapshot);
+}
 function fixtureFetch(imdbFailure = false, animeFailure = false) {
   return vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
@@ -34,6 +43,8 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   expect(fetchMock).not.toHaveBeenCalled();
   const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   const primed = await pending;
+  expect(await getWeeklyRatings('2026-42')).toEqual({ titles: {}, events: [] });
+  await storePrimedSnapshot('2026-42', primed);
   expect(primed.titles['tv:1']).toMatchObject({ anilistId: 123, malId: 456, anilistScore: 81, malScore: 8.25, imdbId: 'tt123', imdbRating: '8.1' });
   expect(primed.events).toHaveLength(1);
   expect(primed.names).toEqual({ 'tv:1': 'Ranma ½' });
@@ -57,7 +68,8 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
 it('stores AniList/MAL successes together, but never persists OMDb quota errors', async () => {
   vi.stubGlobal('fetch', fixtureFetch(true));
   const { getWeeklyRatings, primeWeeklyRatings } = await import('../lib/weekly-ratings');
-  const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync(); await pending;
+  const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  await storePrimedSnapshot('2026-42', await pending);
   const score = (await getWeeklyRatings('2026-42')).titles['tv:1'];
   expect(score).toMatchObject({ anilistId: 123, malScore: 8.25, imdbId: 'tt123' });
   expect(score).not.toHaveProperty('imdbStatus');
@@ -80,11 +92,16 @@ it('retries missing scores on a warm snapshot without querying completed sources
   const fetchMock = fixtureFetch(true); vi.stubGlobal('fetch', fetchMock);
   const { primeWeeklyRatings, readWeeklyRatingsSnapshot } = await import('../lib/weekly-ratings');
   const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
-  expect((await first).titles['tv:1']).not.toHaveProperty('imdbRating');
+  const partial = await first;
+  expect(partial.titles['tv:1']).not.toHaveProperty('imdbRating');
+  await storePrimedSnapshot('2026-42', partial);
   await vi.advanceTimersByTimeAsync(60001); // OMDb's process-wide quota pause.
   const retryFetch = fixtureFetch(); vi.stubGlobal('fetch', retryFetch);
   const retry = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
-  expect((await retry).titles['tv:1']).toMatchObject({ malScore: 8.25, anilistScore: 81, imdbRating: '8.1' });
+  const completed = await retry;
+  expect(completed.titles['tv:1']).toMatchObject({ malScore: 8.25, anilistScore: 81, imdbRating: '8.1' });
+  expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1']).not.toHaveProperty('imdbRating');
+  await storePrimedSnapshot('2026-42', completed);
   expect(retryFetch.mock.calls.some(([url]) => String(url).includes('jikan') || String(url).includes('/external_ids'))).toBe(false);
   expect(retryFetch.mock.calls.filter(([url, init]) => String(url).includes('anilist') && !String(init?.body).includes('airingSchedules'))).toHaveLength(0);
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1'].imdbRating).toBe('8.1');
@@ -100,7 +117,8 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   vi.stubGlobal('fetch', fetchMock);
   const { primeWeeklyRatings, readWeeklyRatingsSnapshot } = await import('../lib/weekly-ratings');
   const previous = { titles: { 'tv:1': { anilistId: 123, malId: 456, anilistScore: 81, imdbId: 'tt123', imdbRating: '8.1' } }, events: [{ id: 4, mediaId: 123, episode: 2, airingAt: 1791990000 }] };
-  const first = primeWeeklyRatings('2026-42', previous); await vi.runAllTimersAsync(); await first;
+  const first = primeWeeklyRatings('2026-42', previous); await vi.runAllTimersAsync();
+  await storePrimedSnapshot('2026-42', await first);
   expect(await readWeeklyRatingsSnapshot('2026-42')).toEqual({ ...previous, names: { 'tv:1': 'Ranma ½' } });
   failed = false;
   const retry = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
@@ -144,11 +162,13 @@ it('resumes titles omitted by the previous run budget and keeps saved scores', a
   expect(partial.total).toBe(3);
   expect(Object.keys(partial.titles)).toHaveLength(1);
   expect(partial.names).toEqual({ 'tv:1': 'Ranma ½', 'tv:2': 'Ranma ½', 'tv:3': 'Ranma ½' });
+  await storePrimedSnapshot('2026-42', partial);
   const retry = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   const merged = await retry;
   expect(Object.keys(merged.titles)).toHaveLength(3);
   expect(merged.titles['tv:1']).toEqual(partial.titles['tv:1']);
   expect(merged.names).toEqual(partial.names);
+  await storePrimedSnapshot('2026-42', merged);
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles).toEqual(merged.titles);
 });
 it('merges display names for completed TV and movie sources and retains undiscovered titles', async () => {
@@ -170,5 +190,6 @@ it('merges display names for completed TV and movie sources and retains undiscov
   expect(result.titles).toEqual(previous.titles);
   expect(previous.names).toEqual({ 'tv:1': 'Old title', 'tv:99': 'Retained title' });
   expect(fetchMock).not.toHaveBeenCalled();
+  await storePrimedSnapshot('2026-42', result);
   expect((await readWeeklyRatingsSnapshot('2026-42')).names).toEqual(result.names);
 });

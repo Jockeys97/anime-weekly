@@ -1,5 +1,5 @@
 import 'server-only';
-import { revalidateTag, unstable_cache } from 'next/cache';
+import { unstable_cache } from 'next/cache';
 import { CACHE_SECONDS } from '@/lib/config';
 import { lookupAnimeRatings } from '@/lib/anime-ratings';
 import { getRatings, getWeeklyRatingSources } from '@/lib/tmdb';
@@ -124,9 +124,15 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
   snapshot.events = [...events.values()];
   if (sources.length && !completed) throw new Error('Weekly ratings unavailable');
 
-  revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
+  // Storage happens in a separate request (storeWeeklyRatingsSnapshot):
+  // an entry rewritten in the same request that invalidated its tag is
+  // treated as stale and lost.
+  return { ...snapshot, total: sources.length };
+}
+
+// Called from a fresh request after the cron invalidated WEEKLY_RATINGS_TAG.
+export async function storeWeeklyRatingsSnapshot(slug: string, snapshot: WeeklyRatings): Promise<void> {
   pendingSnapshot = { slug, snapshot };
   try { await snapshotCache(true)(slug); }
   finally { pendingSnapshot = undefined; }
-  return { ...snapshot, total: sources.length };
 }

@@ -1,11 +1,33 @@
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
+import { after } from 'next/server';
 import { CACHE_TAG } from '@/lib/config';
-import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG } from '@/lib/weekly-ratings';
+import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings } from '@/lib/weekly-ratings';
 import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { getDictionary } from '@/lib/i18n';
 export const maxDuration = 300;
+function authorized(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret?.trim()) return false;
+  const actual = Buffer.from(request.headers.get('authorization') || '');
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+// Second step of the cron: persist the merged snapshot in a fresh request,
+// after the GET invalidated the previous entry's tag.
+export async function POST(request: Request) {
+  if (!authorized(request)) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  const slug = new URL(request.url).searchParams.get('store');
+  if (!slug || !parseWeek(slug)) return Response.json({ error: 'invalid week' }, { status: 400 });
+  const snapshot = await request.json().catch(() => null) as WeeklyRatings | null;
+  if (!snapshot || !snapshot.titles || typeof snapshot.titles !== 'object' || Array.isArray(snapshot.titles) || !Array.isArray(snapshot.events)) return Response.json({ error: 'invalid snapshot' }, { status: 400 });
+  await storeWeeklyRatingsSnapshot(slug, snapshot);
+  revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
+  return Response.json({ stored: true, titles: Object.keys(snapshot.titles).length });
+}
+
 export async function GET(request: Request) {
   // Public read-only mode: serve the cron-written snapshot from this same
   // bundle (unstable_cache entries are only reliably readable here). Never
@@ -30,6 +52,17 @@ export async function GET(request: Request) {
   try {
     const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
     const snapshot = await primeWeeklyRatings(formatWeek(week), previous);
+    const slug = formatWeek(week);
+    const { total: _total, ...toStore } = snapshot;
+    void _total;
+    revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
+    const origin = new URL(request.url).origin;
+    after(async () => {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await fetch(`${origin}/api/revalidate?store=${encodeURIComponent(slug)}`, {
+        method: 'POST', headers: { authorization: request.headers.get('authorization') || '', 'content-type': 'application/json' }, body: JSON.stringify(toStore),
+      }).catch(() => undefined);
+    });
     total = snapshot.total;
     complete = Object.keys(snapshot.titles).length >= total && Object.values(snapshot.titles).every(isWeeklyRatingComplete);
     populated = Object.values(snapshot.titles).filter(ratings => ratings.imdbRating || ratings.anilistScore != null || ratings.malScore != null).length;
