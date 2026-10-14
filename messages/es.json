@@ -40,6 +40,11 @@
     "providersError": "No se pudo cargar la disponibilidad."
   },
   "title": {
+    "imdbError": "No recuperado",
+    "imdbUnavailable": "No disponible",
+    "imdbErrorDetail": "No se pudo recuperar la puntuación. Vuelve a intentarlo.",
+    "imdbUnavailableDetail": "No hay puntuación IMDb disponible para este título.",
+    "imdbUnmatchedDetail": "No hay una coincidencia IMDb confirmada para este título.",
     "imdb": "IMDb",
     "animeScore": "Puntuación anime",
     "votes": "Votos IMDb",

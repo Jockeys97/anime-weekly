@@ -25,8 +25,8 @@ describe('season IMDb series fallback', () => {
     vi.mocked(getAnime).mockImplementation(async id => id === second.id ? second : id === first.id ? first : null);
     vi.mocked(getAnimeAvailability).mockResolvedValueOnce(empty).mockResolvedValueOnce({ ...empty, match: { id: 220542, kind: 'tv' }, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453' }, providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
     expect(await getDetailAvailability(third)).toEqual({ ...empty, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' }, seriesWatch: { id: 220542, kind: 'tv', name: 'The Apothecary Diaries', providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } });
-    expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026, 'tv');
-    expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023, 'tv');
+    expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026, 'tv', false);
+    expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023, 'tv', false);
   });
   it('resolves a multi-season chain with one family request and no per-season requests', async () => {
     const first = anime(1, 'Attack on Titan', 2013);
@@ -114,8 +114,18 @@ describe('season IMDb series fallback', () => {
     expect(seriesBaseTitle('薬屋のひとりごと 第3期 第2クール')).toBe('薬屋のひとりごと');
     expect(seriesBaseTitle('86 Part 2')).toBe('86');
     expect(seriesBaseTitle('Mob Psycho 100')).toBe('Mob Psycho 100');
-    expect(seriesBaseTitle('Example 3')).toBe('Example 3');
+    expect(seriesBaseTitle('Example 3')).toBe('Example');
+    expect(seriesBaseTitle('86')).toBe('86');
+    expect(seriesBaseTitle('Example III')).toBe('Example');
+    expect(seriesBaseTitle('Kimetsu no Yaiba: Hashira Geiko-hen')).toBe('Kimetsu no Yaiba');
     expect(seriesBaseTitle('Shingeki no Kyojin: The Final Season Part 2')).toBe('Shingeki no Kyojin');
     expect(seriesBaseTitle('進撃の巨人 Season３ Part.2')).toBe('進撃の巨人');
   });
+});
+
+it('uses the confirmed original series score when a separate season has an IMDb ID but no score', async () => {
+  const first = anime(1, 'Example', 2023), current = anime(2, 'Example Season 2', 2026); prequel(current, first);
+  vi.mocked(getAnime).mockResolvedValue(first);
+  vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt200', imdbStatus: 'unavailable' } }).mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt100', imdbRating: '8.2', imdbStatus: 'ready' } });
+  expect((await getDetailAvailability(current)).ratings).toEqual({ imdbId: 'tt100', imdbRating: '8.2', imdbStatus: 'ready', imdbSeriesTitle: 'Example' });
 });

@@ -23,7 +23,7 @@ describe('IMDb title link enrichment', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { getWeekData } = await import('../lib/tmdb');
     const result = await getWeekData({ year: 2026, week: 42 });
-    expect(result.titles[0].ratings).toEqual(scenario === 'invalid-id' ? {} : scenario === 'success' ? { imdbId: 'tt123', imdbRating: '8', imdbVotes: '763' } : { imdbId: 'tt123' });
+    expect(result.titles[0].ratings).toEqual(scenario === 'invalid-id' ? { imdbStatus: 'unmatched' } : scenario === 'success' ? { imdbId: 'tt123', imdbRating: '8', imdbVotes: '763', imdbStatus: 'ready' } : { imdbId: 'tt123', imdbStatus: scenario === 'no-key' ? 'unconfigured' : 'error', ...(scenario === 'failure' ? { imdbErrorReason: 'network' } : {}) });
     if (scenario === 'no-key' || scenario === 'invalid-id') expect(fetchMock.mock.calls.some(([url]) => String(url).includes('omdbapi'))).toBe(false);
   });
 });

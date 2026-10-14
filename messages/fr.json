@@ -40,6 +40,11 @@
     "providersError": "Impossible de charger la disponibilité."
   },
   "title": {
+    "imdbError": "Non récupérée",
+    "imdbUnavailable": "Indisponible",
+    "imdbErrorDetail": "La note n’a pas pu être récupérée. Réessayez.",
+    "imdbUnavailableDetail": "Aucune note IMDb n’est disponible pour ce titre.",
+    "imdbUnmatchedDetail": "Aucune correspondance IMDb confirmée pour ce titre.",
     "imdb": "IMDb",
     "animeScore": "Note anime",
     "votes": "Votes IMDb",

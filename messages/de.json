@@ -40,6 +40,11 @@
     "providersError": "Streaming-Verfügbarkeit konnte nicht geladen werden."
   },
   "title": {
+    "imdbError": "Nicht geladen",
+    "imdbUnavailable": "Nicht verfügbar",
+    "imdbErrorDetail": "Die Bewertung konnte nicht geladen werden. Versuche es erneut.",
+    "imdbUnavailableDetail": "Für diesen Titel ist noch keine IMDb-Bewertung verfügbar.",
+    "imdbUnmatchedDetail": "Keine bestätigte IMDb-Zuordnung für diesen Titel.",
     "imdb": "IMDb",
     "animeScore": "Anime-Bewertung",
     "votes": "IMDb-Stimmen",

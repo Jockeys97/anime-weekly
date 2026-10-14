@@ -19,12 +19,13 @@ export function loadCatalogCard(id: number): Promise<CatalogCardSummary> {
   const promise = new Promise<CatalogCardSummary>((resolve, reject) => {
     queue.push(async () => {
       try {
-        const response = await fetch(`/api/anime-card/${id}`, { signal: AbortSignal.timeout(45000) });
+        const response = await fetch(`/api/anime-card/${id}?ratings=v2`, { signal: AbortSignal.timeout(45000) });
         if (!response.ok) throw new Error('Catalog card unavailable');
         const result = await response.json() as CatalogCardSummary;
         if (result.ratings?.anilistId !== id || !result.availability?.providers) throw new Error('Invalid catalog card');
         const entry = requests.get(id);
-        if (entry?.promise === promise) entry.expires = Date.now() + 60000;
+        if (result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured') requests.delete(id);
+        else if (entry?.promise === promise) entry.expires = Date.now() + 60000;
         resolve(result);
       } catch (error) { if (requests.get(id)?.promise === promise) requests.delete(id); reject(error); }
     });

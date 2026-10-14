@@ -45,6 +45,11 @@
     "providersError": "Streaming availability could not be loaded."
   },
   "title": {
+    "imdbError": "Not loaded",
+    "imdbUnavailable": "Unavailable",
+    "imdbErrorDetail": "Could not retrieve the score. Try again.",
+    "imdbUnavailableDetail": "No IMDb score is currently available for this title.",
+    "imdbUnmatchedDetail": "No confirmed IMDb match for this title.",
     "imdb": "IMDb",
     "animeScore": "Anime score",
     "votes": "IMDb votes",

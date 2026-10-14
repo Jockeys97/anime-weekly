@@ -2,6 +2,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { tmdbLanguages, type Locale } from '@/lib/locales';
 import { CACHE_SECONDS, CACHE_TAG, MAX_TITLES_PER_WEEK, STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
+import { getImdbScore } from '@/lib/imdb';
 import type { Ratings } from '@/lib/ratings';
 import { getAnimeRatings } from '@/lib/anime-ratings';
 import { chooseTMDBMatch, type TMDBCandidate } from '@/lib/anime-match';
@@ -17,13 +18,13 @@ export interface AnimeTitle { id: number; kind: Kind; name: string; overview: st
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
-async function tmdb<T>(path: string, query: Record<string, string> = {}, revalidate = CACHE_SECONDS): Promise<T> {
+async function tmdb<T>(path: string, query: Record<string, string> = {}, revalidate = CACHE_SECONDS, fresh = false): Promise<T> {
   if (!isTMDBConfigured()) throw new Error('TMDB not configured');
   const url = new URL(`https://api.themoviedb.org/3/${path}`);
   Object.entries({ language: 'en-US', ...query }).forEach(([key, value]) => url.searchParams.set(key, value));
   const token = process.env.TMDB_READ_TOKEN?.trim();
   if (!token) url.searchParams.set('api_key', process.env.TMDB_API_KEY!.trim());
-  const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: 'force-cache', next: { revalidate, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(12000) });
+  const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: fresh ? 'no-store' : 'force-cache', next: fresh ? undefined : { revalidate, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(12000) });
   if (!response.ok) throw new Error('TMDB request failed');
   return response.json() as Promise<T>;
 }
@@ -48,20 +49,13 @@ async function discover(kind: Kind, week: ISOWeek, locale: Locale, englishNames 
   try { const second = await readPage(2); return [...first.results, ...second.results]; } catch { return first.results; }
 }
 
-async function getRatings(kind: Kind, id: number, revalidate = CACHE_SECONDS): Promise<Ratings> {
-  let ratings: Ratings = {};
+export async function getRatings(kind: Kind, id: number, revalidate = CACHE_SECONDS, fresh = false): Promise<Ratings> {
+  if (!isTMDBConfigured()) return { imdbStatus: 'unconfigured' };
   try {
-    const external = await tmdb<{ imdb_id?: string | null }>(`${kind}/${id}/external_ids`, {}, revalidate);
-    if (!external.imdb_id || !/^tt\d+$/.test(external.imdb_id)) return ratings;
-    ratings = { imdbId: external.imdb_id };
-    if (!isOMDBConfigured()) return ratings;
-    const url = new URL('https://www.omdbapi.com/');
-    url.searchParams.set('i', external.imdb_id); url.searchParams.set('apikey', process.env.OMDB_API_KEY!.trim());
-    const response = await fetch(url, { cache: 'force-cache', next: { revalidate, tags: [CACHE_TAG] }, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) return ratings;
-    const data = await response.json() as Ratings & { Response?: string };
-    return data.Response === 'True' ? { ...ratings, imdbRating: data.imdbRating, imdbVotes: data.imdbVotes } : ratings;
-  } catch { return ratings; }
+    const external = await tmdb<{ imdb_id?: string | null }>(`${kind}/${id}/external_ids`, {}, Math.min(revalidate, 3600), fresh);
+    if (!external.imdb_id || !/^tt\d+$/.test(external.imdb_id)) return { imdbStatus: 'unmatched' };
+    return await getImdbScore(external.imdb_id);
+  } catch { return { imdbStatus: 'error' }; }
 }
 async function recommendation(kind: Kind, id: number): Promise<string | null> {
   for (const endpoint of ['recommendations', 'similar']) {
@@ -100,31 +94,33 @@ export interface AnimeAvailability {
   providersUnavailable: boolean;
 }
 
-export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind): Promise<AnimeAvailability> {
+export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind, fresh = false): Promise<AnimeAvailability> {
   const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
-  if (!isTMDBConfigured()) return empty;
+  if (!isTMDBConfigured()) return { ...empty, ratings: { imdbStatus: 'unconfigured' } };
   const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))];
   const revalidate = 86400;
+  let lookupFailed = false;
   for (const kind of kindHint ? [kindHint] : ['tv', 'movie'] as const) {
     const candidates: TMDBCandidate[] = [];
     const results = await Promise.all(aliases.map(async title => {
       try {
         const query: Record<string, string> = { query: title, include_adult: 'false' };
-        if (year != null) query[kind === 'tv' ? 'first_air_date_year' : 'primary_release_year'] = String(year);
-        const data = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, revalidate);
+        // Validate the year on candidates, rather than filtering away titles
+        // whose TMDB release year differs by one from the AniList premiere.
+        const data = await tmdb<{ results: TMDBCandidate[] }>(`search/${kind}`, query, revalidate, fresh);
         return Array.isArray(data.results) ? data.results : [];
-      } catch { return []; }
+      } catch { lookupFailed = true; return []; }
     }));
     for (const result of results) candidates.push(...result);
     const match = chooseTMDBMatch(candidates, aliases, year);
     if (!match) continue;
     const [ratings, watch] = await Promise.all([
-      getRatings(kind, match.id, revalidate),
+      getRatings(kind, match.id, revalidate, fresh),
       tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${match.id}/watch/providers`, {}, revalidate).catch(() => null),
     ]);
     return { match: { id: match.id, kind }, ratings, providers: watchProviders(watch), providersUnavailable: watch === null };
   }
-  return empty;
+  return { ...empty, ratings: { imdbStatus: lookupFailed ? 'error' : 'unmatched' } };
 }
 async function selectWeekTitles(week: ISOWeek, locale: Locale, englishNames = true) {
   if (!isTMDBConfigured()) return { status: 'unconfigured' as const, selected: [] };
@@ -175,9 +171,20 @@ async function getPrimaryWeekData(week: ISOWeek): Promise<WeekData> {
   }
   return { status: selection.status, partial: selection.partial, titles };
 }
-const cachedPrimaryWeek = unstable_cache(getPrimaryWeekData, ['weekly-primary-v1'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+class UncachedWeek extends Error {
+  constructor(readonly data: WeekData) { super('Incomplete weekly sources'); }
+}
+const checkWeek = (data: WeekData): WeekData => {
+  if (data.status === 'error' || data.partial || data.titles.some(title => title.providersUnavailable || title.ratings.imdbStatus === 'error' || title.ratings.imdbStatus === 'unconfigured')) throw new UncachedWeek(data);
+  return data;
+};
+const recoverWeek = (error: unknown): WeekData => {
+  if (error instanceof UncachedWeek) return error.data;
+  throw error;
+};
+const cachedPrimaryWeek = unstable_cache(async (week: ISOWeek) => checkWeek(await getPrimaryWeekData(week)), ['weekly-primary-v2-validated-imdb'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
 export async function getCachedPrimaryWeekData(week: ISOWeek, locale: Locale = 'en'): Promise<WeekData> {
-  const [core, localized] = await Promise.all([cachedPrimaryWeek(week), locale === 'en' ? Promise.resolve(null) : selectWeekTitles(week, locale, false)]);
+  const [core, localized] = await Promise.all([cachedPrimaryWeek(week).catch(recoverWeek), locale === 'en' ? Promise.resolve(null) : selectWeekTitles(week, locale, false)]);
   if (!localized) return core;
   const overviews = new Map(localized.selected.map(({ kind, raw }) => [`${kind}:${raw.id}`, raw.overview]));
   return { ...core, titles: core.titles.map(anime => ({ ...anime, overview: overviews.get(`${anime.kind}:${anime.id}`) || anime.overview })) };
@@ -185,14 +192,14 @@ export async function getCachedPrimaryWeekData(week: ISOWeek, locale: Locale = '
 
 // Scores, source matches, recommendations and regional providers are shared
 // across languages. Only the overview changes when the visitor switches locale.
-const cachedWeekData = unstable_cache(getWeekData, ['localized-week-v2-english-names'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+const cachedWeekData = unstable_cache(async (week: ISOWeek, locale: Locale) => checkWeek(await getWeekData(week, locale)), ['weekly-v3-validated-imdb'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
 const pendingCoreWeeks = new Map<string, Promise<WeekData>>();
 const pendingWeeks = new Map<string, Promise<WeekData>>();
 function sharedWeekData(week: ISOWeek): Promise<WeekData> {
   const key = `${week.year}-${week.week}`;
   const existing = pendingCoreWeeks.get(key);
   if (existing) return existing;
-  const pending = cachedWeekData(week, 'en').finally(() => { pendingCoreWeeks.delete(key); });
+  const pending = cachedWeekData(week, 'en').catch(recoverWeek).finally(() => { pendingCoreWeeks.delete(key); });
   pendingCoreWeeks.set(key, pending);
   return pending;
 }

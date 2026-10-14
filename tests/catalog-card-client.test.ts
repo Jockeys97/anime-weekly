@@ -31,3 +31,14 @@ describe('visible card request queue', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+it('allows a subsequent load to recover from a 200 response containing an IMDb error', async () => {
+  vi.resetModules();
+  const bad = Response.json({ ratings: { anilistId: 21, imdbStatus: 'error' }, availability: { match: null, providers: {}, providersUnavailable: false } });
+  const good = Response.json({ ratings: { anilistId: 21, imdbStatus: 'ready', imdbRating: '8' }, availability: { match: null, providers: {}, providersUnavailable: false } });
+  const fetchMock = vi.fn().mockResolvedValueOnce(bad).mockResolvedValueOnce(good); vi.stubGlobal('fetch', fetchMock);
+  const { loadCatalogCard } = await import('../lib/catalog-card-client');
+  expect((await loadCatalogCard(21)).ratings.imdbStatus).toBe('error');
+  expect((await loadCatalogCard(21)).ratings.imdbRating).toBe('8');
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});

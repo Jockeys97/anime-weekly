@@ -33,7 +33,16 @@ export interface AniListPage {
 const fields = `id idMal title { romaji english native }
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } episodes format status genres averageScore
-  studios(isMain: true) { nodes { id name } } season seasonYear`;
+  studios(isMain: true) { nodes { id name } } season seasonYear trailer { id site }
+  relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
+const catalogAnime = new Map<number, { expires: number; anime: AniListAnime }>();
+function rememberCatalog(media: AniListAnime[]): void {
+  for (const anime of media) {
+    if (!Number.isSafeInteger(anime.id) || !anime.relations?.edges || !anime.title || !anime.format) continue;
+    if (catalogAnime.size >= 500) catalogAnime.delete(catalogAnime.keys().next().value!);
+    catalogAnime.set(anime.id, { anime, expires: Date.now() + 3600000 });
+  }
+}
 const emptyPage = (page: number): AniListPage => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false } });
 
 async function graphql<T>(query: string, variables: Record<string, string | number>): Promise<T | null> {
@@ -58,6 +67,7 @@ export async function getSeason(year: number, season: Season, page = 1): Promise
     }
   }`, { year, season: season.toUpperCase(), page });
   if (!Array.isArray(data?.Page?.media)) return emptyPage(page);
+  rememberCatalog(data.Page.media);
   return { media: data.Page.media, pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }
 
@@ -69,7 +79,9 @@ export async function searchAnime(query: string): Promise<AniListAnime[]> {
       media(type: ANIME, search: $search, sort: SEARCH_MATCH) { ${fields} }
     }
   }`, { search });
-  return Array.isArray(data?.Page?.media) ? data.Page.media : [];
+  const media = Array.isArray(data?.Page?.media) ? data.Page.media : [];
+  rememberCatalog(media);
+  return media;
 }
 
 // Fetch season siblings and their prequel edges in one bounded request. Exact
@@ -84,7 +96,9 @@ export async function getSeasonFamily(search: string): Promise<AniListAnime[]> {
       }
     }
   }`, { search: search.trim() });
-  return Array.isArray(data?.Page?.media) ? data.Page.media : [];
+  const media = Array.isArray(data?.Page?.media) ? data.Page.media : [];
+  rememberCatalog(media);
+  return media;
 }
 
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
@@ -94,10 +108,12 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   // Reject transient upstream failures so they never become cached empty details.
   if (!data) throw new Error('Anime details unavailable');
   return data.Media?.id === id ? data.Media : null;
-}, ['anime-detail-v3-series-relations'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v4-catalog-relations'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
+  const known = catalogAnime.get(id);
+  if (known && known.expires > Date.now()) return known.anime;
   try { return await getCachedAnime(id); } catch { return null; }
 }
 

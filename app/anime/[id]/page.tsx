@@ -58,7 +58,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
         </Suspense>
         <dl className="ratings">
           <Suspense fallback={<ImdbRatingTile ratings={{}} title={name} locale={locale} pending />}>
-            <DetailImdbRating availability={availability} name={name} locale={locale} />
+            <DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />
           </Suspense>
           <Suspense fallback={<AnimeRatingTile ratings={{ anilistId: anime.id, anilistScore: anime.averageScore }} title={name} locale={locale} />}>
             <DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />
@@ -88,11 +88,11 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   </main>;
 }
 
-async function DetailImdbRating({ availability, name, locale }: {
-  availability: Promise<AnimeAvailability>; name: string; locale: Locale;
+async function DetailImdbRating({ availability, name, locale, id }: {
+  availability: Promise<AnimeAvailability>; name: string; locale: Locale; id: number;
 }) {
   const watch = await availability;
-  return <ImdbRatingTile ratings={watch.ratings} title={name} locale={locale} />;
+  return <ImdbRatingTile ratings={{ ...watch.ratings, anilistId: id }} title={name} locale={locale} />;
 }
 
 async function DetailAnimeRating({ animeRatings, id, name, locale }: {

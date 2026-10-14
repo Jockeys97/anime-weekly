@@ -40,6 +40,11 @@
     "providersError": "Não foi possível carregar a disponibilidade."
   },
   "title": {
+    "imdbError": "Não obtida",
+    "imdbUnavailable": "Indisponível",
+    "imdbErrorDetail": "Não foi possível obter a avaliação. Tenta novamente.",
+    "imdbUnavailableDetail": "Ainda não existe avaliação IMDb para este título.",
+    "imdbUnmatchedDetail": "Sem correspondência IMDb confirmada para este título.",
     "imdb": "IMDb",
     "animeScore": "Pontuação anime",
     "votes": "Votos IMDb",
