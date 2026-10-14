@@ -25,7 +25,7 @@ const empty = (): WeeklyRatings => ({ titles: {}, events: [] });
 // identical function source, key parts and arguments. Only cron may populate a
 // miss. A reader throws instead of persisting an empty snapshot or calling APIs.
 function snapshotCache(canPopulate: boolean) {
-  return unstable_cache(async (slug: string): Promise<WeeklyRatings> => {
+  const loader = async (slug: string): Promise<WeeklyRatings> => {
     if (!canPopulate) throw new ColdWeeklyRatings();
     const week = parseWeek(slug);
     if (!week) throw new Error('Invalid week');
@@ -69,12 +69,17 @@ function snapshotCache(canPopulate: boolean) {
     // A wholly failed job must remain retryable rather than cache an outage.
     if (sources.length && !completed) throw new Error('Weekly ratings unavailable');
     return snapshot;
-  }, ['weekly-ratings-snapshot-v1'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
+  };
+  // unstable_cache keys include cb.toString(), which differs between the cron
+  // route bundle and page bundles after minification. Pin it so the page reads
+  // exactly the entry the cron wrote.
+  Object.defineProperty(loader, 'toString', { value: () => 'weekly-ratings-snapshot-loader' });
+  return unstable_cache(loader, ['weekly-ratings-snapshot-v1'], { revalidate: CACHE_SECONDS, tags: [WEEKLY_RATINGS_TAG] });
 }
 
 export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
   try { return await snapshotCache(false)(slug); }
-  catch { return empty(); }
+  catch (e) { console.error("[weekly-ratings] read miss", slug, (e as Error)?.constructor?.name); return empty(); }
 }
 // Authenticated cron only. The shared cache also deduplicates repeat cron runs.
 export function primeWeeklyRatings(slug: string): Promise<WeeklyRatings> {
