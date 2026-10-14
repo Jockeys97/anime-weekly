@@ -58,7 +58,9 @@ export function loadCatalogCard(id: number, signal?: AbortSignal): Promise<Catal
   queue.push({ entry: current, run: async () => {
     try {
       const result = await withTimeout((async () => {
-        const response = await fetch(`/api/anime-card/${id}?ratings=v2`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
+        // The response now includes the same series-level offers as details.
+        // Bypass any pre-fix CDN response that omitted this fallback.
+        const response = await fetch(`/api/anime-card/${id}?ratings=v3`, { cache: 'no-store', signal: AbortSignal.any([current.controller.signal, AbortSignal.timeout(45000)]) });
         if (!response.ok) throw new Error('Catalog card unavailable');
         return await response.json() as CatalogCardSummary;
       })(), 45000);

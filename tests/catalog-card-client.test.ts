@@ -44,7 +44,7 @@ describe('visible card request queue', () => {
     controllers.forEach(controller => controller.abort());
     const next = loadCatalogCard(4);
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/anime-card/1?ratings=v2','/api/anime-card/2?ratings=v2','/api/anime-card/4?ratings=v2']);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/anime-card/1?ratings=v3','/api/anime-card/2?ratings=v3','/api/anime-card/4?ratings=v3']);
     finish.get(4)!(summary(4));
     await next; await Promise.all(previous);
   });
