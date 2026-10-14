@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
 import { after } from 'next/server';
 import { CACHE_TAG } from '@/lib/config';
-import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings } from '@/lib/weekly-ratings';
+import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings, type RatingsStore } from '@/lib/weekly-ratings';
 import { parseWeek } from '@/lib/week';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
@@ -23,11 +23,23 @@ export async function POST(request: Request) {
   if (!authorized(request)) return Response.json({ error: 'unauthorized' }, { status: 401 });
   const slug = new URL(request.url).searchParams.get('store');
   if (!slug || !parseWeek(slug)) return Response.json({ error: 'invalid week' }, { status: 400 });
-  const snapshot = await request.json().catch(() => null) as WeeklyRatings | null;
+  const body = await request.json().catch(() => null) as (WeeklyRatings & { snapshot?: WeeklyRatings; store?: RatingsStore }) | null;
+  const snapshot = body?.snapshot ?? body;
   if (!snapshot || !snapshot.titles || typeof snapshot.titles !== 'object' || Array.isArray(snapshot.titles) || !Array.isArray(snapshot.events)) return Response.json({ error: 'invalid snapshot' }, { status: 400 });
+  const store = body?.store;
+  if (store !== undefined && !validStore(store)) return Response.json({ error: 'invalid store' }, { status: 400 });
   await storeWeeklyRatingsSnapshot(slug, snapshot);
+  if (store) await storeRatingsStore(store);
   revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
   return Response.json({ stored: true, titles: Object.keys(snapshot.titles).length });
+}
+
+function validStore(store: RatingsStore): boolean {
+  const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  if (!record(store) || !record(store.ratings) || !record(store.sources)) return false;
+  const timestamps = (entry: Record<string, unknown>) => typeof entry.fetchedAt === 'number' && Number.isFinite(entry.fetchedAt) && typeof entry.lastSeenAt === 'number' && Number.isFinite(entry.lastSeenAt);
+  return Object.entries(store.ratings).every(([key, entry]) => /^(imdb:tt\d+|anilist:[1-9]\d*|mal:[1-9]\d*)$/.test(key) && record(entry) && timestamps(entry) && record(entry.values))
+    && Object.entries(store.sources).every(([key, entry]) => /^(tv|movie):[1-9]\d*$/.test(key) && record(entry) && timestamps(entry));
 }
 
 export async function GET(request: Request) {
@@ -60,6 +72,7 @@ export async function GET(request: Request) {
   let complete = false;
   let populated = 0;
   let unavailable = 0;
+  let storeHits = 0;
   try {
     const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
     const [ratings, episodes] = await Promise.allSettled([
@@ -67,18 +80,19 @@ export async function GET(request: Request) {
       primeWeeklyEpisodes(formatWeek(week), previous.episodes),
     ]);
     if (ratings.status === 'rejected' && (episodes.status === 'rejected' || !episodes.value)) throw new Error('Weekly updates unavailable');
-    const snapshot = ratings.status === 'fulfilled' ? ratings.value : { ...previous, total: Object.keys(previous.titles).length };
+    const snapshot = ratings.status === 'fulfilled' ? ratings.value : { ...previous, total: Object.keys(previous.titles).length, store: await readRatingsStore(), storeHits: 0 };
     if (episodes.status === 'fulfilled' && episodes.value) snapshot.episodes = episodes.value;
     else if (previous.episodes) snapshot.episodes = { ...previous.episodes, status: previous.episodes.entries.length ? 'partial' : 'unavailable' };
     const slug = formatWeek(week);
-    const { total: _total, ...toStore } = snapshot;
+    const { total: _total, store, storeHits: hits, ...toStore } = snapshot;
     void _total;
+    storeHits = hits;
     revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
     const origin = new URL(request.url).origin;
     after(async () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       await fetch(`${origin}/api/revalidate?store=${encodeURIComponent(slug)}`, {
-        method: 'POST', headers: { authorization: request.headers.get('authorization') || '', 'content-type': 'application/json' }, body: JSON.stringify(toStore),
+        method: 'POST', headers: { authorization: request.headers.get('authorization') || '', 'content-type': 'application/json' }, body: JSON.stringify({ snapshot: toStore, store }),
       }).catch(() => undefined);
     });
     total = snapshot.total;
@@ -93,5 +107,5 @@ export async function GET(request: Request) {
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.
   revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
-  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete });
+  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits });
 }
