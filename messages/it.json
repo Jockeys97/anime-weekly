@@ -158,6 +158,7 @@
     "releases": "uscite",
     "titles": "titoli",
     "episode": "Episodio",
+    "tmdbNumbering": "numerazione TMDB",
     "airing": "Trasmissione · AniList",
     "movieRelease": "Uscita del film",
     "timeUnavailable": "Orario non disponibile",
