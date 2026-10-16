@@ -427,6 +427,9 @@
     "retry": "Cache erneut prüfen"
   },
   "dubbing": {
+    "audio": "Audio",
+    "reportedShort": "Gemeldet",
+    "partialShort": "Teilweise",
     "label": "Synchronfassung",
     "language": "Deutsch",
     "reported": "Synchronfassung gemeldet",

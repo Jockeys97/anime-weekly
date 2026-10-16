@@ -433,6 +433,9 @@
     "retry": "Check cache again"
   },
   "dubbing": {
+    "audio": "Audio",
+    "reportedShort": "Reported",
+    "partialShort": "Partial",
     "label": "Dubbing",
     "language": "English",
     "reported": "Dub reported",

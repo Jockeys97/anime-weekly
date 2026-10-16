@@ -2,7 +2,7 @@ import { gzipSync } from 'node:zlib';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
-import { primeImdbDatasetEpisodes } from '../lib/imdb-datasets';
+import { primeImdbDatasetEpisodes, ensureImdbEpisodeIndex } from '../lib/imdb-datasets';
 import { runtimeCacheMock } from './runtime-cache-setup';
 const target = { imdbId: 'tt1', seriesImdbId: 'tt100' };
 const ratings = 'tconst\taverageRating\tnumVotes\ntt1\t8.2\t37\ntt100\t9.9\t9999\n';
@@ -125,5 +125,65 @@ it('does not download again for a different candidate list or accept a different
   await primeImdbDatasetEpisodes([target], '2026-10-14');
   expect((await primeImdbDatasetEpisodes([{ imdbId: 'tt2', seriesImdbId: 'tt100' }], '2026-10-14')).ratings).toEqual({});
   expect((await primeImdbDatasetEpisodes([{ ...target, seriesImdbId: 'tt200' }], '2026-10-14')).ratings).toEqual({});
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+async function legacyDay(day = '2026-10-14') {
+  const { unstable_cache } = await import('next/cache');
+  const loader = async (date: string) => ({ status: 'ready', indexVersion: 2, ratings: {}, parents: {}, updatedAt: `${date}T06:00:00Z` });
+  Object.defineProperty(loader, 'toString', { value: () => 'imdb-official-episode-daily-loader-v2' });
+  await unstable_cache(loader, ['imdb-official-episode-daily-v2'])(day);
+  const { storeImdbRatingIndex, RATING_SHARDS, ratingBucket } = await import('../lib/imdb-rating-index');
+  const shards = Array.from({ length: RATING_SHARDS }, () => ({} as Record<string, [number, number]>));
+  for (let i = 1; i <= 4; i++) shards[ratingBucket(`tt${i}`)][`tt${i}`] = [8 + i / 10, 100 * i];
+  await storeImdbRatingIndex(day, shards);
+}
+
+it('initializes a pre-chart day from cached ratings and one episode stream, retaining every IMDb season', async () => {
+  await legacyDay();
+  const fetch = mockFiles(ratings, episodes + 'tt2\ttt100\t3\t1\ntt3\ttt100\t4\t17\ntt4\ttt200\t1\t1\n');
+  const [first, second] = await Promise.all([ensureImdbEpisodeIndex('2026-10-14'), ensureImdbEpisodeIndex('2026-10-14')]);
+  expect(first).toBe(true); expect(second).toBe(true);
+  expect(fetch).toHaveBeenCalledOnce(); expect(fetch.mock.calls[0][0]).toContain('title.episode');
+  const { readImdbEpisodeChart } = await import('../lib/imdb-episode-index');
+  const chart = await readImdbEpisodeChart('tt100', new Date('2026-10-14T12:00:00Z'));
+  expect(chart.episodes.map(item => [item.season, item.episode])).toEqual([[2, 12], [3, 1], [4, 17]]);
+  expect(chart.episodes.every(item => item.imdbId !== 'tt4')).toBe(true);
+  await ensureImdbEpisodeIndex('2026-10-14'); expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('caches a failed bootstrap for the date instead of repeatedly downloading it', async () => {
+  await legacyDay();
+  const fetch = vi.fn(async () => new Response(null, { status: 503 })); vi.stubGlobal('fetch', fetch);
+  expect(await ensureImdbEpisodeIndex('2026-10-14')).toBe(false);
+  expect(await ensureImdbEpisodeIndex('2026-10-14')).toBe(false);
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('refuses a migration when a cached rating partition is missing or corrupt', async () => {
+  await legacyDay();
+  runtimeCacheMock().values.delete('2026-10-14:shard:1');
+  const fetch = mockFiles();
+  expect(await ensureImdbEpisodeIndex('2026-10-14')).toBe(false);
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it('does not redownload either dataset after a normal chart attempt fails', async () => {
+  const runtime = runtimeCacheMock();
+  runtime.set.mockImplementation(async (key, value) => { if (!key.startsWith('episode-chart:')) runtime.values.set(key, value); });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    const fetch = mockFiles();
+    await primeImdbDatasetEpisodes([], '2026-10-14');
+    expect(await ensureImdbEpisodeIndex('2026-10-14')).toBe(false);
+    expect(await ensureImdbEpisodeIndex('2026-10-14')).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  } finally { warning.mockRestore(); }
+});
+
+it('collects a cold new day once and skips subsequent chart checks without extra streams', async () => {
+  const fetch = mockFiles();
+  expect(await ensureImdbEpisodeIndex('2026-10-15')).toBe(true);
+  expect(await ensureImdbEpisodeIndex('2026-10-15')).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(2);
 });

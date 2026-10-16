@@ -427,6 +427,9 @@
     "retry": "Consultar caché de nuevo"
   },
   "dubbing": {
+    "audio": "Audio",
+    "reportedShort": "Registrado",
+    "partialShort": "Parcial",
     "label": "Doblaje",
     "language": "Español",
     "reported": "Doblaje registrado",

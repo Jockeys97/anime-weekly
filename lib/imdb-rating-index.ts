@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { japanDate } from '@/lib/weekly-episodes';
 import type { Ratings } from '@/lib/ratings';
+import { withTimeout } from '@/lib/async-timeout';
 
 export type RatingShard = Record<string, [number, number]>;
 export const RATING_SHARDS = 256;
@@ -54,6 +55,29 @@ export async function storeImdbRatingIndex(day: string, shards: RatingShard[]): 
 }
 export async function hasImdbRatingIndex(day: string): Promise<boolean> {
   try { return validManifest(await cache.get(manifestKey(day))); } catch { return false; }
+}
+
+// Authenticated collector repair only: join episode metadata with the already
+// downloaded ratings, instead of requesting title.ratings or OMDb again.
+export async function readImdbRatingShards(day: string): Promise<RatingShard[] | undefined> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+  try {
+    const manifest = await withTimeout(cache.get(manifestKey(day)), 1000);
+    if (!validManifest(manifest)) return;
+    const shards: RatingShard[] = [];
+    let next = 0;
+    await Promise.all(Array.from({ length: 8 }, async () => {
+      while (next < RATING_SHARDS) {
+        const bucket = next++;
+        const encoded = await withTimeout(cache.get(shardKey(day, bucket)), 1000);
+        if (typeof encoded !== 'string' || digest(encoded) !== manifest.hashes[bucket]) throw new Error('Incomplete ratings');
+        const shard = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64'), { maxOutputLength: 1024 * 1024 }).toString());
+        if (!shard || typeof shard !== 'object' || Array.isArray(shard)) throw new Error('Invalid ratings');
+        shards[bucket] = shard;
+      }
+    }));
+    return shards;
+  } catch { return; }
 }
 function score(id: string, pair: [number, number] | undefined): Ratings | undefined {
   if (!pair) return undefined;

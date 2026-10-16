@@ -24,3 +24,12 @@ it.each(locales)('has complete localized dubbing labels for %s',locale=>{
  expect(Object.keys(getDictionary(locale).dubbing).sort()).toEqual(Object.keys(getDictionary('en').dubbing).sort());
  expect(Object.values(getDictionary(locale).dubbing).every(value=>value.length>0)).toBe(true);
 });
+
+it('keeps list and detail reports compact with native keyboard-accessible disclosure', () => {
+ const html=render('reported');
+ expect(html).toContain('<details>'); expect(html).toContain('<summary class="dubbing-summary"');
+ expect(html).not.toContain('<details open'); expect(html).toContain('dubbing-flag');
+ expect(html).toContain('dubbing-badge'); expect(html).toContain('Segnalato');
+ expect(html.indexOf('dubbing-details')).toBeGreaterThan(html.indexOf('</summary>'));
+ expect(html).toContain('Consultato il'); expect(html).toContain('Voce MAL precisa');
+});

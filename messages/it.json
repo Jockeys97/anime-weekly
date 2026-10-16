@@ -427,6 +427,9 @@
     "retry": "Ricontrolla la cache"
   },
   "dubbing": {
+    "audio": "Audio",
+    "reportedShort": "Segnalato",
+    "partialShort": "Parziale",
     "label": "Doppiaggio",
     "language": "Italiano",
     "reported": "Doppiaggio segnalato",

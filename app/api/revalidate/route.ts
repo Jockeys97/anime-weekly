@@ -1,4 +1,4 @@
-import { repairLegacyImdbRatingIndex } from '@/lib/imdb-datasets';
+import { repairLegacyImdbRatingIndex, ensureImdbEpisodeIndex } from '@/lib/imdb-datasets';
 import { readSharedImdbScore, hasImdbScore } from '@/lib/imdb';
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
@@ -95,8 +95,9 @@ export async function GET(request: Request) {
   }));
   if (providersReady && previous.episodes?.collectorVersion === EPISODE_COLLECTOR_VERSION && previous.episodes.updatedAt && Number.isFinite(Date.parse(previous.episodes.updatedAt)) && japanDate(new Date(previous.episodes.updatedAt)) === japanDate()) {
     const indexReady = await repairLegacyImdbRatingIndex();
-    console.info('[imdb-index] daily index verified', { ready: indexReady });
-    return Response.json({ revalidated: true, cached: true, indexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
+    const episodeIndexReady = await ensureImdbEpisodeIndex().catch(() => false);
+    console.info('[imdb-index] daily indexes verified', { ready: indexReady, episodeIndexReady });
+    return Response.json({ revalidated: true, cached: true, indexReady, episodeIndexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
   }
   revalidateTag(CACHE_TAG, { expire: 0 });
   let total = 0;
@@ -142,5 +143,7 @@ export async function GET(request: Request) {
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.
   revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
-  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits, episodeStatus: episodeSnapshot?.status, episodeCoverage: episodeSnapshot?.coverage, episodeReason: episodeSnapshot?.reason });
+  const episodeIndexReady = await ensureImdbEpisodeIndex().catch(() => false);
+  console.info('[episode-chart] daily index checked', { ready: episodeIndexReady });
+  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits, episodeIndexReady, episodeStatus: episodeSnapshot?.status, episodeCoverage: episodeSnapshot?.coverage, episodeReason: episodeSnapshot?.reason });
 }
