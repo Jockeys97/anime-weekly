@@ -32,9 +32,9 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const startDate = date?.year && date.month && date.day ? <VisitorDate value={`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`} /> : date?.year ?? c.unknown;
   return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
-    {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
+    {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill unoptimized sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
     <article className="anime-card anime-detail">
-      <div className="poster">{cover ? <Image src={cover} alt={name} fill preload sizes="(max-width: 600px) 160px, 220px" /> : <span>{d.state.noPoster}</span>}</div>
+      <div className="poster">{cover ? <Image src={cover} alt={name} fill unoptimized preload sizes="(max-width: 600px) 160px, 220px" /> : <span>{d.state.noPoster}</span>}</div>
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{name}</h1>
