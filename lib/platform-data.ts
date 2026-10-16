@@ -4,6 +4,7 @@ export interface PlatformMetadata {
   providers: AnimeTitle['providers'];
   providersUnavailable: boolean;
   match?: CatalogCardSummary['availability']['match'];
+  seriesWatch?: CatalogCardSummary['availability']['seriesWatch'];
 }
 export interface PlatformSnapshot { titles: Record<string, PlatformMetadata>; unavailable: boolean }
 export function mergePlatformSnapshot(previous: PlatformSnapshot | null, next: PlatformSnapshot): PlatformSnapshot {

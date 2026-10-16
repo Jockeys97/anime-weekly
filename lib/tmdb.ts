@@ -99,10 +99,10 @@ export interface AnimeAvailability {
 export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind, fresh = false, providersOnly = false): Promise<AnimeAvailability> {
   const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
   if (!isTMDBConfigured()) return { ...empty, ratings: { imdbStatus: 'unconfigured' } };
-  const aliases = tmdbSearchTitles(titles, year);
   const revalidate = 86400;
   let lookupFailed = false;
   for (const kind of kindHint ? [kindHint] : ['tv', 'movie'] as const) {
+    const aliases = tmdbSearchTitles(titles, year, kind);
     const candidates: TMDBCandidate[] = [];
     const results = await Promise.all(aliases.map(async title => {
       try {
@@ -114,7 +114,7 @@ export async function getAnimeAvailability(titles: string[], year?: number, kind
       } catch { lookupFailed = true; return []; }
     }));
     for (const result of results) candidates.push(...result);
-    const match = chooseTMDBMatch(candidates, aliases, year);
+    const match = chooseTMDBMatch(candidates, aliases, year, kind);
     if (!match) continue;
     const [ratings, watch] = await Promise.all([
       providersOnly ? Promise.resolve({} as Ratings) : getRatings(kind, match.id, revalidate, fresh),

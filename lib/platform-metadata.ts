@@ -1,24 +1,25 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_TAG } from '@/lib/config';
-import { getSeason } from '@/lib/anilist';
-import { getAnimeAvailability, getQuickWeekData, getWeeklyProviders } from '@/lib/tmdb';
+import { getSeason, type AniListAnime } from '@/lib/anilist';
+import { getQuickWeekData, getWeeklyProviders } from '@/lib/tmdb';
+import { getDetailProviders } from '@/lib/detail-availability';
 import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
 import type { Season } from '@/lib/season';
 import type { PlatformMetadata, PlatformSnapshot } from '@/lib/platform-data';
-import { getVerifiedTitleLinks } from '@/lib/verified-title-links';
 class MissingProviders extends Error {}
 const weeklyProviders = unstable_cache(async (kind: 'tv' | 'movie', id: number): Promise<PlatformMetadata> => {
   const result = await getWeeklyProviders(kind, id);
   if (result.providersUnavailable) throw new MissingProviders();
   return result;
 }, ['weekly-filter-providers-v1'], { revalidate: 3600, tags: [CACHE_TAG] });
-const seasonProviders = unstable_cache(async (aliases: string[], year?: number, kind?: 'tv' | 'movie'): Promise<PlatformMetadata> => {
-  const result = await getAnimeAvailability(aliases, year, kind, false, true);
-  if (result.providersUnavailable || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured') throw new MissingProviders();
-  return { match: result.match, providers: result.providers, providersUnavailable: false };
-}, ['season-filter-providers-v2-card-source'], { revalidate: 3600, tags: [CACHE_TAG] });
+const seasonProviders = unstable_cache(async (anime: AniListAnime): Promise<PlatformMetadata> => {
+  const result = await getDetailProviders(anime);
+  if ((!result.match && !result.seriesWatch && !Object.keys(result.providers).length) || result.providersUnavailable || result.seriesWatch?.providersUnavailable
+    || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured') throw new MissingProviders();
+  return { match: result.match, providers: result.providers, providersUnavailable: false, ...(result.seriesWatch ? { seriesWatch: result.seriesWatch } : {}) };
+}, ['season-filter-providers-v3-series-identity'], { revalidate: 3600, tags: [CACHE_TAG] });
 
 async function collect(entries: { key: string; load: () => Promise<PlatformMetadata> }[], deadline: number, partial = false): Promise<PlatformSnapshot> {
   const result: PlatformSnapshot = { titles: {}, unavailable: partial };
@@ -52,13 +53,5 @@ export async function getSeasonPlatformMetadata(year: number, season: Season, pa
   // requests just to populate a filter. Neither path calls IMDb or Jikan.
   const catalog = await withTimeout(getSeason(year, season, page), 10000);
   if (!catalog.media.length) throw new MissingProviders();
-  return collect(catalog.media.map(anime => {
-    const verified = getVerifiedTitleLinks(anime);
-    if (verified) return { key: `anilist:${anime.id}`, load: async () => ({ providers: verified.providers, providersUnavailable: false }) };
-    const premiere = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-    const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((name): name is string => Boolean(name))
-      .map(name => premiere == null ? name : name.replace(/\s*\((?:19|20)\d{2}\)\s*$/u, ''));
-    const kind = anime.format === 'MOVIE' ? 'movie' : ['TV', 'TV_SHORT', 'ONA'].includes(anime.format ?? '') ? 'tv' : undefined;
-    return { key: `anilist:${anime.id}`, load: () => seasonProviders(aliases, premiere, kind) };
-  }), deadline);
+  return collect(catalog.media.map(anime => ({ key: `anilist:${anime.id}`, load: () => seasonProviders(anime) })), deadline);
 }

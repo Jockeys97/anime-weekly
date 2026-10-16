@@ -41,3 +41,16 @@ it('uses seasonal provider metadata when a rating snapshot had no saved offers',
   })));
   expect(html).toContain('Netflix');
 });
+
+it('attributes early season-family links to the series with the correct TMDB identity', () => {
+  const html = renderToStaticMarkup(React.createElement(CatalogWatchProvider, {
+    snapshot: { unavailable: false, titles: { 'anilist:123': {
+      match: null, providers: {}, providersUnavailable: false,
+      seriesWatch: { id: 456, kind: 'tv', name: 'Parent series', providersUnavailable: false,
+        providers: { US: { link: 'https://example.test/us', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } },
+    } } },
+  }, React.createElement(CatalogCardExtras, { id: 123, name: 'Example Season 3', score: 85 })));
+  expect(html).toContain('Series watch options: Parent series');
+  expect(html).toContain('id=456&amp;region=US&amp;provider=8');
+  expect(html).not.toContain('id=0&amp;region=US');
+});

@@ -23,7 +23,7 @@ export function SeasonContent({ entries, locale, providerUrl, initialProviders }
       .finally(() => { if (!controller.signal.aborted) setPending(false); });
     return () => controller.abort();
   }, [providerUrl, attempt]);
-  const titles = entries.map(entry => ({ ...entry, key: `anilist:${entry.id}`, providers: providers?.titles[`anilist:${entry.id}`]?.providers ?? {} }));
+  const titles = entries.map(entry => ({ ...entry, key: `anilist:${entry.id}`, providers: providers?.titles[`anilist:${entry.id}`]?.providers ?? {}, seriesWatch: providers?.titles[`anilist:${entry.id}`]?.seriesWatch }));
   const incomplete = providers?.unavailable || Boolean(providers && entries.some(entry => !providers.titles[`anilist:${entry.id}`]));
   const options = filterOptions(titles, region, platform);
   const visible = new Set(filterTitles(titles, { genre, platform, region, onlyWatchlist, watchlist }).map(title => title.id));
