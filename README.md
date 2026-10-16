@@ -321,7 +321,7 @@ TV/TV_SHORT/ONA detail pages include a season selector and an episode-rating bar
 
 The authenticated collector reuses its two daily TSV streams to join all rated episodes with exact IMDb parents, including series outside that week's Top 5 candidates. Compact per-parent partitions are compressed and stored in a separate Runtime Cache namespace, with verified writes and checksums before publishing a completion marker. Public SSR and `/api/episode-ratings?imdb=tt…` only read the relevant partition, retaining a complete index from the previous seven days on failure. No public request downloads datasets or calls OMDb. A missing chart cache can be checked again in the browser without refreshing the page or spending vendor quota.
 
-The daily collector cache identity stays unchanged: deploying this feature after today's collection does not download either file again. The first new index is built by the next day's normal collection. The episode stream now also runs on days with zero weekly candidates so historical-series charts remain available. A chart storage failure does not discard successful title ratings or weekly episode results. All six interface languages include chart labels.
+The daily collector cache identity stays unchanged: deploying this feature after today's collection does not download either file again. The authenticated collector also checks chart readiness independently of the weekly snapshot. A pre-chart daily result can be initialized once per date by reusing the existing, checksum-verified title rating partitions and streaming only episode metadata. Success and failure of that migration are cached. Newly collected days record chart success/failure explicitly and never redownload the streams to retry a failed chart on the same day. The episode stream now also runs on days with zero weekly candidates so historical-series charts remain available. A chart storage failure does not discard successful title ratings or weekly episode results. All six interface languages include chart labels.
 
 ### Episode chart recovery
 
@@ -354,3 +354,5 @@ number heuristic is used. `/api/dubbing` accepts exactly one positive `mal` or
 Dataset attribution: Dub data © [MyDubList](https://mydublist.com) —
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Dataset entries are filtered
 by exact ID and displayed with localized status labels; original datasets are not modified.
+
+Dubbing reports use a compact, keyboard-accessible audio/language/status disclosure on both detail and list views. Source, consulted date and the regional-availability qualification stay available inside the disclosure. A small decorative flag follows the audio language (GB, IT, ES, FR, DE, PT); it does not claim a regional dub variant or availability in that country.

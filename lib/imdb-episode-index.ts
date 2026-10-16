@@ -30,6 +30,11 @@ async function persist(id: string, value: unknown) {
   throw new Error('Episode chart cache write could not be verified');
 }
 
+export async function hasImdbEpisodeIndex(day: string): Promise<boolean> {
+  try { return validManifest(await withTimeout(cache.get(key(day, 'complete')), 1000)); }
+  catch { return false; }
+}
+
 // Called only by the existing daily dataset collector; no new dataset requests.
 export async function storeImdbEpisodeIndex(day: string, shards: EpisodeShard[], updatedAt: string, dataUpdatedAt?: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || shards.length !== RATING_SHARDS || !Number.isFinite(Date.parse(updatedAt))) throw new Error('Invalid episode chart index');

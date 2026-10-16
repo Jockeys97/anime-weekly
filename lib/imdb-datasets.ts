@@ -4,9 +4,9 @@ import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
 import { createGunzip } from 'node:zlib';
 import { unstable_cache } from 'next/cache';
-import { storeImdbRatingIndex, hasImdbRatingIndex, migrateLegacyImdbIndex, ratingBucket, RATING_SHARDS, type RatingShard } from '@/lib/imdb-rating-index';
+import { storeImdbRatingIndex, hasImdbRatingIndex, migrateLegacyImdbIndex, ratingBucket, RATING_SHARDS, readImdbRatingShards, type RatingShard } from '@/lib/imdb-rating-index';
 import { japanDate } from '@/lib/weekly-episodes';
-import { storeImdbEpisodeIndex, type EpisodeShard } from '@/lib/imdb-episode-index';
+import { storeImdbEpisodeIndex, hasImdbEpisodeIndex, type EpisodeShard } from '@/lib/imdb-episode-index';
 
 export interface ImdbEpisodeTarget { imdbId: string; seriesImdbId: string }
 export interface DatasetEpisodeScore { season: number; episode: number; score: number; votes: number }
@@ -121,7 +121,7 @@ function targetsForCache(targets: readonly ImdbEpisodeTarget[]): ImdbEpisodeTarg
   return [...unique.values()].filter(target => !ambiguous.has(target.imdbId)).sort((a, b) => a.imdbId.localeCompare(b.imdbId));
 }
 
-interface DailyDatasetEpisodes extends ImdbDatasetEpisodes { indexVersion?: number; parents: Record<string, string> }
+interface DailyDatasetEpisodes extends ImdbDatasetEpisodes { indexVersion?: number; parents: Record<string, string>; chartStatus?: 'ready' | 'unavailable' }
 const pendingTargets = new Map<string, ImdbEpisodeTarget[]>();
 const inFlight = new Map<string, Promise<DailyDatasetEpisodes>>();
 const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
@@ -149,7 +149,7 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
       // title-rating file from refreshing, including days with no weekly targets.
       await storeImdbRatingIndex(day, shards);
       if (episodeResult.status === 'rejected') return {
-        status: targets.length ? 'unavailable' : 'ready', indexVersion: 2, ratings: {}, parents: {}, updatedAt,
+        status: targets.length ? 'unavailable' : 'ready', indexVersion: 2, chartStatus: 'unavailable', ratings: {}, parents: {}, updatedAt,
         ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}),
       };
       const episodes = episodeResult.value;
@@ -169,12 +169,14 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
       }
       // Chart storage is optional: a failed partition must not remove a valid
       // title-score index or the weekly Top 5 result. Readers retain yesterday.
-      await storeImdbEpisodeIndex(day, chartShards, updatedAt, ratings.modified).catch(() => console.warn('[episode-chart] daily cache write unavailable'));
-      return { status: 'ready', indexVersion: 2, ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
+      const chartReady = await storeImdbEpisodeIndex(day, chartShards, updatedAt, ratings.modified).then(() => true).catch(() => {
+        console.warn('[episode-chart] daily cache write unavailable'); return false;
+      });
+      return { status: 'ready', indexVersion: 2, chartStatus: chartReady ? 'ready' : 'unavailable', ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
     } catch {
       controller.abort();
       // Cache the failed daily attempt too; tomorrow has a different key.
-      return { status: 'unavailable', ratings: {}, parents: {}, updatedAt };
+      return { status: 'unavailable', chartStatus: 'unavailable', ratings: {}, parents: {}, updatedAt };
     } finally { clearTimeout(timeout); }
   })();
   inFlight.set(key, task);
@@ -207,6 +209,50 @@ export async function repairLegacyImdbRatingIndex(day = japanDate()): Promise<bo
   if (await hasImdbRatingIndex(day)) return true;
   if (await migrateLegacyImdbIndex(day)) return true;
   return repairDailyIndex(day);
+}
+
+// Migrate a completed daily result from before chart collection was introduced.
+// Reuse every verified rating partition; fetch only episode metadata, once per
+// date including failures. Normal daily attempts (including failed ones) never
+// enter this repair, so a chart outage cannot double the daily downloads.
+const repairEpisodeIndexLoader = async (day: string) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  let stage = 'cached-ratings';
+  try {
+    const ratings = await readImdbRatingShards(day);
+    if (!ratings) { console.warn('[episode-chart] bootstrap unavailable', { stage }); return false; }
+    const shards: EpisodeShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
+    stage = 'episode-stream';
+    const metadata = await matchingRows('episodes', new Set(), controller.signal, undefined, { shards, ratings: Promise.resolve(ratings) });
+    stage = 'chart-storage';
+    await storeImdbEpisodeIndex(day, shards, new Date().toISOString(), metadata.modified);
+    console.info('[episode-chart] bootstrap complete', { day });
+    return true;
+  } catch { console.warn('[episode-chart] bootstrap unavailable', { stage }); return false; }
+  finally { clearTimeout(timer); }
+};
+Object.defineProperty(repairEpisodeIndexLoader, 'toString', { value: () => 'imdb-episode-index-migration-loader-v1' });
+const repairDailyEpisodeIndex = unstable_cache(repairEpisodeIndexLoader, ['imdb-episode-index-migration-v1'], { revalidate: 172800, tags: ['imdb-datasets'] });
+const chartRepairs = new Map<string, Promise<boolean>>();
+// Call only from the authenticated cron, even when its weekly snapshot is warm.
+export function ensureImdbEpisodeIndex(day = japanDate()): Promise<boolean> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return Promise.reject(new Error('Invalid IMDb index day'));
+  const pending = chartRepairs.get(day);
+  if (pending) return pending;
+  const task = (async () => {
+    if (await hasImdbEpisodeIndex(day)) return true;
+    if (!pendingTargets.has(day)) pendingTargets.set(day, []);
+    let collected: DailyDatasetEpisodes;
+    try { collected = await dailyEpisodes(day); }
+    finally { pendingTargets.delete(day); }
+    if (await hasImdbEpisodeIndex(day)) return true;
+    // chartStatus means this day was already attempted by the new collector.
+    if (collected.chartStatus || collected.status !== 'ready') return false;
+    return repairDailyEpisodeIndex(day);
+  })().finally(() => chartRepairs.delete(day));
+  chartRepairs.set(day, task);
+  return task;
 }
 
 // Only the authenticated collector calls this writer. Public pages read the
