@@ -68,7 +68,10 @@ export function parseJustWatchPage(html: string, pageUrl: string, imdbId: string
 }
 
 export async function recoverJustWatchOffers(name: string, imdbId: string, region: StreamingRegion, kind: 'tv' | 'movie' = 'tv') {
-  const slug = name.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // The canonical slug omits AniList's remake label. The page's IMDb identity
+  // is still mandatory, so this cannot inherit offers from the older adaptation.
+  const slug = name.replace(/\s*\((?:19|20)\d{2}\)\s*$/u, '').replaceAll('½', '1/2')
+    .normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   if (!slug || !/^tt\d+$/.test(imdbId)) return null;
   const load = async (url: string) => {
     const response = await fetch(url, { next: { revalidate: 3600, tags: ['anime-week'] }, signal: AbortSignal.timeout(7000), redirect: 'error' });
