@@ -10,7 +10,7 @@ export function pageMetadata(title: string, description: string, path: string, i
   const url = new URL(path, siteUrl()).href;
   return {
     title, description, alternates: { canonical: url },
-    openGraph: { title, description, url, siteName: 'Anime Weekly', locale: 'it_IT', type: 'website', ...(image ? { images: [{ url: image, alt: title }] } : {}) },
+    openGraph: { title, description, url, siteName: 'Weekly Anime', locale: 'it_IT', type: 'website', ...(image ? { images: [{ url: image, alt: title }] } : {}) },
     twitter: { card: image ? 'summary_large_image' : 'summary', title, description, ...(image ? { images: [image] } : {}) },
   };
 }

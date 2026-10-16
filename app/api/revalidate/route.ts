@@ -11,7 +11,11 @@ import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
 import { topWeeklyEpisodes, needsEpisodeRepair, japanDate, EPISODE_COLLECTOR_VERSION, type WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
 import { PROVIDER_MAX_AGE, validProviderSnapshot } from '@/lib/provider-snapshot';
+import { readImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { validImdbId } from '@/lib/episode-chart';
 export const maxDuration = 300;
+// Runtime Cache is regional: collector and shared read endpoints use one region.
+export const preferredRegion = 'iad1';
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) return false;
@@ -51,6 +55,12 @@ export async function GET(request: Request) {
   // Public read-only mode: serve the cron-written snapshot from this same
   // bundle (unstable_cache entries are only reliably readable here). Never
   // calls rating APIs; a cold cache returns an empty snapshot.
+  const chart = new URL(request.url).searchParams.get('episodeChart');
+  if (chart !== null) {
+    if (!validImdbId(chart)) return Response.json({ error: 'invalid IMDb series ID' }, { status: 400 });
+    const result = await readImdbEpisodeChart(chart);
+    return Response.json({ ...result, seriesId: chart }, { headers: { 'cache-control': result.status === 'ready' ? 'public, max-age=60, s-maxage=300' : 'no-store' } });
+  }
   const imdb = new URL(request.url).searchParams.get('imdb');
   if (imdb !== null) {
     if (!/^tt\d+$/.test(imdb) || imdb.length > 32) return Response.json({ error: 'invalid IMDb ID' }, { status: 400 });

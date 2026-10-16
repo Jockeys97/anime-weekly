@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import { getDictionary, type Locale } from '@/lib/i18n';
 type TextResult = { name: string | null; overview: string | null; overviewLanguage: string | null; machine: boolean; locale: Locale };
 const japanese = /[\u3040-\u30ff\u3400-\u9fff]/;
-export function WeeklyText({ id, kind, name, overview, locale }: { id: number; kind: 'tv' | 'movie'; name: string; overview: string; locale: Locale }) {
+export function WeeklyText({ id, kind, name, overview, locale, detailHref }: { id: number; kind: 'tv' | 'movie'; name: string; overview: string; locale: Locale; detailHref: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [text, setText] = useState<TextResult | null>(null);
   const d = getDictionary(locale);
@@ -28,8 +29,8 @@ export function WeeklyText({ id, kind, name, overview, locale }: { id: number; k
     return () => { controller.abort(); observer.disconnect(); };
   }, [id, kind, locale, needsLookup]);
   const synopsis = cleanSynopsis(text?.overview || overview);
-  return <div ref={ref}>
-    <h3><a href={`https://www.themoviedb.org/${kind}/${id}`} target="_blank" rel="noopener noreferrer">{displayTitle(text?.name || (japanese.test(name) ? `Anime #${id}` : name))}</a></h3>
+  return <div ref={ref} className="weekly-text">
+    <h3><Link href={detailHref} prefetch={false}>{displayTitle(text?.name || (japanese.test(name) ? `Anime #${id}` : name))}</Link></h3>
     <p className="synopsis" lang={text?.overviewLanguage || (japanese.test(synopsis) ? 'ja' : undefined)}>{synopsis || d.state.noSynopsis}</p>
     {text?.machine && <p className="synopsis-fallback">{d.language.machineTranslation} · DeepL</p>}
     {text?.overview && text.overviewLanguage !== locale && <p className="synopsis-fallback">{d.language.sourceSynopsis}</p>}

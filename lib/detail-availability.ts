@@ -66,6 +66,7 @@ export async function findSeasonSeries(anime: AniListAnime): Promise<AniListAnim
 }
 
 export interface DetailAvailability extends AnimeAvailability {
+  episodeSeries?: { imdbId: string; title: string };
   seriesWatch?: { id: number; kind: 'tv'; name: string; providers: AnimeAvailability['providers']; providersUnavailable: boolean };
 }
 
@@ -97,6 +98,11 @@ async function resolveAvailability(anime: AniListAnime, fresh = false, providers
   // when the chosen country has no direct offers, without claiming season coverage.
   return {
     ...direct,
+    // A separately rated cour may have its own IMDb page, while its episodes
+    // belong to the confirmed parent series. Keep the chart identity separate.
+    ...(original.ratings.imdbId && original.ratings.imdbId !== direct.ratings.imdbId ? {
+      episodeSeries: { imdbId: original.ratings.imdbId, title: animeName(series) },
+    } : {}),
     ratings: !hasImdbScore(direct.ratings) && seriesRatingKnown
       ? { ...original.ratings, imdbSeriesTitle: animeName(series) }
       : direct.ratings,
@@ -127,7 +133,7 @@ const cachedDetailAvailability = unstable_cache(async (anime: AniListAnime) => {
     || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured'
     || (result.ratings.imdbId && !hasImdbScore(result.ratings))) throw new UncachedAvailability(result);
   return result;
-}, ['detail-availability-v8-season-audit'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['detail-availability-v9-episode-series'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 export async function getCachedDetailAvailability(anime: AniListAnime): Promise<DetailAvailability> {
   try { return await cachedDetailAvailability(anime); }

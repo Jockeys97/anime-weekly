@@ -4,6 +4,7 @@ export interface EpisodeChartData {
   episodes: ChartEpisode[];
   updatedAt?: string;
   dataUpdatedAt?: string;
+  reason?: 'cache-error';
 }
 export interface ChartSeason { number: number; episodes: ChartEpisode[]; average: number; votes: number }
 export const validImdbId = (id: unknown): id is string => typeof id === 'string' && /^tt\d{1,20}$/.test(id);

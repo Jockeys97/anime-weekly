@@ -24,7 +24,7 @@ describe('season IMDb series fallback', () => {
     prequel(third, second); prequel(second, first);
     vi.mocked(getAnime).mockImplementation(async id => id === second.id ? second : id === first.id ? first : null);
     vi.mocked(getAnimeAvailability).mockResolvedValueOnce(empty).mockResolvedValueOnce({ ...empty, match: { id: 220542, kind: 'tv' }, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453' }, providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } } });
-    expect(await getDetailAvailability(third)).toEqual({ ...empty, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' }, seriesWatch: { id: 220542, kind: 'tv', name: 'The Apothecary Diaries', providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } });
+    expect(await getDetailAvailability(third)).toEqual({ ...empty, episodeSeries: { imdbId: 'tt26743760', title: 'The Apothecary Diaries' }, ratings: { imdbId: 'tt26743760', imdbRating: '8.6', imdbVotes: '28,453', imdbSeriesTitle: 'The Apothecary Diaries' }, seriesWatch: { id: 220542, kind: 'tv', name: 'The Apothecary Diaries', providers: { US: { link: 'https://www.themoviedb.org/tv/220542/watch?locale=US', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } });
     expect(getAnimeAvailability).toHaveBeenNthCalledWith(1, ['The Apothecary Diaries Season 3'], 2026, 'tv', false);
     expect(getAnimeAvailability).toHaveBeenNthCalledWith(2, ['The Apothecary Diaries'], 2023, 'tv', false);
   });
@@ -143,4 +143,19 @@ it('preserves a confirmed series IMDb identity and retrieval error instead of re
   vi.mocked(getAnime).mockResolvedValue(first);
   vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, ratings: { imdbStatus: 'unmatched' } }).mockResolvedValueOnce({ ...empty, match: { id: 10, kind: 'tv' }, ratings: { imdbId: 'tt100', imdbStatus: 'error' } });
   expect((await getDetailAvailability(current)).ratings).toEqual({ imdbId: 'tt100', imdbStatus: 'error', imdbSeriesTitle: 'Example' });
+});
+
+it.each(['Attack on Titan Final Season Part 2', 'Example Season 3 Part 2'])('opens all episodes of the confirmed series even when %s has its own rated IMDb page', async title => {
+  const rootTitle = title.startsWith('Attack') ? 'Attack on Titan' : 'Example';
+  const root = anime(16498, rootTitle, 2013);
+  const final = anime(110277, `${rootTitle} Final Season`, 2020);
+  const part = anime(131681, title, 2022);
+  prequel(part, final); prequel(final, root);
+  vi.mocked(getSeasonFamily).mockResolvedValue([final, root]);
+  vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt900', imdbRating: '8.5' } })
+    .mockResolvedValueOnce({ ...empty, ratings: { imdbId: 'tt2560140', imdbRating: '9.1' } });
+  const result = await getDetailAvailability(part);
+  expect(result.ratings.imdbId).toBe('tt900');
+  expect(result.episodeSeries).toEqual({ imdbId: 'tt2560140', title: rootTitle });
+  expect(getAnimeAvailability).toHaveBeenCalledWith([rootTitle], 2013, 'tv', false);
 });

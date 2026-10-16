@@ -5,6 +5,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import { japanDate } from '@/lib/weekly-episodes';
 import { ratingBucket, RATING_SHARDS } from '@/lib/imdb-rating-index';
 import { validChartEpisode, validImdbId, type ChartEpisode, type EpisodeChartData } from '@/lib/episode-chart';
+import { withTimeout } from '@/lib/async-timeout';
 
 export type EpisodeTuple = [id: string, season: number, episode: number, score: number, votes: number];
 export type EpisodeShard = Record<string, EpisodeTuple[]>;
@@ -56,16 +57,19 @@ export async function storeImdbEpisodeIndex(day: string, shards: EpisodeShard[],
 // TMDB, or OMDb here, including on a miss or an incomplete daily write.
 export async function readImdbEpisodeChart(seriesId: string, now = new Date()): Promise<EpisodeChartData> {
   if (!validImdbId(seriesId)) return { status: 'unavailable', episodes: [] };
+  const deadline = Date.now() + 4000;
+  let failed = false;
   for (let age = 0; age < 7; age++) {
+    if (Date.now() >= deadline) break;
     const day = japanDate(new Date(now.getTime() - age * 86400000));
     try {
-      const manifest = await cache.get(key(day, 'complete'));
+      const manifest = await withTimeout(cache.get(key(day, 'complete')), Math.max(1, Math.min(1000, deadline - Date.now())));
       if (!validManifest(manifest)) continue;
-      const bucket = ratingBucket(seriesId), encoded = await cache.get(key(day, bucket));
-      if (typeof encoded !== 'string' || digest(encoded) !== manifest.hashes[bucket]) continue;
+      const bucket = ratingBucket(seriesId), encoded = await withTimeout(cache.get(key(day, bucket)), Math.max(1, Math.min(1000, deadline - Date.now())));
+      if (typeof encoded !== 'string' || digest(encoded) !== manifest.hashes[bucket]) { failed = true; continue; }
       const shard = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64'), { maxOutputLength: 4 * 1024 * 1024 }).toString()) as EpisodeShard;
       const tuples = shard[seriesId] ?? [];
-      if (!Array.isArray(tuples) || tuples.length > 10000) continue;
+      if (!Array.isArray(tuples) || tuples.length > 10000) { failed = true; continue; }
       const episodes: ChartEpisode[] = [];
       let valid = true;
       for (const tuple of tuples) {
@@ -76,7 +80,37 @@ export async function readImdbEpisodeChart(seriesId: string, now = new Date()): 
         episodes.push(item);
       }
       if (valid) return { status: 'ready', episodes, updatedAt: manifest.updatedAt, ...(manifest.dataUpdatedAt ? { dataUpdatedAt: manifest.dataUpdatedAt } : {}) };
-    } catch { /* Retain the last complete daily index during upstream/cache outages. */ }
+      failed = true;
+    } catch { failed = true; /* Retain the last complete daily index during cache outages. */ }
   }
-  return { status: 'unavailable', episodes: [] };
+  return { status: 'unavailable', episodes: [], ...(failed ? { reason: 'cache-error' as const } : {}) };
+}
+
+const reads = new Map<string, Promise<EpisodeChartData>>();
+// Read through the collector bundle after a local miss, as series scores do.
+// The endpoint below is strictly read-only and cannot download a dataset.
+export function getImdbEpisodeChart(seriesId: string): Promise<EpisodeChartData> {
+  if (!validImdbId(seriesId)) return Promise.resolve({ status: 'unavailable', episodes: [] });
+  const previous = reads.get(seriesId);
+  if (previous) return previous;
+  const request = (async () => {
+    const local = await readImdbEpisodeChart(seriesId);
+    if (local.status === 'ready') return local;
+    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    if (host && process.env.VERCEL_ENV === 'production') {
+      try {
+        return await withTimeout((async () => {
+          const response = await fetch(`https://${host}/api/revalidate?episodeChart=${seriesId}`, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+          if (!response.ok) throw new Error('Shared episode cache unavailable');
+          const result = await response.json() as EpisodeChartData & { seriesId?: string };
+          if (result.seriesId !== seriesId || !['ready', 'unavailable'].includes(result.status) || !Array.isArray(result.episodes) || result.episodes.length > 10000 || !result.episodes.every(validChartEpisode)) throw new Error('Invalid shared episode cache');
+          if (result.status !== 'ready') return result.reason === 'cache-error' ? { ...local, reason: 'cache-error' as const } : local;
+          return { status: 'ready' as const, episodes: result.episodes, updatedAt: result.updatedAt, dataUpdatedAt: result.dataUpdatedAt };
+        })(), 5000);
+      } catch { return { ...local, reason: 'cache-error' as const }; }
+    }
+    return local;
+  })().finally(() => reads.delete(seriesId));
+  reads.set(seriesId, request);
+  return request;
 }

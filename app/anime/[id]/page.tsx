@@ -15,7 +15,7 @@ import { getCachedDetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 import { pageMetadata, serializeJsonLd, siteUrl } from '@/lib/seo';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
-import { readImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 
 export const revalidate = 86400;
 // A process-local throttle cannot guarantee a shared quota across build workers.
@@ -71,9 +71,9 @@ export default async function AnimePage({ params }: Props) {
 
 async function DetailEpisodeChart({ availability, name }: { availability: Promise<AnimeAvailability>; name: string }) {
   const watch = await availability;
-  const id = watch.ratings.imdbId;
-  const initial = id ? await readImdbEpisodeChart(id) : { status: 'unavailable' as const, episodes: [] };
-  return <EpisodeRatingsChart key={id || name} initial={initial} seriesId={id} seriesTitle={watch.ratings.imdbSeriesTitle || name} />;
+  const id = watch.episodeSeries?.imdbId || watch.ratings.imdbId;
+  const initial = id ? await getImdbEpisodeChart(id) : { status: 'unavailable' as const, episodes: [] };
+  return <EpisodeRatingsChart key={id || name} initial={initial} seriesId={id} seriesTitle={watch.episodeSeries?.title || watch.ratings.imdbSeriesTitle || name} />;
 }
 
 async function DetailImdbRating({ availability, name, locale, id }: {

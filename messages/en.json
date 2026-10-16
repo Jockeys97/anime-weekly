@@ -1,7 +1,7 @@
 {
-  "brand": "Anime Weekly",
+  "brand": "Weekly Anime",
   "metadata": {
-    "title": "Anime Weekly · Your weekly anime release guide",
+    "title": "Weekly Anime · Your weekly anime release guide",
     "description": "Explore Japanese animated TV and movie releases by ISO week, with real ratings and streaming availability."
   },
   "nav": {
@@ -405,10 +405,12 @@
   },
   "support": {
     "title": "Support the site",
-    "description": "Help keep Anime Weekly running, with no ads or affiliate links.",
+    "description": "Help keep Weekly Anime running, with no ads or affiliate links.",
     "link": "Support on Ko-fi"
   },
   "episodeChart": {
+    "allSeasons": "All seasons",
+    "cacheError": "The episode cache could not be read. Please try again.",
     "title": "Episode ratings",
     "eyebrow": "By season",
     "description": "Episode ratings for the IMDb series:",

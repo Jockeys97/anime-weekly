@@ -21,6 +21,13 @@ it.each(fixture.cases)('resolves the reviewed season identity: $title', async ({
   expect((await findSeasonSeries(catalog.get(id)!))?.id ?? null).toBe(rootId);
 });
 
+it('follows AoT Final Season Part 2 through every archived prequel to the 2013 series', async () => {
+  const final = catalog.get(110277)!;
+  const part = { ...final, id: 131681, title: { english: 'Attack on Titan Final Season Part 2', romaji: 'Shingeki no Kyojin: The Final Season Part 2', native: null }, startDate: { year: 2022, month: 1, day: 10 },
+    relations: { edges: [{ relationType: 'PREQUEL', node: { id: final.id, type: 'ANIME', format: final.format, title: final.title, startDate: { year: 2020 } } }] } };
+  expect((await findSeasonSeries(part))?.id).toBe(16498);
+});
+
 it.each([
   { id: 209872, rootId: 178533, imdbId: 'tt32766897' }, // Ranma remake
   { id: 178789, rootId: 108465, imdbId: 'tt13293588' }, // Mushoku, including Cour 2

@@ -210,3 +210,40 @@
 .site-support a { text-decoration: underline; }
 /* Keep rating retries above the source card's full-tile link. */
 .ratings .rating-detail button{position:relative;z-index:1}
+
+/* Let the cover share the heading, without squeezing the rest of a mobile card. */
+@media (max-width: 600px) {
+  .anime-card:not(.anime-detail) { display: flow-root; position: relative; }
+  .anime-card:not(.anime-detail) > .poster { display: block; float: left; width: 95px; margin: 0 14px 14px 0; }
+  .anime-card:not(.anime-detail) .card-body { min-width: 0; }
+  .anime-card:not(.anime-detail) .card-body > .type-label { display: block; min-height: 36px; padding-right: 44px; }
+  .anime-card:not(.anime-detail) .card-body h3 { display: flow-root; line-height: 1.3; margin: 8px 0 14px; overflow-wrap: break-word; }
+  .anime-card:not(.anime-detail) .localized-synopsis,
+  .anime-card:not(.anime-detail) .weekly-text .synopsis,
+  .anime-card:not(.anime-detail) .catalog-card-extras,
+  .anime-card:not(.anime-detail) .ratings { clear: both; }
+  .anime-card:not(.anime-detail) .card-body > .watchlist-button { position: absolute; top: 12px; right: 12px; float: none; margin: 0; }
+  .anime-card:not(.anime-detail) .synopsis { font-size: 13px; }
+
+  /* One source per row keeps names, scales and series notices readable. */
+  .ratings { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .rating-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; padding: 12px; }
+  .rating-source { min-width: 0; font-size: 11px; }
+  .ratings .rating-value { margin-top: 0; font-size: 24px; white-space: nowrap; }
+  .ratings .rating-value-state { font-size: 12px; white-space: normal; text-align: right; max-width: 110px; }
+  .ratings .rating-detail { grid-column: 1 / -1; margin-top: 6px; font-size: 11px; overflow-wrap: break-word; }
+  .rating-scale { font-size: 11px; }
+  .rating-external { flex-shrink: 0; }
+  .streaming summary { min-height: 44px; align-items: center; font-size: 12px; }
+  .streaming-country-name { max-width: 55%; overflow-wrap: break-word; }
+  .provider-link { max-width: 100%; min-height: 44px; overflow-wrap: anywhere; }
+  .provider-link img { flex-shrink: 0; }
+  .title-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .title-filters label { min-width: 0; }
+  .title-filters label:has(select) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .title-filters select { width: 100%; max-width: none; min-width: 0; min-height: 44px; }
+  .header-tools input, .header-tools select, .country-controls input,
+  .country-controls select, .title-filters select, .anime-search-filters input,
+  .anime-search-filters select { font-size: 16px; }
+  .explore-fields { grid-template-columns: minmax(0, 1fr); }
+}
