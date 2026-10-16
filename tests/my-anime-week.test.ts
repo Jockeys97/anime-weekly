@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-import { buildPersonalReleases, inRomeWeek, matchMal, matchTrakt, romeWeek, weekCandidates, type TraktRelease, type WeekCandidate } from '../lib/my-anime-week';
+import { buildPersonalReleases, groupPersonalReleases, inRomeWeek, matchMal, matchTrakt, romeWeek, weekCandidates, type TraktRelease, type WeekCandidate } from '../lib/my-anime-week';
 import { getDictionary, locales } from '../lib/i18n';
 const week = { year: 2026, week: 43 }; // Rome switches to winter time on Sunday.
 const candidates: WeekCandidate[] = [{ id: 21, malId: 123, names: ['Example Anime'], tmdbKeys: ['tv:42'] }];
@@ -32,7 +32,7 @@ describe('personal calendar week and matching', () => {
     expect(matchTrakt({ title: 'Different', ids: { trakt: 7, tmdb: 42 } }, mapped)?.id).toBe(21);
     expect(matchTrakt({ title: 'Unknown', ids: { trakt: 7 } }, mapped)).toBeUndefined();
   });
-  it('keeps direct Trakt entries, filters to followed MAL anime and deduplicates matched episodes', () => {
+  it('keeps only confirmed Trakt anime, filters to followed MAL anime and deduplicates matched episodes', () => {
     const firstAired = '2026-10-20T12:00:00Z';
     const trakt: TraktRelease = { first_aired: firstAired, episode: { season: 1, number: 2 }, show: { title: 'Example Anime', ids: { trakt: 7, tmdb: 42 } } };
     const events = [
@@ -43,9 +43,9 @@ describe('personal calendar week and matching', () => {
     ];
     const result = buildPersonalReleases([trakt, trakt, { ...trakt, show: { title: 'Unmatched Trakt title', ids: { trakt: 99 } } }],
       [{ id: 123, title: 'Example Anime' }, { id: 456, title: 'Unmatched MAL title' }], candidates, events, week);
-    expect(result.releases).toHaveLength(3); expect(result.unmatched).toBe(1);
+    expect(result.releases).toHaveLength(2); expect(result.unmatched).toBe(1);
     expect(result.releases.find(release => release.anilistId === 21 && release.episode === 2)?.sources).toEqual(['trakt', 'mal']);
-    expect(result.releases.find(release => release.title === 'Unmatched Trakt title')?.anilistId).toBeUndefined();
+    expect(result.releases.some(release => release.title === 'Unmatched Trakt title')).toBe(false);
   });
   it.each(locales)('includes all personalized copy keys in %s', locale => {
     const d = getDictionary(locale).myAnime;
@@ -53,4 +53,14 @@ describe('personal calendar week and matching', () => {
     expect(Object.values(d).every(value => typeof value === 'string' && value.length > 0)).toBe(true);
     if (locale === 'it') expect(d.title).toBe('I miei anime');
   });
+});
+
+it('groups episode batches by anime and Rome day while keeping different days separate', () => {
+  const entry = { key: '1', title: 'Example Anime', anilistId: 21, airingAt: Date.parse('2026-10-20T12:00:00Z'), episode: 1, season: 1, sources: ['trakt' as const] };
+  const groups = groupPersonalReleases([entry, { ...entry, key: '2', episode: 2 }, { ...entry, key: '3', episode: 3, airingAt: Date.parse('2026-10-21T12:00:00Z') }]);
+  expect(groups).toHaveLength(2); expect(groups[0].episodes).toHaveLength(2);
+  expect(groups[0].sources).toEqual(['trakt']);
+});
+it('does not override a conflicting TMDB identity with a same-name alias', () => {
+  expect(matchTrakt({ title: 'Example Anime', ids: { trakt: 7, tmdb: 999 } }, candidates)).toBeUndefined();
 });
