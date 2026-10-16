@@ -20,6 +20,18 @@ export interface AnimeTitle { genres?: string[]; id: number; kind: Kind; name: s
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };
 export function isTMDBConfigured() { return Boolean(process.env.TMDB_READ_TOKEN?.trim() || process.env.TMDB_API_KEY?.trim()); }
 export function isOMDBConfigured() { return Boolean(process.env.OMDB_API_KEY?.trim()); }
+// Public metadata used to identify personal Trakt shows, independently of the
+// current weekly selection. A missing/failed response is never a negative match.
+export async function getAnimeSeriesMetadata(id: number): Promise<{ title: string; originalTitle?: string; year: number; poster: string | null } | null> {
+  if (!Number.isSafeInteger(id) || id <= 0) return null;
+  const data = await tmdb<{ id: number; name: string; original_name?: string; first_air_date?: string; genres?: { id: number }[]; origin_country?: string[]; poster_path?: string | null }>(`tv/${id}`, {}, 604800);
+  if (data.id !== id || !data.name || !data.first_air_date) throw new Error('Invalid series metadata');
+  if (!data.genres?.some(genre => genre.id === 16) || !data.origin_country?.includes('JP')) return null;
+  const year = Number(data.first_air_date.slice(0, 4));
+  if (!Number.isInteger(year) || year < 1900) throw new Error('Missing series premiere');
+  return { title: data.name, originalTitle: data.original_name, year,
+    poster: data.poster_path && /^\/[a-zA-Z0-9_.-]+$/.test(data.poster_path) ? `https://image.tmdb.org/t/p/w342${data.poster_path}` : null };
+}
 async function tmdb<T>(path: string, query: Record<string, string> = {}, revalidate = CACHE_SECONDS, fresh = false): Promise<T> {
   if (!isTMDBConfigured()) throw new Error('TMDB not configured');
   const url = new URL(`https://api.themoviedb.org/3/${path}`);

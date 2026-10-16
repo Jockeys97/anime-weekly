@@ -121,3 +121,12 @@ it('provider-only filtering never calls rating or external-ID endpoints', async 
   expect(result.providers.IT?.providers).toEqual([netflix]);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it('verifies Japanese animation metadata for personal calendars before catalog matching', async () => {
+  const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ id: 42, name: 'Example Anime', original_name: 'アニメ', first_air_date: '2020-10-01', genres: [{ id: 16 }], origin_country: ['JP'], poster_path: '/poster.jpg' }))
+    .mockResolvedValueOnce(Response.json({ id: 43, name: 'The Diplomat', first_air_date: '2023-01-01', genres: [{ id: 18 }], origin_country: ['US'] }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { getAnimeSeriesMetadata } = await import('../lib/tmdb');
+  expect(await getAnimeSeriesMetadata(42)).toEqual({ title: 'Example Anime', originalTitle: 'アニメ', year: 2020, poster: 'https://image.tmdb.org/t/p/w342/poster.jpg' });
+  expect(await getAnimeSeriesMetadata(43)).toBeNull();
+});
