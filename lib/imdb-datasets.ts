@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import { StringDecoder } from 'node:string_decoder';
 import { createGunzip } from 'node:zlib';
 import { unstable_cache } from 'next/cache';
-import { storeImdbRatingIndex, ratingBucket, RATING_SHARDS, type RatingShard } from '@/lib/imdb-rating-index';
+import { storeImdbRatingIndex, hasImdbRatingIndex, migrateLegacyImdbIndex, ratingBucket, RATING_SHARDS, type RatingShard } from '@/lib/imdb-rating-index';
 import { japanDate } from '@/lib/weekly-episodes';
 
 export interface ImdbEpisodeTarget { imdbId: string; seriesImdbId: string }
@@ -100,7 +100,7 @@ function targetsForCache(targets: readonly ImdbEpisodeTarget[]): ImdbEpisodeTarg
   return [...unique.values()].filter(target => !ambiguous.has(target.imdbId)).sort((a, b) => a.imdbId.localeCompare(b.imdbId));
 }
 
-interface DailyDatasetEpisodes extends ImdbDatasetEpisodes { parents: Record<string, string> }
+interface DailyDatasetEpisodes extends ImdbDatasetEpisodes { indexVersion?: number; parents: Record<string, string> }
 const pendingTargets = new Map<string, ImdbEpisodeTarget[]>();
 const inFlight = new Map<string, Promise<DailyDatasetEpisodes>>();
 const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
@@ -135,7 +135,7 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
         parents[target.imdbId] = target.seriesImdbId;
       }
       await storeImdbRatingIndex(day, shards);
-      return { status: 'ready', ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
+      return { status: 'ready', indexVersion: 2, ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
     } catch {
       controller.abort();
       // Cache the failed daily attempt too; tomorrow has a different key.
@@ -151,6 +151,29 @@ Object.defineProperty(dailyLoader, 'toString', { value: () => 'imdb-official-epi
 // a third file on the same day. Newly identified episodes wait until tomorrow.
 const dailyEpisodes = unstable_cache(dailyLoader, ['imdb-official-episode-daily-v2'], { revalidate: 172800, tags: ['imdb-datasets'] });
 
+// One-time migration of an older daily result whose deferred Next cache writes
+// were incomplete. Reuse complete legacy partitions first. Otherwise download
+// only the rating file once for this migration day; never consume OMDb quota.
+const repairIndexLoader = async (day: string) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const shards: RatingShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
+    await matchingRows('ratings', new Set(), controller.signal, shards);
+    await storeImdbRatingIndex(day, shards);
+    return true;
+  } catch { return false; }
+  finally { clearTimeout(timer); }
+};
+Object.defineProperty(repairIndexLoader, 'toString', { value: () => 'imdb-runtime-index-migration-loader-v1' });
+const repairDailyIndex = unstable_cache(repairIndexLoader, ['imdb-runtime-index-migration-v1'], { revalidate: 172800, tags: ['imdb-datasets'] });
+export async function repairLegacyImdbRatingIndex(day = japanDate()): Promise<boolean> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('Invalid IMDb index day');
+  if (await hasImdbRatingIndex(day)) return true;
+  if (await migrateLegacyImdbIndex(day)) return true;
+  return repairDailyIndex(day);
+}
+
 // Only the authenticated collector calls this writer. Public pages read the
 // small stored weekly snapshot and never download either dataset.
 export async function primeImdbDatasetEpisodes(targets: readonly ImdbEpisodeTarget[], day = japanDate()): Promise<ImdbDatasetEpisodes> {
@@ -159,6 +182,7 @@ export async function primeImdbDatasetEpisodes(targets: readonly ImdbEpisodeTarg
   if (!pendingTargets.has(day)) pendingTargets.set(day, selected);
   try {
     const cached = await dailyEpisodes(day);
+    if (cached.status === 'ready' && cached.indexVersion !== 2) await repairLegacyImdbRatingIndex(day);
     // A cache hit still requires the exact parent requested by this collector.
     const ratings = Object.fromEntries(selected.filter(target => cached.parents[target.imdbId] === target.seriesImdbId && cached.ratings[target.imdbId]).map(target => [target.imdbId, cached.ratings[target.imdbId]]));
     return { status: cached.status, ratings, updatedAt: cached.updatedAt, ...(cached.dataUpdatedAt ? { dataUpdatedAt: cached.dataUpdatedAt } : {}) };
