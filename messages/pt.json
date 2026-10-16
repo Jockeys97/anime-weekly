@@ -168,7 +168,7 @@
     "body": "Um pequeno espaço para quem adora anime."
   },
   "metadata": {
-    "title": "Anime Weekly · O guia semanal",
+    "title": "Weekly Anime · O guia semanal",
     "description": "Anime em exibição no Japão e novas estreias de cinema. Encontra a tua próxima história e descobre onde a ver."
   },
   "calendar": {
@@ -399,10 +399,12 @@
   },
   "support": {
     "title": "Apoia o site",
-    "description": "Ajuda a manter o Anime Weekly online, sem anúncios nem links de afiliados.",
+    "description": "Ajuda a manter o Weekly Anime online, sem anúncios nem links de afiliados.",
     "link": "Apoia no Ko-fi"
   },
   "episodeChart": {
+    "allSeasons": "Todas as temporadas",
+    "cacheError": "Não foi possível ler a cache dos episódios. Tenta novamente.",
     "title": "Notas dos episódios",
     "eyebrow": "Por temporada",
     "description": "Notas dos episódios da série IMDb:",

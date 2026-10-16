@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import { runtimeCacheMock } from './runtime-cache-setup';
-import { storeImdbEpisodeIndex, readImdbEpisodeChart, type EpisodeShard } from '../lib/imdb-episode-index';
+import { storeImdbEpisodeIndex, readImdbEpisodeChart, getImdbEpisodeChart, type EpisodeShard } from '../lib/imdb-episode-index';
 import { ratingBucket, RATING_SHARDS } from '../lib/imdb-rating-index';
 import { GET } from '../app/api/episode-ratings/route';
 const runtime = runtimeCacheMock();
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const now = new Date('2026-10-16T12:00:00Z');
 async function write(day = '2026-10-16') {
   const shards: EpisodeShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
@@ -52,4 +52,26 @@ it('keeps public cache misses retryable and never initiates upstream work', asyn
   expect(await response.json()).toEqual({ status: 'unavailable', episodes: [] });
   expect(fetch).not.toHaveBeenCalled();
   expect(runtime.set).not.toHaveBeenCalled();
+});
+it('reads a missing regional index through the collector bundle without downloading IMDb', async () => {
+  vi.stubEnv('VERCEL_ENV', 'production'); vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'anime-weekly.example.test');
+  const fetch = vi.fn(async () => Response.json({ seriesId: 'tt100', status: 'ready', episodes: [{ imdbId: 'tt1', season: 4, episode: 17, score: 9.1, votes: 1200 }] }));
+  vi.stubGlobal('fetch', fetch);
+  const [a, b] = await Promise.all([getImdbEpisodeChart('tt100'), getImdbEpisodeChart('tt100')]);
+  expect(a).toEqual(b); expect(a.episodes[0].season).toBe(4);
+  expect(fetch).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.example.test/api/revalidate?episodeChart=tt100', expect.objectContaining({ cache: 'no-store' }));
+  expect(runtime.set).not.toHaveBeenCalled();
+});
+it('rejects a collector response for a different series and never fabricates a chart', async () => {
+  vi.stubEnv('VERCEL_ENV', 'production'); vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'anime-weekly.example.test');
+  const fetch = vi.fn(async () => Response.json({ seriesId: 'tt200', status: 'ready', episodes: [] })); vi.stubGlobal('fetch', fetch);
+  expect(await getImdbEpisodeChart('tt100')).toEqual({ status: 'unavailable', episodes: [], reason: 'cache-error' });
+  expect(fetch).toHaveBeenCalledTimes(1); expect(runtime.set).not.toHaveBeenCalled();
+});
+it('bounds cache outages rather than holding a detail render indefinitely', async () => {
+  vi.useFakeTimers(); runtime.get.mockImplementation(() => new Promise(() => {}));
+  const pending = readImdbEpisodeChart('tt100', now);
+  await vi.advanceTimersByTimeAsync(4001);
+  expect(await pending).toEqual({ status: 'unavailable', episodes: [], reason: 'cache-error' });
+  expect(runtime.get.mock.calls.length).toBeLessThanOrEqual(4);
 });

@@ -58,3 +58,8 @@
     transition: none;
   }
 }
+
+@media (max-width: 600px) {
+  .weekly { position: absolute; top: 12px; right: 12px; float: none; margin: 0; }
+  :global(.anime-card:not(.anime-detail)) .actions + :global(.type-label) { padding-right: 88px; }
+}

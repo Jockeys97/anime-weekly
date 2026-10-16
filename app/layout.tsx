@@ -13,9 +13,9 @@ const d = getDictionary('it');
 // Locales currently use a cookie/client preference, not distinct crawlable URLs.
 // Do not advertise hreflang alternates that all resolve to the same document.
 export const metadata: Metadata = {
-  metadataBase: siteUrl(), title: { default: d.metadata.title, template: '%s · Anime Weekly' },
+  metadataBase: siteUrl(), title: { default: d.metadata.title, template: '%s · Weekly Anime' },
   description: d.metadata.description, icons: { icon: '/icon.svg' },
-  openGraph: { title: d.metadata.title, description: d.metadata.description, siteName: 'Anime Weekly', locale: 'it_IT', type: 'website', url: '/' },
+  openGraph: { title: d.metadata.title, description: d.metadata.description, siteName: 'Weekly Anime', locale: 'it_IT', type: 'website', url: '/' },
   twitter: { card: 'summary', title: d.metadata.title, description: d.metadata.description },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

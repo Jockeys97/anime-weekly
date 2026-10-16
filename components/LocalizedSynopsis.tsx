@@ -41,7 +41,7 @@ function SynopsisContent({ original, titles, year, kind, locale, anilistId, init
     return () => { cancelled = true; observer.disconnect(); };
   }, [locale, query, initial]);
   const pending = locale !== 'en' && Boolean(original) && !translation && !checked;
-  return <div ref={ref}>
+  return <div ref={ref} className="localized-synopsis">
     <p className={className} lang={pending || translation ? locale : original ? 'en' : locale} role={pending ? 'status' : undefined}>{pending ? d.language.loadingSynopsis : translation || original || d.state.noSynopsis}</p>
     {translation && machine && <p className="synopsis-fallback">{d.language.machineTranslation} · DeepL</p>}
     {locale !== 'en' && original && !translation && checked && <p className="synopsis-fallback">{d.language.originalSynopsis}</p>}

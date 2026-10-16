@@ -50,9 +50,12 @@
 }
 @media (max-width: 600px) {
   .header-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
-  .header-nav { width: 100%; grid-column: 1 / -1; }
-  .header-nav a { flex: 1; padding: 9px 8px; font-size: 12px; gap: 7px; }
+  .header-nav { width: 100%; grid-column: 1 / -1; align-items: stretch; }
+  .header-nav a { flex: 1 1 0; min-width: 0; flex-direction: column; padding: 9px 4px; font-size: 12px; gap: 5px; white-space: normal; text-align: center; overflow-wrap: break-word; }
+  .header-tools .search-box { grid-column: 1 / -1; min-width: 0; }
   .header-tools .search-box input { width: 100%; }
+  .header-tools .language-control { grid-column: 1 / -1; }
+  .header-tools .language-control select { width: 100%; max-width: none; min-height: 44px; }
 }
 @media (max-width: 400px) {
   .header-nav a { font-size: 11px; padding: 9px 6px; gap: 4px; }

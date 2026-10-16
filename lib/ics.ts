@@ -16,7 +16,7 @@ export function foldCalendarLine(line: string): string {
   return result + current;
 }
 export function generateIcs(episodes: readonly CalendarEpisode[], stamp = new Date()): string {
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Anime Weekly//Calendario episodi//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Weekly Anime//Calendario episodi//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
   const seen = new Set<string>();
   for (const event of [...episodes].sort((a, b) => a.airingAt - b.airingAt || a.uid.localeCompare(b.uid))) {
     if (!Number.isSafeInteger(event.airingAt) || !Number.isSafeInteger(event.episode) || event.episode <= 0 || !event.uid || seen.has(event.uid) || !Number.isFinite(new Date(event.airingAt * 1000).getTime())) continue;

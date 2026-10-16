@@ -1,4 +1,4 @@
-# Anime Weekly
+# Weekly Anime
 
 A multilingual, mobile-first weekly anime guide built with Next.js App Router, TypeScript, Tailwind CSS and ESLint. No sample releases or estimated ratings are displayed.
 
@@ -223,7 +223,7 @@ The newsletter is optional and hidden by default. All signup/status text and dig
 | `KV_REST_API_TOKEN` | Server-only read/write REST token for the same Redis database. |
 | `NEWSLETTER_SECRET` | Long random server-only HMAC secret for unsubscribe links. Required for sending; rotating it invalidates previous links. |
 | `RESEND_API_KEY` | Server-only Resend API key. |
-| `NEWSLETTER_FROM` | Sender address on a verified Resend domain, e.g. `Anime Weekly <news@example.com>`. |
+| `NEWSLETTER_FROM` | Sender address on a verified Resend domain, e.g. `Weekly Anime <news@example.com>`. |
 | `CRON_SECRET` | Existing server-only secret, required as `Authorization: Bearer <CRON_SECRET>` for sending. |
 | `NEWSLETTER_SITE_URL` | Optional canonical site origin for email links, e.g. `https://example.com`. Defaults to the authenticated send request's origin. Set this for production to avoid preview/local links. |
 
@@ -317,8 +317,12 @@ Empty Trakt history/watchlist responses may have zero pagination pages; these ar
 
 ### IMDb episode chart on anime details
 
-TV/TV_SHORT/ONA detail pages include a season selector and an episode-rating bar chart, using the same confirmed IMDb series ID as the existing rating tile. Ratings, votes, IMDb numbering and exact episode links come from the official daily datasets. The default season is the first numbered season; specials are separate. The dashed line is the arithmetic average of the displayed episode ratings, not the series rating. Episodes without a rating are omitted without renumbering the remaining episodes. Titles and anime-season numbering are not guessed from IMDb coordinates.
+TV/TV_SHORT/ONA detail pages include a season selector and an episode-rating bar chart, using the confirmed parent IMDb series identity even when a cour has its own independently rated IMDb page. Ratings, votes, IMDb numbering and exact episode links come from the official daily datasets. The default view shows all rated episodes across the IMDb series; each season and specials remain separately selectable. The dashed line is the arithmetic average of the displayed episode ratings, not the series rating. Episodes without a rating are omitted without renumbering the remaining episodes. Titles and anime-season numbering are not guessed from IMDb coordinates.
 
 The authenticated collector reuses its two daily TSV streams to join all rated episodes with exact IMDb parents, including series outside that week's Top 5 candidates. Compact per-parent partitions are compressed and stored in a separate Runtime Cache namespace, with verified writes and checksums before publishing a completion marker. Public SSR and `/api/episode-ratings?imdb=tt…` only read the relevant partition, retaining a complete index from the previous seven days on failure. No public request downloads datasets or calls OMDb. A missing chart cache can be checked again in the browser without refreshing the page or spending vendor quota.
 
 The daily collector cache identity stays unchanged: deploying this feature after today's collection does not download either file again. The first new index is built by the next day's normal collection. The episode stream now also runs on days with zero weekly candidates so historical-series charts remain available. A chart storage failure does not discard successful title ratings or weekly episode results. All six interface languages include chart labels.
+
+### Episode chart recovery
+
+The series/cour resolution preserves a separate `episodeSeries` identity when a rated season page differs from the verified parent. This does not change exact-season AniList or MAL IDs. The chart opens all IMDb seasons by default and includes season numbers in episode labels. Public renders and retries read the local index first, then a cache-only reader in the collector bundle; collector and episode API use `iad1` because Runtime Cache is regional. Reads have deadlines and concurrent series lookups coalesce. Cache read failures are distinguished from an index not yet collected. No public path invokes a writer or downloads a dataset, and the daily collection key remains unchanged.

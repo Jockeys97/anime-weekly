@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const background = vi.hoisted(() => ({ tasks: [] as Promise<void>[] }));
+vi.mock('../lib/imdb-episode-index', () => ({ readImdbEpisodeChart: vi.fn() }));
+import { readImdbEpisodeChart } from '../lib/imdb-episode-index';
 vi.mock('../lib/imdb-datasets', () => ({ repairLegacyImdbRatingIndex: vi.fn() }));
 import { repairLegacyImdbRatingIndex } from '../lib/imdb-datasets';
 vi.mock('server-only', () => ({}));
@@ -268,4 +270,12 @@ it('resumes incomplete availability even after same-day episode collection', asy
   await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(primeWeeklyRatings).toHaveBeenCalledExactlyOnceWith('2026-42', previous);
   expect(after).toHaveBeenCalledOnce();
+});
+
+it('serves full-series episode charts from the collector cache without running any writer', async () => {
+  vi.mocked(readImdbEpisodeChart).mockResolvedValue({ status: 'ready', episodes: [{ imdbId: 'tt1', season: 4, episode: 17, score: 9.1, votes: 100 }] });
+  const response = await GET(new Request('https://example.test/api/revalidate?episodeChart=tt2560140'));
+  expect(await response.json()).toMatchObject({ seriesId: 'tt2560140', status: 'ready', episodes: [{ season: 4, episode: 17 }] });
+  expect(primeWeeklyEpisodes).not.toHaveBeenCalled(); expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  expect(repairLegacyImdbRatingIndex).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
 });
