@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { siteUrl } from '@/lib/seo';
 import { Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/next';
 import { getDictionary } from '@/lib/i18n';
 import { StreamingCountryProvider } from '@/components/StreamingCountry';
 import { LocaleProvider } from '@/components/LanguageSelector';
@@ -19,5 +20,5 @@ export const metadata: Metadata = {
   twitter: { card: 'summary', title: d.metadata.title, description: d.metadata.description },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="it"><body><LocaleProvider><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider></body></html>;
+  return <html lang="it"><body><LocaleProvider><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider><Analytics /></body></html>;
 }
