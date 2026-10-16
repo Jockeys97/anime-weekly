@@ -427,6 +427,7 @@
     "retry": "Cache erneut prüfen"
   },
   "dubbing": {
+    "lookupLanguage": "Geprüfte Sprache",
     "audio": "Audio",
     "reportedShort": "Gemeldet",
     "partialShort": "Teilweise",

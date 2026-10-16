@@ -356,3 +356,5 @@ Dataset attribution: Dub data © [MyDubList](https://mydublist.com) —
 by exact ID and displayed with localized status labels; original datasets are not modified.
 
 Dubbing reports use a compact, keyboard-accessible audio/language/status disclosure on both detail and list views. Source, consulted date and the regional-availability qualification stay available inside the disclosure. A small decorative flag follows the audio language (GB, IT, ES, FR, DE, PT); it does not claim a regional dub variant or availability in that country.
+
+A dubbing flag is only shown for a full or partial MyDubList report. Unverified and pending lookups use a neutral question mark and a “Language checked” label instead of “Audio”, so a selected interface language cannot be mistaken for an existing audio track. An absent entry remains unverified, never an inferred “no dub”.
