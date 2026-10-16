@@ -6,6 +6,7 @@ import { createGunzip } from 'node:zlib';
 import { unstable_cache } from 'next/cache';
 import { storeImdbRatingIndex, hasImdbRatingIndex, migrateLegacyImdbIndex, ratingBucket, RATING_SHARDS, type RatingShard } from '@/lib/imdb-rating-index';
 import { japanDate } from '@/lib/weekly-episodes';
+import { storeImdbEpisodeIndex, type EpisodeShard } from '@/lib/imdb-episode-index';
 
 export interface ImdbEpisodeTarget { imdbId: string; seriesImdbId: string }
 export interface DatasetEpisodeScore { season: number; episode: number; score: number; votes: number }
@@ -24,8 +25,10 @@ const files = {
 } as const;
 
 // Stream the official TSV files instead of loading a complete IMDb database
-// into memory or the Next data cache. Only score/vote pairs are indexed.
-async function matchingRows(file: keyof typeof files, wanted: Set<string>, signal: AbortSignal, shards?: RatingShard[]) {
+// into memory or the Next data cache. Index only validated scores, votes and
+// episode coordinates; never retain the full title.episode catalogue.
+async function matchingRows(file: keyof typeof files, wanted: Set<string>, signal: AbortSignal, shards?: RatingShard[], chart?: { shards: EpisodeShard[]; ratings: Promise<RatingShard[]> }) {
+  if (chart) void chart.ratings.catch(() => undefined);
   const response = await fetch(`https://datasets.imdbws.com/${files[file].name}`, { cache: 'no-store', signal });
   if (!response.ok || !response.body) throw new Error('IMDb dataset unavailable');
   const input = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
@@ -35,7 +38,8 @@ async function matchingRows(file: keyof typeof files, wanted: Set<string>, signa
   void transfer.catch(() => undefined);
   const decoder = new StringDecoder('utf8');
   const rows = new Map<string, string[]>();
-  let buffer = '', bytes = 0, headerSeen = false, ratingRows = 0;
+  let buffer = '', bytes = 0, headerSeen = false, ratingRows = 0, chartRows = 0;
+  let chartRatings: RatingShard[] | undefined;
   const consume = (line: string) => {
     if (!headerSeen) {
       if (line.replace(/^\uFEFF/, '').replace(/\r$/, '') !== files[file].header) throw new Error('IMDb dataset schema changed');
@@ -59,12 +63,29 @@ async function matchingRows(file: keyof typeof files, wanted: Set<string>, signa
         }
       }
     }
+    if (file === 'episodes' && chart && chartRatings) {
+      const [id, parent, seasonText, episodeText, extra] = line.replace(/\r$/, '').split('\t');
+      const rating = /^tt\d+$/.test(id) ? chartRatings[ratingBucket(id)][id] : undefined;
+      if (extra === undefined && rating && /^tt\d+$/.test(parent) && parent !== id && /^\d+$/.test(seasonText) && /^\d+$/.test(episodeText)) {
+        const season = Number(seasonText), episode = Number(episodeText);
+        if (Number.isSafeInteger(season) && season >= 0 && season <= 10000 && Number.isSafeInteger(episode) && episode > 0 && episode <= 100000) {
+          if (++chartRows > 3000000) throw new Error('Episode chart index size limit reached');
+          const partition = chart.shards[ratingBucket(parent)];
+          const entries = partition[parent] ??= [];
+          if (entries.length >= 10000) throw new Error('Episode chart series size limit reached');
+          entries.push([id, season, episode, rating[0], rating[1]]);
+        }
+      }
+    }
     if (tab < 0 || !wanted.has(line.slice(0, tab))) return;
     const columns = line.replace(/\r$/, '').split('\t');
     if (columns.length !== (file === 'ratings' ? 3 : 4) || rows.has(columns[0])) throw new Error('Ambiguous IMDb dataset row');
     rows.set(columns[0], columns);
   };
   try {
+    // Both HTTP streams start together; backpressure bounds the episode stream
+    // while the score index finishes. No full title.episode file is retained.
+    if (chart) chartRatings = await chart.ratings;
     for await (const chunk of output) {
       bytes += chunk.length;
       if (bytes > MAX_BYTES) throw new Error('IMDb dataset size limit reached');
@@ -117,9 +138,21 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
     try {
       const wanted = new Set(targets.map(target => target.imdbId));
       const shards: RatingShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
-      const [ratings, episodes] = await Promise.all([
-        matchingRows('ratings', wanted, controller.signal, shards), targets.length ? matchingRows('episodes', wanted, controller.signal) : Promise.resolve({ rows: new Map<string, string[]>() }),
+      const chartShards: EpisodeShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
+      const ratingTask = matchingRows('ratings', wanted, controller.signal, shards);
+      const [ratingResult, episodeResult] = await Promise.allSettled([
+        ratingTask, matchingRows('episodes', wanted, controller.signal, undefined, { shards: chartShards, ratings: ratingTask.then(() => shards) }),
       ]);
+      if (ratingResult.status === 'rejected') throw ratingResult.reason;
+      const ratings = ratingResult.value;
+      // The optional global episode stream must never prevent a complete
+      // title-rating file from refreshing, including days with no weekly targets.
+      await storeImdbRatingIndex(day, shards);
+      if (episodeResult.status === 'rejected') return {
+        status: targets.length ? 'unavailable' : 'ready', indexVersion: 2, ratings: {}, parents: {}, updatedAt,
+        ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}),
+      };
+      const episodes = episodeResult.value;
       const result: Record<string, DatasetEpisodeScore> = {};
       const parents: Record<string, string> = {};
       for (const target of targets) {
@@ -134,7 +167,9 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
         result[target.imdbId] = { score, votes, season, episode };
         parents[target.imdbId] = target.seriesImdbId;
       }
-      await storeImdbRatingIndex(day, shards);
+      // Chart storage is optional: a failed partition must not remove a valid
+      // title-score index or the weekly Top 5 result. Readers retain yesterday.
+      await storeImdbEpisodeIndex(day, chartShards, updatedAt, ratings.modified).catch(() => console.warn('[episode-chart] daily cache write unavailable'));
       return { status: 'ready', indexVersion: 2, ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
     } catch {
       controller.abort();

@@ -34,7 +34,7 @@ it('keeps the previous complete daily file across a week boundary and a failed d
   fetch.mockRejectedValue(new Error('offline'));
   await primeImdbDatasetEpisodes([]);
   expect((await getImdbScore('tt2560140', '2026-43')).imdbRating).toBe('9.1');
-  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(fetch).toHaveBeenCalledTimes(4); // Ratings and episode streams, once per day.
 });
 it('does not publish rows from a corrupt/truncated gzip stream', async () => {
   const compressed = gzipSync(table);

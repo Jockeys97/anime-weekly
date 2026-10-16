@@ -401,5 +401,27 @@
     "title": "Sostieni il sito",
     "description": "Aiuta Anime Weekly a restare online, senza pubblicità né link affiliati.",
     "link": "Sostieni su Ko-fi"
+  },
+  "episodeChart": {
+    "title": "Voti degli episodi",
+    "eyebrow": "Stagione per stagione",
+    "description": "Voti degli episodi della serie IMDb:",
+    "chooseSeason": "Scegli una stagione",
+    "season": "Stagione",
+    "specials": "Speciali",
+    "ratedEpisodes": "episodi con voto",
+    "average": "di media",
+    "chartLabel": "Grafico dei voti degli episodi; scorri orizzontalmente",
+    "episode": "Episodio",
+    "votes": "voti",
+    "openImdb": "Vedi su IMDb",
+    "scrollHint": "Scorri per vedere altri episodi. Seleziona una barra per aprire la pagina IMDb.",
+    "note": "Voti degli episodi IMDb · cache giornaliera. Sono mostrati solo gli episodi con voto; la numerazione segue IMDb e può differire dalle stagioni anime. La linea tratteggiata indica la media degli episodi mostrati.",
+    "updated": "Dati del",
+    "loading": "Caricamento dei voti degli episodi dalla cache…",
+    "noRatings": "Non ci sono episodi con voto per questa serie nell’ultimo dataset IMDb.",
+    "notCached": "L’indice giornaliero degli episodi non è ancora disponibile. Verrà compilato al prossimo aggiornamento programmato.",
+    "noMatch": "Serve un abbinamento esatto alla serie IMDb per mostrare i voti degli episodi.",
+    "retry": "Ricontrolla la cache"
   }
 }

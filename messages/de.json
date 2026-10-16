@@ -401,5 +401,27 @@
     "title": "Unterstütze die Website",
     "description": "Hilf Anime Weekly online zu bleiben, ohne Werbung oder Affiliate-Links.",
     "link": "Auf Ko-fi unterstützen"
+  },
+  "episodeChart": {
+    "title": "Episodenbewertungen",
+    "eyebrow": "Nach Staffel",
+    "description": "Episodenbewertungen der IMDb-Serie:",
+    "chooseSeason": "Staffel wählen",
+    "season": "Staffel",
+    "specials": "Spezialfolgen",
+    "ratedEpisodes": "bewertete Episoden",
+    "average": "im Durchschnitt",
+    "chartLabel": "Episodenbewertungen; horizontal scrollen",
+    "episode": "Episode",
+    "votes": "Stimmen",
+    "openImdb": "Auf IMDb ansehen",
+    "scrollHint": "Scrolle für weitere Episoden. Wähle einen Balken, um die IMDb-Seite zu öffnen.",
+    "note": "IMDb-Episodenbewertungen · täglicher Cache. Nur bewertete Episoden werden angezeigt; die IMDb-Nummerierung kann von Anime-Staffeln abweichen. Die gestrichelte Linie zeigt den Durchschnitt der angezeigten Episoden.",
+    "updated": "Daten vom",
+    "loading": "Episodenbewertungen werden aus dem Cache geladen…",
+    "noRatings": "Im neuesten IMDb-Datensatz gibt es keine bewerteten Episoden für diese Serie.",
+    "notCached": "Der tägliche Episodenindex ist noch nicht verfügbar. Er wird beim nächsten geplanten Update erstellt.",
+    "noMatch": "Für die Episodenbewertungen wird eine genaue Zuordnung zur IMDb-Serie benötigt.",
+    "retry": "Cache erneut prüfen"
   }
 }
