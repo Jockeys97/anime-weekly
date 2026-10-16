@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { parseJustWatchPage, recoverJustWatchOffers } from '../lib/justwatch-recovery';
-function fixture(country = 'IT', imdb = 'tt7441658', monetization = 'FLATRATE', href = 'https://www.netflix.com/title/80238012') {
+function fixture(country = 'IT', imdb = 'tt7441658', monetization = 'FLATRATE', href = 'https://www.netflix.com/title/80238012', icon?: string) {
   const table: unknown[] = [];
   function ref(value: unknown): number {
     const index = table.length; table.push(null);
@@ -9,7 +9,7 @@ function fixture(country = 'IT', imdb = 'tt7441658', monetization = 'FLATRATE', 
   }
   const path = country === 'IT' ? '/it/serie-tv/black-clover' : '/us/tv-show/black-clover';
   ref({ __typename: 'Url', fullPath: path, node: { __ref: 'Show:123' } });
-  ref({ 'Show:123': { ['content({"country":"'+country+'"})']: { externalIds: { imdbId: imdb } }, ['offers({"country":"'+country+'"})']: [{ country, monetizationType: monetization, package: { packageId: 8, clearName: 'Netflix' }, standardWebURL: href }] } });
+  ref({ 'Show:123': { ['content({"country":"'+country+'"})']: { externalIds: { imdbId: imdb } }, ['offers({"country":"'+country+'"})']: [{ country, monetizationType: monetization, package: { packageId: 8, clearName: 'Netflix', ...(icon ? { 'icon({"profile":"S100"})': icon } : {}) }, standardWebURL: href }] } });
   return `<link hreflang="it-IT" href="https://www.justwatch.com/it/serie-tv/black-clover"><script id="__NUXT_DATA__">${JSON.stringify(table)}</script>`;
 }
 afterEach(() => vi.unstubAllGlobals());
@@ -40,4 +40,13 @@ it('leaves unavailable data retryable when the seed cannot be verified', async (
 });
 it('fails safely when markup changes', () => {
   expect(parseJustWatchPage('<script id="__NUXT_DATA__">bad</script>','https://www.justwatch.com/it/serie-tv/black-clover','tt7441658','IT')).toBeNull();
+});
+
+it('keeps the JustWatch package icon with its verified regional offer', () => {
+  const result = parseJustWatchPage(fixture('IT', 'tt7441658', 'FLATRATE', 'https://www.netflix.com/title/80238012', '/icon/207360008/s100/netflix.{format}'), 'https://www.justwatch.com/it/serie-tv/black-clover', 'tt7441658', 'IT');
+  expect(result?.providers[0].logo_url).toBe('https://images.justwatch.com/icon/207360008/s100/netflix.png');
+});
+it.each(['https://evil.example/icon.png', '//evil.example/icon.png', '/icon/1/s100/../../secret.png'])('rejects an untrusted logo path %s', icon => {
+  const result = parseJustWatchPage(fixture('IT', 'tt7441658', 'FLATRATE', 'https://www.netflix.com/title/80238012', icon), 'https://www.justwatch.com/it/serie-tv/black-clover', 'tt7441658', 'IT');
+  expect(result?.providers[0].logo_url).toBeUndefined();
 });

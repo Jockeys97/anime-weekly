@@ -8,6 +8,7 @@ export type RatingShard = Record<string, [number, number]>;
 export const RATING_SHARDS = 256;
 export const IMDB_DATASET_RATINGS_TAG = 'imdb-dataset-ratings';
 const pending = new Map<string, RatingShard>();
+const reportedMisses = new Set<string>();
 let pendingDay: string | undefined;
 export function ratingBucket(id: string): number {
   let hash = 2166136261;
@@ -63,7 +64,13 @@ export async function readImdbDatasetRating(id: string, now = new Date()): Promi
       const [score, votes] = pair;
       if (!Number.isFinite(score) || score <= 0 || score > 10 || !Number.isSafeInteger(votes) || votes <= 0) return undefined;
       return { imdbId: id, imdbRating: String(score), imdbVotes: String(votes), imdbStatus: 'ready' };
-    } catch { /* Keep the previous complete daily file available during outages. */ }
+    } catch (error) {
+      if (age === 0 && process.env.VERCEL_ENV === 'production' && !reportedMisses.has(day)) {
+        reportedMisses.add(day);
+        console.info('[imdb-index] cache read miss', { day, bucket: ratingBucket(id), reason: error instanceof Error ? error.message : 'unknown' });
+      }
+      /* Keep the previous complete daily file available during outages. */
+    }
   }
   return undefined;
 }

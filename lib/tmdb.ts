@@ -14,7 +14,7 @@ type Kind = 'tv' | 'movie';
 const TMDB_GENRES: Record<number, string> = { 28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction', 10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western', 10759: 'Action & Adventure', 10762: 'Kids', 10765: 'Sci-Fi & Fantasy', 10768: 'War & Politics' };
 interface RawTitle { popularity?: number; genre_ids?: number[]; id: number; name?: string; title?: string; original_name?: string; original_title?: string; first_air_date?: string; release_date?: string; overview?: string; poster_path?: string | null }
 interface Page { results: RawTitle[]; total_pages: number }
-export interface Provider { watch_url?: string; provider_id: number; provider_name: string; logo_path: string | null }
+export interface Provider { logo_url?: string; watch_url?: string; provider_id: number; provider_name: string; logo_path: string | null }
 interface WatchRegion { link?: string; flatrate?: Provider[]; free?: Provider[]; ads?: Provider[] }
 export interface AnimeTitle { genres?: string[]; id: number; kind: Kind; name: string; overview: string; poster: string | null; releaseDate?: string | null; ratings: Ratings; recommendation: string | null; providers: Partial<Record<StreamingRegion, { link: string; providers: Provider[] }>>; providersUnavailable: boolean }
 export type WeekData = { status: 'unconfigured' | 'error' | 'ready'; titles: AnimeTitle[]; partial?: boolean };

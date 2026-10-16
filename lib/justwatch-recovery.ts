@@ -56,7 +56,11 @@ export function parseJustWatchPage(html: string, pageUrl: string, imdbId: string
         if (!record(service)) continue;
         const id = read(service.packageId), name = read(service.clearName), href = safeUrl(read(offer.standardWebURL));
         if (!Number.isSafeInteger(id) || Number(id) <= 0 || typeof name !== 'string' || !href) continue;
-        unique.set(Number(id), { provider_id: Number(id), provider_name: name, logo_path: null, watch_url: href });
+        const iconKey = Object.keys(service).find(key => key.startsWith('icon(')) || 'icon';
+        const icon = read(service[iconKey]);
+        const iconPath = typeof icon === 'string' ? icon.replace('{profile}', 's100').replace('{format}', 'png') : '';
+        const logo_url = /^\/icon\/\d+\/s100\/[a-z0-9_-]+\.png$/i.test(iconPath) ? `https://images.justwatch.com${iconPath}` : undefined;
+        unique.set(Number(id), { ...(logo_url ? { logo_url } : {}), provider_id: Number(id), provider_name: name, logo_path: null, watch_url: href });
       }
     }
     return { providers: [...unique.values()], ...(regionalUrl && new URL(regionalUrl).origin === 'https://www.justwatch.com' ? { regionalUrl } : {}) };

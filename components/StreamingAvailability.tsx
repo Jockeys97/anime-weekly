@@ -32,7 +32,7 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
     // A failed request is not proof that the country has no streaming offers.
     // Bound both fetching and reading the body, and let the visitor retry.
     void withTimeout((async () => {
-      const response = await fetch(`/api/streaming-recovery?anime=${recoveryId}&region=${region}`, {
+      const response = await fetch(`/api/streaming-recovery?anime=${recoveryId}&region=${region}&logos=v2`, {
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(25000)]),
       });
       if (!response.ok) throw new Error('Streaming recovery unavailable');
@@ -53,7 +53,7 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
       {loading || pending ? <p role="status">{d.catalog.loadingAvailability}</p> : availability?.providers.length ? availability.providers.map(provider => <ProviderLink key={provider.provider_id}
         href={provider.watch_url || providerWatchLink(source.kind, source.id, region, provider.provider_id)}
         label={`${source.name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
-        {provider.logo_path && <Image src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`} alt="" width={24} height={24} />}
+        {(provider.logo_path || provider.logo_url) && <Image src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" width={24} height={24} />}
         <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
       </ProviderLink>) : result?.status === 'error' ? <p role="status">{d.state.providersError} <button type="button" onClick={() => {
         setResults(previous => { const next = { ...previous }; delete next[key]; return next; });
