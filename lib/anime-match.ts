@@ -85,16 +85,24 @@ export interface TMDBCandidate {
   origin_country?: string[];
 }
 
+// AniList adds the remake's premiere year to the name; TMDB usually stores it
+// only in first_air_date. Remove that label only when it agrees with the known
+// premiere year. Season suffixes and other parenthetical text stay significant.
+export function tmdbSearchTitles(titles: string[], year?: number): string[] {
+  return [...new Set(titles.map(title => title.trim().replace(/\s*\(((?:19|20)\d{2})\)\s*$/u,
+    (label, releaseYear: string) => year === Number(releaseYear) ? '' : label)).filter(Boolean))];
+}
+
 // Reverse lookup: require an exact normalized alias and a nearby release year.
 // Refuse tied matches so unrelated adaptations do not inherit providers or scores.
 export function chooseTMDBMatch(candidates: TMDBCandidate[], titles: string[], year?: number): TMDBCandidate | null {
-  const aliases = titles.map(normalizeTitle).filter(Boolean);
+  const aliases = tmdbSearchTitles(titles, year).map(normalizeTitle).filter(Boolean);
   const ranked = new Map<number, { candidate: TMDBCandidate; distance: number }>();
   for (const candidate of candidates) {
     if (candidate.genre_ids?.length && !candidate.genre_ids.includes(16)) continue;
     if (candidate.origin_country?.length && !candidate.origin_country.includes('JP')) continue;
     const names = [candidate.name, candidate.title, candidate.original_name, candidate.original_title];
-    if (!names.some(name => name && aliases.includes(normalizeTitle(name)))) continue;
+    if (!tmdbSearchTitles(names.filter((name): name is string => Boolean(name)), year).some(name => aliases.includes(normalizeTitle(name)))) continue;
     const date = candidate.first_air_date || candidate.release_date;
     const releaseYear = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.slice(0, 4)) : undefined;
     if (year != null && (releaseYear == null || Math.abs(releaseYear - year) > 1)) continue;

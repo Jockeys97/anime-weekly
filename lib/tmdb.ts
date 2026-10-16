@@ -6,7 +6,7 @@ import { getImdbScore } from '@/lib/imdb';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { Ratings } from '@/lib/ratings';
 import { getAnimeRatings } from '@/lib/anime-ratings';
-import { chooseTMDBMatch, type TMDBCandidate } from '@/lib/anime-match';
+import { chooseTMDBMatch, tmdbSearchTitles, type TMDBCandidate } from '@/lib/anime-match';
 import { weekRange, type ISOWeek } from '@/lib/week';
 import { readEpisodeDates, selectEpisodeSeasons, type EpisodeDate, type EpisodeDetails } from '@/lib/episode-dates';
 
@@ -99,7 +99,7 @@ export interface AnimeAvailability {
 export async function getAnimeAvailability(titles: string[], year?: number, kindHint?: Kind, fresh = false, providersOnly = false): Promise<AnimeAvailability> {
   const empty: AnimeAvailability = { match: null, ratings: {}, providers: {}, providersUnavailable: false };
   if (!isTMDBConfigured()) return { ...empty, ratings: { imdbStatus: 'unconfigured' } };
-  const aliases = [...new Set(titles.map(title => title.trim()).filter(Boolean))];
+  const aliases = tmdbSearchTitles(titles, year);
   const revalidate = 86400;
   let lookupFailed = false;
   for (const kind of kindHint ? [kindHint] : ['tv', 'movie'] as const) {

@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { chooseAnimeMatch, normalizeTitle, type AnimeCandidate, type AnimeSearch } from '../lib/anime-match';
+import { chooseAnimeMatch, chooseTMDBMatch, tmdbSearchTitles, normalizeTitle, type AnimeCandidate, type AnimeSearch } from '../lib/anime-match';
 
 const search: AnimeSearch = { kind: 'tv', originalTitle: '進撃の巨人', title: 'Attack on Titan', year: 2013 };
 const candidate: AnimeCandidate = { id: 1, type: 'ANIME', format: 'TV', title: { romaji: 'Shingeki no Kyojin', english: 'Attack on Titan', native: '進撃の巨人' }, startDate: { year: 2013 }, idMal: 16498, averageScore: 84 };
+describe('TMDB remake identity', () => {
+  const remake = { id: 2, name: 'Ranma ½', first_air_date: '2024-10-06', genre_ids: [16], origin_country: ['JP'] };
+  const older = { ...remake, id: 1, first_air_date: '1989-04-15' };
+  it('matches a parenthetical premiere label to the remake, never the old adaptation', () => {
+    expect(chooseTMDBMatch([older, remake], ['Ranma1/2 (2024)'], 2024)).toEqual(remake);
+    expect(chooseTMDBMatch([older], ['Ranma1/2 (2024)'], 2024)).toBeNull();
+  });
+  it('does not remove a year without a matching known premiere, or remove season and subtitle identity', () => {
+    expect(tmdbSearchTitles(['Ranma1/2 (2024)'], 2024)).toEqual(['Ranma1/2']);
+    for (const year of [undefined, 1989, 2026]) {
+      expect(chooseTMDBMatch([remake], ['Ranma1/2 (2024)'], year)).toBeNull();
+    }
+    expect(chooseTMDBMatch([remake], ['Ranma1/2 (2024) Season 3'], 2024)).toBeNull();
+    expect(chooseTMDBMatch([remake], ['Ranma1/2 (Special)'], 2024)).toBeNull();
+    expect(chooseTMDBMatch([remake, { ...remake, id: 3 }], ['Ranma1/2 (2024)'], 2024)).toBeNull();
+  });
+});
 describe('conservative anime matching', () => {
   it('normalizes case, punctuation, spacing and full-width text while retaining Unicode', () => {
     expect(normalizeTitle(' Ａttack: on TITAN! ')).toBe('attackontitan');

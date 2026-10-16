@@ -38,6 +38,12 @@ it('leaves unavailable data retryable when the seed cannot be verified', async (
   vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(fixture('US','tt999'))));
   expect(await recoverJustWatchOffers('Black Clover','tt7441658','IT')).toBeNull();
 });
+it('omits a remake year from the seed slug while still rejecting a different IMDb identity', async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response(fixture('US', 'tt999')));
+  vi.stubGlobal('fetch', fetch);
+  expect(await recoverJustWatchOffers('Ranma1/2 (2024)', 'tt32766897', 'US')).toBeNull();
+  expect(fetch.mock.calls[0][0]).toBe('https://www.justwatch.com/us/tv-show/ranma1-2');
+});
 it('fails safely when markup changes', () => {
   expect(parseJustWatchPage('<script id="__NUXT_DATA__">bad</script>','https://www.justwatch.com/it/serie-tv/black-clover','tt7441658','IT')).toBeNull();
 });
