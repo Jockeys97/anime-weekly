@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getDictionary } from '@/lib/i18n';
 import { withTimeout } from '@/lib/async-timeout';
 import type { PersonalAnimeStats } from '@/lib/my-anime-stats-model';
@@ -26,11 +26,13 @@ export function MyAnimeStats({ locale, refreshKey, onLoadingChange }: { locale: 
   const d = getDictionary(locale).myAnime;
   const [result, setResult] = useState<{ key: string; data: PersonalAnimeStats | null; error: boolean } | null>(null);
   const [retry, setRetry] = useState(0);
+  const continuations = useRef(0);
   const key = `${refreshKey}:${retry}`;
   const loading = result?.key !== key, data = result?.data, error = result?.key === key && result.error;
+  useEffect(() => { continuations.current = 0; }, [refreshKey]);
   useEffect(() => {
-    if (!data?.syncing || error || retry >= 8 || loading) return;
-    const timer = setTimeout(() => setRetry(value => value + 1), 2000);
+    if (!data?.syncing || error || continuations.current >= 8 || loading) return;
+    const timer = setTimeout(() => { continuations.current++; setRetry(value => value + 1); }, 2000);
     return () => clearTimeout(timer);
   }, [data, error, loading, retry]);
   useEffect(() => {
@@ -52,6 +54,6 @@ export function MyAnimeStats({ locale, refreshKey, onLoadingChange }: { locale: 
     {loading && !data ? <div className="my-anime-stats-loading" role="status">{d.statsLoading}<div aria-hidden="true">{[0, 1, 2, 3].map(key => <span key={key} />)}</div></div>
       : data ? <MyAnimeStatsView data={data} locale={locale} /> : null}
     {data?.syncing && <p className="my-anime-note" role="status">{d.statsLoading}</p>}
-    {error && <p className="my-anime-stats-warning" role="status">{d.statsUnavailable} <button type="button" disabled={loading} onClick={() => setRetry(value => value + 1)}>{d.retry}</button></p>}
+    {error && <p className="my-anime-stats-warning" role="status">{d.statsUnavailable} <button type="button" disabled={loading} onClick={() => { continuations.current = 0; setRetry(value => value + 1); }}>{d.retry}</button></p>}
   </section>;
 }
