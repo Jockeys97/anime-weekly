@@ -36,11 +36,13 @@ export function DubbingStatus({ malId, anilistId, locale = 'en', initial, follow
   const exactId = result?.malId ?? (validMalId(malId) ? malId : undefined);
   const checked = result?.checkedAt && Number.isFinite(Date.parse(result.checkedAt)) ? result.checkedAt : undefined;
   const shortStatus = pending ? d.loading : status === 'reported' ? d.reportedShort : status === 'partial' ? d.partialShort : d.unverified;
+  const hasReport = !pending && (status === 'reported' || status === 'partial');
+  const languageLabel = hasReport ? d.label : d.lookupLanguage;
   return <section ref={ref} className="dubbing-status" data-status={pending ? 'pending' : status} aria-busy={pending}>
     <details>
-      <summary className="dubbing-summary" aria-label={`${d.label}: ${d.language} · ${shortStatus}`}>
-        <DubbingFlag language={language} />
-        <span className="dubbing-language"><span>{d.audio}</span><strong>{d.language}</strong></span>
+      <summary className="dubbing-summary" aria-label={`${languageLabel}: ${d.language} · ${shortStatus}`}>
+        {hasReport ? <DubbingFlag language={language} /> : <span className="dubbing-unknown" aria-hidden="true">?</span>}
+        <span className="dubbing-language"><span>{languageLabel}</span><strong>{d.language}</strong></span>
         <span className="dubbing-badge"><span aria-hidden="true" />{shortStatus}</span>
         <svg className="dubbing-chevron" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m6 8 4 4 4-4" /></svg>
       </summary>

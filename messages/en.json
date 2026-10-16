@@ -433,6 +433,7 @@
     "retry": "Check cache again"
   },
   "dubbing": {
+    "lookupLanguage": "Language checked",
     "audio": "Audio",
     "reportedShort": "Reported",
     "partialShort": "Partial",
