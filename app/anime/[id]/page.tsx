@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
+import { DubbingSummary } from '@/components/DubbingSummary';
 import { AnimeDetailView } from '@/components/AnimeDetailView';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
 import { AnimeRatingTile, ImdbRatingTile, MyAnimeListRatingTile } from '@/components/RatingSummary';
@@ -61,6 +62,7 @@ export default async function AnimePage({ params }: Props) {
   };
   return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structured) }} />
     <AnimeDetailView anime={anime}
+      dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<DetailSynopsis synopsis={synopsis} anime={anime} aliases={aliases} year={year} locale={locale} />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
       ratings={<DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />}

@@ -425,5 +425,18 @@
     "notCached": "L’index quotidien des épisodes n’est pas encore disponible. Il sera rempli à la prochaine mise à jour programmée.",
     "noMatch": "Une correspondance exacte avec la série IMDb est nécessaire pour afficher les notes.",
     "retry": "Consulter à nouveau le cache"
+  },
+  "dubbing": {
+    "label": "Doublage",
+    "language": "Français",
+    "reported": "Doublage signalé",
+    "partial": "Doublage partiel signalé",
+    "unverified": "Non vérifié",
+    "loading": "Vérification…",
+    "missing": "Aucune information vérifiée sur le doublage de cette fiche. Une donnée manquante ne signifie pas qu’il n’existe pas.",
+    "identity": "Aucun identifiant MAL vérifié pour cette saison précise.",
+    "note": "Un doublage est signalé pour cette fiche MAL. Sa disponibilité par plateforme et par pays doit être vérifiée séparément.",
+    "entry": "Fiche MAL précise",
+    "checked": "Consulté le"
   }
 }

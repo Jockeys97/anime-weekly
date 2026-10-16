@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { AnimeTitle } from '../lib/tmdb';
 
+vi.mock('../components/DubbingStatus', () => ({ DubbingStatus: () => null }));
 vi.mock('../components/AnimeActions', () => ({ AnimeActions: () => null }));
 vi.mock('../components/RatingSummary', () => ({ RatingSummary: () => null }));
 vi.mock('../components/StreamingAvailability', () => ({ StreamingAvailability: () => null }));

@@ -425,5 +425,18 @@
     "notCached": "O índice diário de episódios ainda não está disponível. Será preenchido na próxima atualização programada.",
     "noMatch": "É necessária uma correspondência exata com a série IMDb para mostrar as notas.",
     "retry": "Consultar o cache novamente"
+  },
+  "dubbing": {
+    "label": "Dobragem / dublagem",
+    "language": "Português",
+    "reported": "Dublagem indicada",
+    "partial": "Dublagem parcial indicada",
+    "unverified": "Não verificado",
+    "loading": "A verificar…",
+    "missing": "Não há informação verificada de dublagem para esta entrada. A falta de dados não significa que não exista.",
+    "identity": "Falta um ID MAL verificado para esta temporada exata.",
+    "note": "Há dublagem indicada para esta entrada MAL. A disponibilidade por plataforma e país deve ser verificada separadamente.",
+    "entry": "Entrada MAL exata",
+    "checked": "Consultado em"
   }
 }

@@ -13,10 +13,11 @@ import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import type { AniListAnime } from '@/lib/anilist';
 import { displayTitle } from '@/lib/title-text';
+import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode;
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing }: {
+  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode;
 }) {
   const locale = useLocale();
   const d = getDictionary(locale);
@@ -52,6 +53,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
             {ratings}
           </Suspense>
         </dl>
+        <Suspense fallback={<DubbingStatus malId={anime.idMal} locale={locale} followLocale />}>{dubbing}</Suspense>
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
           <div><dt>{c.status}</dt><dd>{status}</dd></div>

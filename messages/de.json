@@ -425,5 +425,18 @@
     "notCached": "Der tägliche Episodenindex ist noch nicht verfügbar. Er wird beim nächsten geplanten Update erstellt.",
     "noMatch": "Für die Episodenbewertungen wird eine genaue Zuordnung zur IMDb-Serie benötigt.",
     "retry": "Cache erneut prüfen"
+  },
+  "dubbing": {
+    "label": "Synchronfassung",
+    "language": "Deutsch",
+    "reported": "Synchronfassung gemeldet",
+    "partial": "Teilweise Synchronfassung gemeldet",
+    "unverified": "Nicht verifiziert",
+    "loading": "Wird geprüft…",
+    "missing": "Für diesen Eintrag liegen keine verifizierten Angaben zur Synchronfassung vor. Fehlende Daten bedeuten nicht, dass keine existiert.",
+    "identity": "Für diese genaue Staffel liegt keine verifizierte MAL-ID vor.",
+    "note": "Für diesen MAL-Eintrag wurde eine Synchronfassung gemeldet. Die Verfügbarkeit je Plattform und Land muss separat geprüft werden.",
+    "entry": "Genauer MAL-Eintrag",
+    "checked": "Abgerufen am"
   }
 }

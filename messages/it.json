@@ -425,5 +425,18 @@
     "notCached": "L’indice giornaliero degli episodi non è ancora disponibile. Verrà compilato al prossimo aggiornamento programmato.",
     "noMatch": "Serve un abbinamento esatto alla serie IMDb per mostrare i voti degli episodi.",
     "retry": "Ricontrolla la cache"
+  },
+  "dubbing": {
+    "label": "Doppiaggio",
+    "language": "Italiano",
+    "reported": "Doppiaggio segnalato",
+    "partial": "Doppiaggio parziale segnalato",
+    "unverified": "Non verificato",
+    "loading": "Verifica…",
+    "missing": "Non ci sono informazioni verificate sul doppiaggio di questa voce. Il dato mancante non significa che non esista.",
+    "identity": "Manca un ID MAL verificato per questa stagione precisa.",
+    "note": "Il doppiaggio è segnalato per questa voce MAL. La disponibilità sulle piattaforme e nei vari paesi va verificata separatamente.",
+    "entry": "Voce MAL precisa",
+    "checked": "Consultato il"
   }
 }

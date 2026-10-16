@@ -431,5 +431,18 @@
     "notCached": "The daily episode index is not available yet. It will be populated by the next scheduled update.",
     "noMatch": "An exact IMDb series match is needed to show episode ratings.",
     "retry": "Check cache again"
+  },
+  "dubbing": {
+    "label": "Dubbing",
+    "language": "English",
+    "reported": "Dub reported",
+    "partial": "Partial dub reported",
+    "unverified": "Not verified",
+    "loading": "Checking…",
+    "missing": "No verified dubbing information for this entry. Missing data does not mean no dub exists.",
+    "identity": "No verified MAL ID is available for this exact season.",
+    "note": "A dub is reported for this MAL entry. Availability on each platform and in each country must be checked separately.",
+    "entry": "Exact MAL entry",
+    "checked": "Checked"
   }
 }

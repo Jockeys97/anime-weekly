@@ -114,7 +114,7 @@ export function WeeklyContent({ initial, week, initialEvents = [], initialEpisod
   const filterable = titles.map(title => ({ ...title, key: watchlistId(title) }));
   const options = filterOptions(filterable, region, platform);
   const visible = filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist });
-  const renderCard = (anime: AnimeTitle) => <AnimeCard anime={anime} locale={locale} enrichmentFailed={cards[titleKey(anime)]?.status === 'error'} onRetry={() => load(anime, true)} />;
+  const renderCard = (anime: AnimeTitle, dubbingAnilistId?: number) => <AnimeCard anime={anime} locale={locale} dubbingAnilistId={dubbingAnilistId} enrichmentFailed={cards[titleKey(anime)]?.status === 'error'} onRetry={() => load(anime, true)} />;
   return <div ref={container}>
     <WeeklyTopFive slug={slug} initialEpisodes={initialEpisodes} />
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
