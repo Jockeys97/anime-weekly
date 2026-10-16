@@ -20,7 +20,7 @@ export function AnimeTrailer({ trailer, title, image, locale = 'it' }: {
         {playing ? <iframe key={links.embed} src={links.embed} title={`${d.heading} · ${title}`} loading="lazy"
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
           : <button type="button" className={styles.play} onClick={() => setPlaying(true)} aria-label={`${d.play} · ${title}`}>
-            {image && <Image src={image} alt="" fill sizes="(max-width: 850px) 100vw, 900px" />}
+            {image && <Image src={image} alt="" fill unoptimized={image.startsWith('https://s4.anilist.co/')} sizes="(max-width: 850px) 100vw, 900px" />}
             <span className={styles.overlay}><span className={styles.icon} aria-hidden="true">▶</span><span>{d.play}</span></span>
           </button>}
       </div>

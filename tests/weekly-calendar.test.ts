@@ -84,3 +84,12 @@ it('groups late-night broadcasts by the visitor timezone while keeping date-only
   expect(result.days[1].releases[0].episode).toBe(1);
   expect(result.days[2].releases[0].episode).toBe(3);
 });
+
+
+it('uses only the airing event season identity for dubbing, never the root ratings identity', () => {
+  const anime = { ...tv(), ratings: { anilistId: 16498, malId: 16498 } };
+  const result = buildWeeklyCalendar([anime], [event(time('2026-10-14T08:00:00Z'), 2, 131681)], week, [], 'Europe/Rome', { 'tv:1': 131681 });
+  expect(result.days[2].releases[0].dubbingAnilistId).toBe(131681);
+  const fallback = buildWeeklyCalendar([anime], [], week, [{ seriesId: 1, season: 4, episode: 2, date: '2026-10-14' }]);
+  expect(fallback.days[2].releases[0].dubbingAnilistId).toBeUndefined();
+});

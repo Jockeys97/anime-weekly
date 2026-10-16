@@ -326,3 +326,31 @@ The daily collector cache identity stays unchanged: deploying this feature after
 ### Episode chart recovery
 
 The series/cour resolution preserves a separate `episodeSeries` identity when a rated season page differs from the verified parent. This does not change exact-season AniList or MAL IDs. The chart opens all IMDb seasons by default and includes season numbers in episode labels. Public renders and retries read the local index first, then a cache-only reader in the collector bundle; collector and episode API use `iad1` because Runtime Cache is regional. Reads have deadlines and concurrent series lookups coalesce. Cache read failures are distinguished from an index not yet collected. No public path invokes a writer or downloads a dataset, and the daily collection key remains unchanged.
+
+
+### Dubbing reports (MyDubList)
+
+The selected interface language selects the dubbing language (English, Italian,
+Spanish, French, German or Portuguese); the streaming-country selector does not
+imply an audio language. Dubbing reports are shown independently of platform offers.
+The current dataset does not identify regional variants such as European versus
+Latin American Spanish or European versus Brazilian Portuguese.
+
+One public MyDubList `confidence/low/dubbed_<language>.json` file is validated and
+cached for 24 hours per language, shared across exact MAL-ID lookups, with concurrent
+reads coalesced. This tier includes at least one automatic source or manual curation:
+the UI says **reported**, never officially confirmed. Known partial dubs have a separate
+label. Missing entries, missing exact IDs, malformed datasets and outages display
+**not verified**; absence never means no dub. Errors are not cached as daily negatives;
+a one-minute process cooldown prevents a burst of identical failures.
+
+Catalog/search/season and detail pages use the selected AniList entry's own `idMal`.
+They never use a parent series, a prequel or IMDb's series identity. Weekly TV cards
+use the exact AniList media ID of their airing event; TMDB-only/official/undated TV
+entries without that identity remain unverified. No title normalization or season
+number heuristic is used. `/api/dubbing` accepts exactly one positive `mal` or
+`anilist` ID and a supported `locale`; it never calls IMDb, OMDb or the MAL score API.
+
+Dataset attribution: Dub data © [MyDubList](https://mydublist.com) —
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Dataset entries are filtered
+by exact ID and displayed with localized status labels; original datasets are not modified.

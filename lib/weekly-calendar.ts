@@ -4,7 +4,7 @@ import { officialAirings } from '@/lib/official-airings';
 import type { EpisodeDate } from '@/lib/episode-dates';
 import type { AiringEvent } from '@/lib/airing-schedule';
 import { weekRange, type ISOWeek } from '@/lib/week';
-export interface CalendarRelease { anime: AnimeTitle; date: string; airingAt?: number; episode?: number; season?: number; source?: 'tmdb' | 'official'; sourceUrl?: string }
+export interface CalendarRelease { anime: AnimeTitle; date: string; airingAt?: number; episode?: number; season?: number; source?: 'tmdb' | 'official'; sourceUrl?: string; dubbingAnilistId?: number }
 export interface CalendarDay { date: string; releases: CalendarRelease[] }
 export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[], week: ISOWeek, episodeDates: EpisodeDate[] = [], timeZone = DEFAULT_TIME_ZONE, anilistIds: Record<string, number> = {}) {
   const { monday } = weekRange(week);
@@ -38,7 +38,7 @@ export function buildWeeklyCalendar(titles: AnimeTitle[], events: AiringEvent[],
       const key = `${event.episode}:${event.airingAt}`;
       if (seen.has(key)) continue;
       seen.add(key); found = true;
-      day.releases.push({ anime, date: day.date, airingAt: event.airingAt, episode: event.episode });
+      day.releases.push({ anime, date: day.date, airingAt: event.airingAt, episode: event.episode, dubbingAnilistId: event.mediaId });
     }
     if (!found) for (const episode of episodeDates) {
       if (episode.seriesId !== anime.id || !Number.isSafeInteger(episode.episode) || episode.episode <= 0 || !Number.isSafeInteger(episode.season) || episode.season < 0) continue;

@@ -425,5 +425,18 @@
     "notCached": "El índice diario de episodios aún no está disponible. Se completará en la próxima actualización programada.",
     "noMatch": "Se necesita una coincidencia exacta con la serie IMDb para mostrar sus episodios.",
     "retry": "Consultar caché de nuevo"
+  },
+  "dubbing": {
+    "label": "Doblaje",
+    "language": "Español",
+    "reported": "Doblaje registrado",
+    "partial": "Doblaje parcial registrado",
+    "unverified": "No verificado",
+    "loading": "Comprobando…",
+    "missing": "No hay información verificada de doblaje para esta entrada. La falta de datos no significa que no exista.",
+    "identity": "Falta un ID de MAL verificado para esta temporada exacta.",
+    "note": "Hay un doblaje registrado para esta entrada de MAL. La disponibilidad por plataforma y país debe comprobarse por separado.",
+    "entry": "Entrada exacta de MAL",
+    "checked": "Consultado el"
   }
 }
