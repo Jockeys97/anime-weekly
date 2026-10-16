@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const background = vi.hoisted(() => ({ tasks: [] as Promise<void>[] }));
+vi.mock('../lib/imdb-datasets', () => ({ repairLegacyImdbRatingIndex: vi.fn() }));
+import { repairLegacyImdbRatingIndex } from '../lib/imdb-datasets';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('next/server', () => ({ after: vi.fn((callback: () => Promise<void>) => { background.tasks.push(callback()); }) }));
@@ -14,6 +16,7 @@ import { after } from 'next/server';
 import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore } from '../lib/weekly-ratings';
 import { GET, POST, maxDuration } from '../app/api/revalidate/route';
 beforeEach(() => {
+  vi.mocked(repairLegacyImdbRatingIndex).mockResolvedValue(true);
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-14T12:00:00Z'));
@@ -31,6 +34,7 @@ afterEach(async () => {
 it('requires the existing cron secret before doing work', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
   expect((await GET(new Request('https://example.test/api/revalidate'))).status).toBe(401);
+  expect(repairLegacyImdbRatingIndex).not.toHaveBeenCalled();
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(revalidateTag).not.toHaveBeenCalled();
   expect(after).not.toHaveBeenCalled();
@@ -197,7 +201,8 @@ it('reuses the completed daily job without invalidation, persistence or vendor c
   vi.stubEnv('CRON_SECRET', 'fixture');
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } });
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
-  expect(await response.json()).toMatchObject({ cached: true, episodeStatus: 'ready' });
+  expect(await response.json()).toMatchObject({ cached: true, indexReady: true, episodeStatus: 'ready' });
+  expect(repairLegacyImdbRatingIndex).toHaveBeenCalledOnce();
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
   expect(revalidateTag).not.toHaveBeenCalled();
@@ -211,6 +216,7 @@ it('serves an exact cached IMDb score publicly without calling either writer or 
   expect(response.headers.get('cache-control')).toContain('s-maxage=300');
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
+  expect(repairLegacyImdbRatingIndex).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
 });
 it('never caches a missing IMDb value or fills it on a public read', async () => {

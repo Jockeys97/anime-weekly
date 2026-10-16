@@ -1,3 +1,4 @@
+import { repairLegacyImdbRatingIndex } from '@/lib/imdb-datasets';
 import { readSharedImdbScore, hasImdbScore } from '@/lib/imdb';
 import { timingSafeEqual } from 'node:crypto';
 import { revalidateTag } from 'next/cache';
@@ -76,7 +77,9 @@ export async function GET(request: Request) {
   const week = isoWeek(new Date());
   const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
   if (previous.episodes?.collectorVersion === EPISODE_COLLECTOR_VERSION && previous.episodes.updatedAt && Number.isFinite(Date.parse(previous.episodes.updatedAt)) && japanDate(new Date(previous.episodes.updatedAt)) === japanDate()) {
-    return Response.json({ revalidated: true, cached: true, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
+    const indexReady = await repairLegacyImdbRatingIndex();
+    console.info('[imdb-index] daily index verified', { ready: indexReady });
+    return Response.json({ revalidated: true, cached: true, indexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
   }
   revalidateTag(CACHE_TAG, { expire: 0 });
   let total = 0;

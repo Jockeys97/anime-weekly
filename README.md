@@ -260,7 +260,7 @@ episodes and unverified identities cannot fill missing positions.
 The authenticated job runs daily at `0 6 * * *`. Metadata collection is bounded
 to 60 seconds, 60 matched targets and 120 identity attempts. The two parallel gzip
 streams have a 45-second deadline and a 1 GiB decompressed limit per file; the
-full TSV files and title metadata are never stored in Next's cache. Only compact score/vote pairs are divided into 256 private cache partitions, each capped at 1 MiB (below Next's 2 MiB entry limit). Readers load one partition for the exact IMDb ID. A completion marker is published only after the full gzip passes integrity checks and all partitions are written; the last complete index remains readable for up to seven days during an outage.
+full TSV files and title metadata are never stored in Next's cache. Only compact score/vote pairs are divided into 256 compressed private Vercel Runtime Cache partitions, each capped at 1 MiB uncompressed. Readers verify and load one partition for the exact IMDb ID, including inside nested Next cache callbacks. Each write is awaited and read back before a completion manifest with SHA-256 checksums is published; Next's deferred cache writes are no longer used for this index. After the full gzip passes integrity checks and all partitions are verified, the last complete index remains readable for up to seven days during an outage.
 Header changes, duplicate target rows and corrupt/truncated gzip data fail the
 attempt instead of publishing a partially parsed dataset.
 
@@ -285,3 +285,5 @@ The project owner requested this dataset configuration after review of those
 conditions. No separate written IMDb authorization was obtained by this change.
 Required IMDb attribution is shown in the footer; the ranking links to the
 source and shows the file date. Full TSV files are not redistributed.
+
+IMDb index migration: an authenticated cron may repair a pre-migration incomplete index once per date, reusing legacy partitions if complete or streaming only the rating file once. It does not call OMDb or redownload episode metadata. Success and failure attempts are cached; normal collection remains daily. JustWatch recovery preserves each verified package icon and uses its own image host, separately from TMDB logo paths.
