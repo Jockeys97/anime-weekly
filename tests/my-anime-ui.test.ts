@@ -16,6 +16,8 @@ it('renders one poster card for an episode batch, with an explicit special label
   expect(html).toContain('Speciale 52'); expect(html).not.toContain('Stagione 0');
   expect(html).toContain('/anime/21'); expect(html).toContain('cover.jpg');
   expect(html).toContain('2 episodi'); expect(html).toContain('Caricamento delle tue statistiche anime');
+  // A first stats import must not disable the calendar's recovery action.
+  expect(html).not.toMatch(/class="my-anime-refresh"[^>]*disabled/);
 });
 it('labels missing runtimes and partial statistics rather than displaying a false complete total', () => {
   const html = renderToStaticMarkup(createElement(MyAnimeStatsView, { locale: 'it', data: { status: 'ready', series: 2, episodes: 10, plays: 12, rewatches: 2, minutes: 240, partial: true, missingRuntimePlays: 1, unmatched: 1, updatedAt: '2026-10-16T12:00:00Z' } }));

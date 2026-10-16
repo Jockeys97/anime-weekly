@@ -122,7 +122,7 @@
     "justwatch": "Streaming data provided by JustWatch",
     "omdb": "IMDb ratings: daily IMDb datasets · OMDb fallback",
     "anilist": "Anime matching and fallback scores by AniList",
-    "mal": "MyAnimeList scores via Jikan",
+    "mal": "MyAnimeList scores via Tenrai",
     "note": "Release dates and availability come from the credited sources. No ratings are estimated."
   },
   "notFound": {

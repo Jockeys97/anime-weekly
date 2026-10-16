@@ -16,6 +16,7 @@ it('distinguishes loading, a confirmed missing score, and a service outage', () 
   expect(render({ malId: 123 }, true)).toContain('Caricamento dei voti');
   expect(render({ malId: 123, malStatus: 'unavailable' })).toContain('Non è ancora disponibile un voto MyAnimeList');
   const failed = render({ malId: 123, malStatus: 'error' });
-  expect(failed).toContain('temporaneamente non disponibile'); expect(failed).toContain('Riprova'); expect(failed).not.toContain('n/a');
+  // A server-side service error must get a fresh client lookup rather than stay stuck.
+  expect(failed).toContain('Caricamento dei voti'); expect(failed).not.toContain('n/a');
   expect(render({ malScore: 8.12, malMembers: 1000 })).toContain('1K utenti');
 });

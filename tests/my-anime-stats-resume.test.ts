@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 it('resumes a long import from cached private pages, preserving the same end_at and final totals', async () => {
-  json.mockImplementationOnce(async () => { vi.advanceTimersByTime(25001); return { data: [play(1)], pages: 2 }; })
+  json.mockImplementationOnce(async () => { vi.advanceTimersByTime(8001); return { data: [play(1)], pages: 2 }; })
     .mockResolvedValueOnce({ data: [play(2)], pages: 2 });
   expect(await getPersonalStats('resume-account')).toMatchObject({ syncing: true, partial: true, episodes: 1 });
   expect(json).toHaveBeenCalledTimes(1);

@@ -8,8 +8,14 @@ export async function traktJson<T>(path: string, token: string, maxWaitMs: numbe
 }
 async function readTraktJson<T>(path: string, token: string, maxWaitMs: number): Promise<{ data: T | null; pages: number }> {
   const response = await traktFetch(`https://api.trakt.tv${path}`, { cache: 'no-store', next: undefined, headers: traktHeaders(token) }, maxWaitMs);
-  if (!response.ok) throw new Error('Trakt unavailable');
+  if (!response.ok) {
+    // Only endpoint and status: never log tokens, headers or watched content.
+    console.warn('[my-anime] Trakt request failed', path.split('?')[0], response.status);
+    throw new Error('Trakt unavailable');
+  }
   const value = Number(response.headers.get('X-Pagination-Page-Count') || 1);
-  if (!Number.isSafeInteger(value) || value < 1) throw new Error('Invalid pagination');
-  return { data: response.status === 204 ? null : await response.json() as T, pages: value };
+  const data = response.status === 204 ? null : await response.json() as T;
+  // Trakt can report zero pages for an empty history or watchlist.
+  if (!Number.isSafeInteger(value) || value < 0 || (value === 0 && data !== null && (!Array.isArray(data) || data.length > 0))) throw new Error('Invalid pagination');
+  return { data, pages: Math.max(1, value) };
 }

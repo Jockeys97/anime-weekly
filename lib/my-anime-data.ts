@@ -119,7 +119,8 @@ async function loadPersonalWeek(tokens: { trakt?: AuthToken | null; mal?: AuthTo
   const releases = buildPersonalReleases(trakt.events.filter(event => resolved.identities.has(event?.show?.ids?.trakt)), mal.anime, candidates, [...events.values()], week);
   const result = { ...releases, unmatched: releases.unmatched + resolved.unmatched,
     followed: new Set([...resolved.identities.values()].map(identity => identity.id).concat(selected)).size, unavailable: [...new Set(unavailable)] };
-  if (resolved.deferred) throw new IncompletePersonalWeek(result);
+  // Do not pin a transient upstream failure to the account for ten minutes.
+  if (resolved.deferred || result.unavailable.length) throw new IncompletePersonalWeek(result);
   return result;
 }
 class IncompletePersonalWeek extends Error {
@@ -128,7 +129,7 @@ class IncompletePersonalWeek extends Error {
 export async function getPersonalWeek(tokens: { trakt?: AuthToken | null; mal?: AuthToken | null }, week: ISOWeek): Promise<PersonalWeekData> {
   // Tokens live only in the closure: cache keys/arguments contain hashes, never
   // credentials. Upstream authenticated responses always use no-store.
-  const key = ['my-anime-week-v2-anime-only', formatWeek(week),
+  const key = ['my-anime-week-v3-retryable', formatWeek(week),
     tokens.trakt ? tokenHash(tokens.trakt.accessToken) : '-', tokens.mal ? tokenHash(tokens.mal.accessToken) : '-'];
   const tags = [tokens.trakt?.accessToken, tokens.mal?.accessToken].filter((token): token is string => Boolean(token)).map(personalCacheTag);
   try { return await unstable_cache(() => loadPersonalWeek(tokens, week), key, { revalidate: 600, tags })(); }

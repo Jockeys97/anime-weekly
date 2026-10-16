@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 const { cache, json, resolve } = vi.hoisted(() => ({ cache: vi.fn((fn: () => unknown) => fn), json: vi.fn(), resolve: vi.fn() }));
 vi.mock('next/cache', () => ({ unstable_cache: cache }));
@@ -16,6 +16,7 @@ beforeEach(() => {
   json.mockResolvedValue({ data: [play(1), play(2, 2), play(3)], pages: 1 });
   resolve.mockResolvedValue({ identities, unavailable: false, unmatched: 0, excluded: 0 });
 });
+afterEach(() => vi.useRealTimers());
 describe('anime-only viewing totals', () => {
   it('counts unique episodes once and rewatches separately, including both in hours', () => {
     expect(animeHistoryStats([play(1), play(2, 2), play(3), play(3), { ...play(4), show: { title: 'The Diplomat', ids: { trakt: 99 } } }], identities))
@@ -61,5 +62,35 @@ describe('private Trakt history import', () => {
     await vi.waitFor(() => expect(json).toHaveBeenCalledTimes(1));
     finish({ data: [], pages: 1 });
     await Promise.all([a, b]);
+  });
+  it('does not let an unresponsive aggregate cache block a valid import', async () => {
+    vi.useFakeTimers();
+    runtimeCacheMock().get.mockImplementationOnce(() => new Promise(() => {}));
+    runtimeCacheMock().set.mockImplementationOnce(() => new Promise(() => {}));
+    const result = getPersonalStats('cache-stalled');
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(await result).toMatchObject({ status: 'ready', episodes: 2, minutes: 72 });
+  });
+  it('bounds a stalled history lookup and allows the next attempt to recover', async () => {
+    vi.useFakeTimers();
+    json.mockImplementationOnce(() => new Promise(() => {}));
+    const failed = getPersonalStats('history-stalled');
+    await vi.advanceTimersByTimeAsync(8001);
+    expect(await failed).toMatchObject({ status: 'unavailable' });
+    expect(await getPersonalStats('history-stalled')).toMatchObject({ status: 'ready', episodes: 2 });
+  });
+  it('bounds the complete request even when catalog identification never settles', async () => {
+    vi.useFakeTimers();
+    resolve.mockImplementationOnce(() => new Promise(() => {}));
+    const failed = getPersonalStats('catalog-stalled');
+    await vi.advanceTimersByTimeAsync(22001);
+    expect(await failed).toMatchObject({ status: 'unavailable' });
+    expect(await getPersonalStats('catalog-stalled')).toMatchObject({ status: 'ready' });
+  });
+  it('does not cache a transient partial import as the final total', async () => {
+    json.mockResolvedValueOnce({ data: [play(1)], pages: 2 }).mockRejectedValueOnce(new Error('temporary failure'));
+    expect(await getPersonalStats('retry-partial')).toMatchObject({ partial: true });
+    expect(runtimeCacheMock().set).not.toHaveBeenCalled();
+    expect(await getPersonalStats('retry-partial')).toMatchObject({ partial: false, episodes: 2 });
   });
 });

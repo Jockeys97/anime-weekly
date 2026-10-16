@@ -3,9 +3,10 @@ import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
 import { animeSearchTitles, chooseAnimeMatch, type AnimeCandidate, type AnimeSearch } from '@/lib/anime-match';
 import type { Ratings } from '@/lib/ratings';
 import { withTimeout } from '@/lib/async-timeout';
+import { MAL_API_BASE, parseMalRating } from '@/lib/mal-provider';
 
 import { anilistFetch as anilist, jikanFetch as jikan } from '@/lib/rate-limited-fetch';
-// Below both Jikan's 60/minute and 3/second limits, including retries.
+// Legacy option/queue names are retained for cron compatibility; MAL now uses Tenrai.
 export const JIKAN_REVALIDATE = 86400;
 const query = `query ($search: String!, $formats: [MediaFormat]) {
   Page(page: 1, perPage: 50) {
@@ -61,7 +62,7 @@ export async function lookupAnimeRatings(search: AnimeSearch, options: AnimeRati
   } catch { return { ratings: {}, unavailable: true }; }
 }
 
-// Details already have an exact MAL ID, so reuse Jikan without another title lookup.
+// Details already have an exact MAL ID, so no further title lookup is needed.
 export async function getAnimeRatingsById(idMal: number | null | undefined, averageScore: number | null | undefined, revalidate = JIKAN_REVALIDATE, maxWaitMs?: number, weekly = false, onTimeout?: () => void): Promise<Ratings> {
   const fallback: Ratings = { anilistScore: averageScore };
   if (!Number.isSafeInteger(idMal) || idMal! <= 0) return fallback;
@@ -69,13 +70,13 @@ export async function getAnimeRatingsById(idMal: number | null | undefined, aver
   const started = Date.now();
   try {
     const lookup = async (): Promise<Ratings> => {
-      const response = await jikan(`https://api.jikan.moe/v4/anime/${idMal}`, weekly ? { cache: 'no-store', next: undefined } : { next: { revalidate, tags: [CACHE_TAG] } }, maxWaitMs);
+      const response = await jikan(`${MAL_API_BASE}/anime/${idMal}`, weekly ? { cache: 'no-store', next: undefined } : { next: { revalidate, tags: [CACHE_TAG] } }, maxWaitMs);
       if (!response.ok) {
         if (maxWaitMs != null && Date.now() - started >= maxWaitMs) onTimeout?.();
         return fallback;
       }
-      const data = await response.json() as { data?: { score?: number | null; members?: number | null } };
-      return { ...fallback, malScore: data.data?.score, malMembers: data.data?.members };
+      const ratings = parseMalRating(await response.json(), idMal!);
+      return { ...fallback, malScore: ratings.malScore, malMembers: ratings.malMembers, ...(ratings.malScoredBy == null ? {} : { malScoredBy: ratings.malScoredBy }) };
     };
     // Include response bodies in the cron timeout as well as the service queue.
     return await (weekly ? withTimeout(lookup(), maxWaitMs ?? 6000) : lookup());
