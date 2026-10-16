@@ -1,1 +1,14 @@
-{"crons":[{"path":"/api/revalidate","schedule":"0 6 * * *"}]}
+{
+  "crons": [
+    {
+      "path": "/api/revalidate",
+      "schedule": "0 6 * * *"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "*": false
+    }
+  }
+}
