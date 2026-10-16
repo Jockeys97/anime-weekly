@@ -3,7 +3,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { AnimeDetailView } from '@/components/AnimeDetailView';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
-import { AnimeRatingTile, ImdbRatingTile } from '@/components/RatingSummary';
+import { AnimeRatingTile, ImdbRatingTile, MyAnimeListRatingTile } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
 import { getSynopsis } from '@/lib/synopsis';
 import type { SynopsisResult } from '@/lib/synopsis-client';
@@ -77,7 +77,8 @@ async function DetailAnimeRating({ animeRatings, id, name, locale }: {
   animeRatings: Promise<Ratings>; id: number; name: string; locale: Locale;
 }) {
   const scores = await animeRatings;
-  return <AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} followLocale />;
+  return <><AnimeRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} followLocale />
+    <MyAnimeListRatingTile ratings={{ ...scores, anilistId: id }} title={name} locale={locale} followLocale /></>;
 }
 
 async function DetailAvailability({ availability, name, locale, id }: { availability: Promise<AnimeAvailability>; name: string; locale: Locale; id: number }) {

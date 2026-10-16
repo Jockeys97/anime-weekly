@@ -96,6 +96,14 @@ describe('season IMDb series fallback', () => {
     expect(await findSeasonSeries(cycle)).toBeNull();
     expect(getAnime).not.toHaveBeenCalled();
   });
+  it('rejects a different returned parent ID and a parent dated after the current season', async () => {
+    const current = anime(3, 'Example Season 2', 2026), parent = anime(1, 'Example', 2023);
+    prequel(current, parent);
+    vi.mocked(getAnime).mockResolvedValue({ ...parent, id: 99 });
+    expect(await findSeasonSeries(current)).toBeNull();
+    vi.mocked(getAnime).mockResolvedValue({ ...parent, startDate: { year: 2027, month: null, day: null } });
+    expect(await findSeasonSeries(current)).toBeNull();
+  });
   it('does not use a movie as the parent series', async () => {
     const current = anime(3, 'Example Season 3', 2026); const movie = anime(1, 'Example', 2023); movie.format = 'MOVIE'; prequel(current, movie);
     expect(await findSeasonSeries(current)).toBeNull();

@@ -20,6 +20,13 @@ describe('TMDB remake identity', () => {
     expect(chooseTMDBMatch([remake, { ...remake, id: 3 }], ['Ranma1/2 (2024)'], 2024)).toBeNull();
   });
 });
+
+it('normalizes the TV metadata label only for a TV lookup, preserving film identity and remake years', () => {
+  const series = { id: 14719, name: "JoJo's Bizarre Adventure", first_air_date: '2012-10-06' };
+  expect(chooseTMDBMatch([series], ["JoJo's Bizarre Adventure (TV)"], 2012, 'tv')?.id).toBe(14719);
+  expect(chooseTMDBMatch([series], ["JoJo's Bizarre Adventure (TV)"], 2012, 'movie')).toBeNull();
+  expect(chooseTMDBMatch([{ ...series, first_air_date: '1993-01-01' }], ["JoJo's Bizarre Adventure (TV)"], 2012, 'tv')).toBeNull();
+});
 describe('conservative anime matching', () => {
   it('normalizes case, punctuation, spacing and full-width text while retaining Unicode', () => {
     expect(normalizeTitle(' Ａttack: on TITAN! ')).toBe('attackontitan');

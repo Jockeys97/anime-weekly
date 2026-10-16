@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
-vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
+vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), getAnime: vi.fn(), getSeasonFamily: vi.fn(), animeName: (a: { title: { english: string } }) => a.title.english }));
+vi.mock('../lib/imdb', () => ({ getImdbScore: vi.fn(), hasImdbScore: () => false }));
 vi.mock('../lib/tmdb', () => ({ getQuickWeekData: vi.fn(), getWeeklyProviders: vi.fn(), getAnimeAvailability: vi.fn() }));
 import { getSeason } from '../lib/anilist';
 import { getQuickWeekData, getWeeklyProviders, getAnimeAvailability } from '../lib/tmdb';
@@ -10,6 +11,7 @@ import { mergePlatformSnapshot } from '../lib/platform-data';
 import { GET as weeklyGet } from '../app/api/weekly-providers/route';
 import { GET as seasonGet } from '../app/api/season-providers/route';
 import type { AniListAnime } from '../lib/anilist';
+import { getImdbScore } from '../lib/imdb';
 const available = { providers: { IT: { link: 'https://www.themoviedb.org/tv/1/watch?locale=IT', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false };
 const week = { year: 2026, week: 42 };
 beforeEach(async () => {
@@ -47,7 +49,8 @@ it('loads a canonical season page once and explicitly requests provider-only mat
   const data = await getSeasonPlatformMetadata(2024, 'fall', 1);
   expect(data.titles['anilist:178533']).toEqual({ ...available, match: { id: 259140, kind: 'tv' } });
   expect(getSeason).toHaveBeenCalledExactlyOnceWith(2024, 'fall', 1);
-  expect(getAnimeAvailability).toHaveBeenCalledExactlyOnceWith(['Ranma ½', 'らんま1/2'], 2024, 'tv', false, true);
+  expect(getAnimeAvailability).toHaveBeenCalledExactlyOnceWith(['Ranma ½ (2024)', 'らんま1/2'], 2024, 'tv', false, true);
+  expect(getImdbScore).not.toHaveBeenCalled();
   expect(getWeeklyProviders).not.toHaveBeenCalled();
 });
 
@@ -57,6 +60,20 @@ it('includes verified Steel Ball Run offers in seasonal filters without rating o
   expect(data.titles['anilist:210482'].providers.US?.providers[0].watch_url).toBe('https://www.netflix.com/title/82116553');
   expect(data.titles['anilist:210482'].providers.IT?.providers[0].provider_name).toBe('Netflix');
   expect(getAnimeAvailability).not.toHaveBeenCalled();
+  expect(getImdbScore).not.toHaveBeenCalled();
+});
+
+it('does not cache a failed title identity as confirmed empty platform metadata', async () => {
+  const anime = { id: 1, title: { english: 'Example', romaji: null, native: null }, format: 'TV', startDate: { year: 2024 } } as AniListAnime;
+  vi.mocked(getSeason).mockResolvedValue({ media: [anime], pageInfo: { currentPage: 1, hasNextPage: false } });
+  vi.mocked(getAnimeAvailability).mockResolvedValueOnce({ match: null, ratings: { imdbStatus: 'unmatched' }, providers: {}, providersUnavailable: false })
+    .mockResolvedValue({ ...available, match: { id: 1, kind: 'tv' }, ratings: {} });
+  const first = await getSeasonPlatformMetadata(2024, 'fall', 1);
+  expect(first.unavailable).toBe(true);
+  expect(first.titles['anilist:1'].providersUnavailable).toBe(true);
+  const next = await getSeasonPlatformMetadata(2024, 'fall', 1);
+  expect(next.unavailable).toBe(false);
+  expect(next.titles['anilist:1'].providers.IT?.providers[0].provider_name).toBe('Netflix');
 });
 
 it('rejects invalid route parameters before calling any sources', async () => {

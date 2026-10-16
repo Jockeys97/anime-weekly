@@ -12,17 +12,18 @@ export interface MalAnime {
   broadcast?: { day_of_the_week?: string; start_time?: string };
   status?: string; num_episodes?: number;
 }
-export interface TraktShow { title: string; ids: { trakt: number; tmdb?: number | null } }
+export interface TraktShow { title: string; year?: number | null; genres?: string[]; country?: string; ids: { trakt: number; tmdb?: number | null } }
 export interface TraktRelease {
   first_aired: string;
-  episode: { season: number; number: number; ids?: { trakt?: number } };
+  episode: { season: number; number: number; title?: string; ids?: { trakt?: number } };
   show: TraktShow;
 }
 export interface PersonalRelease {
   key: string; title: string; airingAt: number; episode: number; season?: number;
   anilistId?: number; sources: ('trakt' | 'mal')[];
+  poster?: string | null; episodeTitle?: string;
 }
-export interface WeekCandidate { id: number; malId?: number; names: string[]; tmdbKeys: string[] }
+export interface WeekCandidate { id: number; malId?: number; names: string[]; tmdbKeys: string[]; poster?: string | null }
 export function romeWeek(now = new Date()) {
   const week = isoWeek(new Date(`${calendarDate(now.getTime(), 'Europe/Rome')}T12:00:00Z`));
   return { week, slug: formatWeek(week), ...weekRange(week) };
@@ -40,6 +41,7 @@ export function weekCandidates(snapshot: WeeklyRatings, mappings: AnimeMapping[]
     const candidate = candidates.get(id) ?? { id, malId: mapping?.idMal ?? rating.malId, names: [], tmdbKeys: [] };
     candidate.names.push(...[snapshot.names?.[key], ...Object.values(mapping?.title ?? {})].filter((name): name is string => Boolean(name?.trim())));
     candidate.tmdbKeys.push(key); candidates.set(id, candidate);
+    if (mapping?.coverImage) candidate.poster = mapping.coverImage.extraLarge || mapping.coverImage.large;
   }
   return [...candidates.values()];
 }
@@ -57,7 +59,9 @@ export function matchMal(anime: MalAnime, candidates: WeekCandidate[]): WeekCand
 }
 export function matchTrakt(show: TraktShow, candidates: WeekCandidate[]): WeekCandidate | undefined {
   const matches = candidates.filter(candidate => show.ids.tmdb != null && candidate.tmdbKeys.includes(`tv:${show.ids.tmdb}`));
-  return matches.length === 1 ? matches[0] : matchNames([show.title], candidates);
+  if (matches.length) return matches.length === 1 ? matches[0] : undefined;
+  const match = matchNames([show.title], candidates);
+  return match && (!show.ids.tmdb || !match.tmdbKeys.length || match.tmdbKeys.includes(`tv:${show.ids.tmdb}`)) ? match : undefined;
 }
 export function buildPersonalReleases(trakt: TraktRelease[], mal: MalAnime[], candidates: WeekCandidate[], events: AiringEvent[], week: ISOWeek) {
   const releases: PersonalRelease[] = [];
@@ -67,8 +71,12 @@ export function buildPersonalReleases(trakt: TraktRelease[], mal: MalAnime[], ca
     if (!inRomeWeek(airingAt, week) || !entry.show?.title || !entry.show.ids || !Number.isSafeInteger(entry.episode?.number) || entry.episode.number <= 0
       || !Number.isSafeInteger(entry.episode.season) || entry.episode.season < 0) continue;
     const match = matchTrakt(entry.show, candidates);
+    // Trakt calendars contain all television. Only independently confirmed
+    // anime identities may appear in this site's personal calendar.
+    if (!match) continue;
     releases.push({ key: `trakt:${entry.show.ids.trakt}:${entry.episode.season}:${entry.episode.number}`, title: entry.show.title,
-      airingAt, episode: entry.episode.number, season: entry.episode.season, anilistId: match?.id, sources: ['trakt'] });
+      airingAt, episode: entry.episode.number, season: entry.episode.season, anilistId: match.id, poster: match.poster,
+      episodeTitle: entry.episode.title, sources: ['trakt'] });
   }
   const follows = new Map<number, MalAnime>();
   for (const anime of mal) { const match = matchMal(anime, candidates); if (match) follows.set(match.id, anime); }
@@ -76,17 +84,31 @@ export function buildPersonalReleases(trakt: TraktRelease[], mal: MalAnime[], ca
     const anime = follows.get(event.mediaId), airingAt = event.airingAt * 1000;
     if (!anime || !inRomeWeek(airingAt, week) || !Number.isSafeInteger(event.episode) || event.episode <= 0) continue;
     releases.push({ key: `mal:${event.mediaId}:${event.episode}`, title: anime.title, airingAt, episode: event.episode,
-      anilistId: event.mediaId, sources: ['mal'] });
+      anilistId: event.mediaId, poster: candidates.find(candidate => candidate.id === event.mediaId)?.poster, sources: ['mal'] });
   }
   const unique = new Map<string, PersonalRelease>();
   for (const release of releases) {
     // Absolute AniList episode numbers can differ from Trakt season numbers;
     // merge only on a confirmed ID, episode and Rome date.
-    const key = release.anilistId ? `${release.anilistId}:${release.episode}:${calendarDate(release.airingAt)}` : release.key;
+    const key = release.anilistId ? `${release.anilistId}:${release.season === 0 ? 'special:' : ''}${release.episode}:${calendarDate(release.airingAt)}` : release.key;
     const previous = unique.get(key);
     if (previous) previous.sources = [...new Set([...previous.sources, ...release.sources])];
     else unique.set(key, release);
   }
   return { releases: [...unique.values()].sort((a, b) => a.airingAt - b.airingAt || a.title.localeCompare(b.title)),
     unmatched: mal.filter(anime => !matchMal(anime, candidates)).length };
+}
+
+export function groupPersonalReleases(releases: PersonalRelease[]) {
+  const groups = new Map<string, { key: string; title: string; anilistId?: number; poster?: string | null; day: string; episodes: PersonalRelease[]; sources: PersonalRelease['sources'] }>();
+  for (const release of releases) {
+    const day = calendarDate(release.airingAt, 'Europe/Rome');
+    const key = `${day}:${release.anilistId ?? release.key}`;
+    const group = groups.get(key) ?? { key, title: release.title, anilistId: release.anilistId, poster: release.poster, day, episodes: [], sources: [] };
+    group.episodes.push(release);
+    group.sources = [...new Set([...group.sources, ...release.sources])];
+    if (!group.poster) group.poster = release.poster;
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }

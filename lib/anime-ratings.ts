@@ -4,9 +4,8 @@ import { animeSearchTitles, chooseAnimeMatch, type AnimeCandidate, type AnimeSea
 import type { Ratings } from '@/lib/ratings';
 import { withTimeout } from '@/lib/async-timeout';
 
-import { anilistFetch as anilist, throttle } from '@/lib/rate-limited-fetch';
+import { anilistFetch as anilist, jikanFetch as jikan } from '@/lib/rate-limited-fetch';
 // Below both Jikan's 60/minute and 3/second limits, including retries.
-const jikan = throttle(1100, 6000);
 export const JIKAN_REVALIDATE = 86400;
 const query = `query ($search: String!, $formats: [MediaFormat]) {
   Page(page: 1, perPage: 50) {

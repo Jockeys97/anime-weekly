@@ -76,7 +76,7 @@ export default async function SeasonPage({ params, searchParams }: {
         </div>
       </div>
     </section>
-    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} initialProviders={initialProviders} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} initialSummary={summaries[anime.id]} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} initialProviders={initialProviders} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}&watch=v3`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} initialSummary={summaries[anime.id]} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

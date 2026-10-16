@@ -10,6 +10,7 @@ import { MyAnimeContent } from '@/components/MyAnimeContent';
 import './my-anime.css';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { ...pageMetadata('I miei anime', 'Il tuo calendario anime personale.', '/my-anime'), robots: { index: false, follow: false } };
 export default async function MyAnimePage({ searchParams }: { searchParams: Promise<{ auth?: string }> }) {

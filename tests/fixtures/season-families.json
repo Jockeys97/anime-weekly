@@ -1,0 +1,1407 @@
+{
+  "source": "AniList public GraphQL, collected 2026-10-16; exact PREQUEL edges, not invented title relationships",
+  "cases": [
+    {
+      "id": 209872,
+      "rootId": 178533,
+      "title": "Ranma1/2 (2024) Season 3"
+    },
+    {
+      "id": 185731,
+      "rootId": 178533,
+      "title": "Ranma1/2 (2024) Season 2"
+    },
+    {
+      "id": 195516,
+      "rootId": 161645,
+      "title": "The Apothecary Diaries Season 3"
+    },
+    {
+      "id": 176301,
+      "rootId": 161645,
+      "title": "The Apothecary Diaries Season 2"
+    },
+    {
+      "id": 195604,
+      "rootId": 97940,
+      "title": "Black Clover Season 2"
+    },
+    {
+      "id": 178789,
+      "rootId": 108465,
+      "title": "Mushoku Tensei: Jobless Reincarnation Season 3"
+    },
+    {
+      "id": 166873,
+      "rootId": 108465,
+      "title": "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2"
+    },
+    {
+      "id": 146065,
+      "rootId": 108465,
+      "title": "Mushoku Tensei: Jobless Reincarnation Season 2"
+    },
+    {
+      "id": 127720,
+      "rootId": 108465,
+      "title": "Mushoku Tensei: Jobless Reincarnation Cour 2"
+    },
+    {
+      "id": 129874,
+      "rootId": 101922,
+      "title": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc"
+    },
+    {
+      "id": 142329,
+      "rootId": 101922,
+      "title": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc"
+    },
+    {
+      "id": 20958,
+      "rootId": 16498,
+      "title": "Attack on Titan Season 2"
+    },
+    {
+      "id": 99147,
+      "rootId": 16498,
+      "title": "Attack on Titan Season 3"
+    },
+    {
+      "id": 110277,
+      "rootId": 16498,
+      "title": "Attack on Titan Final Season"
+    },
+    {
+      "id": 104578,
+      "rootId": 16498,
+      "title": "Attack on Titan Season 3 Part 2"
+    },
+    {
+      "id": 20474,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: Stardust Crusaders"
+    },
+    {
+      "id": 20799,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: Stardust Crusaders - Battle in Egypt"
+    },
+    {
+      "id": 21450,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: Diamond is Unbreakable"
+    },
+    {
+      "id": 102883,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: Golden Wind"
+    },
+    {
+      "id": 131942,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: STONE OCEAN"
+    },
+    {
+      "id": 146722,
+      "rootId": 14719,
+      "title": "JoJo's Bizarre Adventure: STONE OCEAN Part 2"
+    },
+    {
+      "id": 185874,
+      "rootId": 116674,
+      "title": "BLEACH: Thousand-Year Blood War - The Calamity"
+    },
+    {
+      "id": 169755,
+      "rootId": 116674,
+      "title": "BLEACH: Thousand-Year Blood War - The Conflict"
+    },
+    {
+      "id": 159322,
+      "rootId": 116674,
+      "title": "BLEACH: Thousand-Year Blood War - The Separation"
+    },
+    {
+      "id": 116674,
+      "rootId": null,
+      "title": "BLEACH: Thousand-Year Blood War"
+    },
+    {
+      "id": 14719,
+      "rootId": null,
+      "title": "JoJo's Bizarre Adventure (TV)"
+    },
+    {
+      "id": 210482,
+      "rootId": 190327,
+      "title": "STEEL BALL RUN JoJo's Bizarre Adventure 2nd - 3rd STAGE"
+    },
+    {
+      "id": 190327,
+      "rootId": null,
+      "title": "STEEL BALL RUN JoJo's Bizarre Adventure 1st STAGE"
+    },
+    {
+      "id": 21,
+      "rootId": null,
+      "title": "ONE PIECE"
+    },
+    {
+      "id": 1735,
+      "rootId": null,
+      "title": "Naruto: Shippuden"
+    },
+    {
+      "id": 813,
+      "rootId": null,
+      "title": "Dragon Ball Z"
+    },
+    {
+      "id": 160803,
+      "rootId": null,
+      "title": "MAGICAL GIRL RAISING PROJECT restart"
+    },
+    {
+      "id": 206814,
+      "rootId": null,
+      "title": "Dragon Ball Super: Beerus"
+    }
+  ],
+  "media": [
+    {
+      "id": 209872,
+      "title": {
+        "english": "Ranma1/2 (2024) Season 3",
+        "romaji": "Ranma 1/2 (2024) 3rd Season",
+        "native": "らんま1/2 (2024) 第3期"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 185731,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Ranma1/2 (2024) Season 2",
+                "romaji": "Ranma 1/2 (2024) 2nd Season",
+                "native": "らんま1/2 (2024) 第2期"
+              },
+              "startDate": {
+                "year": 2025
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 185731,
+      "title": {
+        "english": "Ranma1/2 (2024) Season 2",
+        "romaji": "Ranma 1/2 (2024) 2nd Season",
+        "native": "らんま1/2 (2024) 第2期"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2025
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 178533,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Ranma1/2 (2024)",
+                "romaji": "Ranma 1/2 (2024)",
+                "native": "らんま1/2 (2024)"
+              },
+              "startDate": {
+                "year": 2024
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 195516,
+      "title": {
+        "english": "The Apothecary Diaries Season 3",
+        "romaji": "Kusuriya no Hitorigoto 3rd Season",
+        "native": "薬屋のひとりごと 第3期"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 176301,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "The Apothecary Diaries Season 2",
+                "romaji": "Kusuriya no Hitorigoto 2nd Season",
+                "native": "薬屋のひとりごと 第2期"
+              },
+              "startDate": {
+                "year": 2025
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 176301,
+      "title": {
+        "english": "The Apothecary Diaries Season 2",
+        "romaji": "Kusuriya no Hitorigoto 2nd Season",
+        "native": "薬屋のひとりごと 第2期"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2025
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 161645,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "The Apothecary Diaries",
+                "romaji": "Kusuriya no Hitorigoto",
+                "native": "薬屋のひとりごと"
+              },
+              "startDate": {
+                "year": 2023
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 195604,
+      "title": {
+        "english": "Black Clover Season 2",
+        "romaji": "Black Clover 2nd Season",
+        "native": "ブラッククローバー 第2期"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 97940,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Black Clover",
+                "romaji": "Black Clover",
+                "native": "ブラッククローバー"
+              },
+              "startDate": {
+                "year": 2017
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 178789,
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation Season 3",
+        "romaji": "Mushoku Tensei III: Isekai Ittara Honki Dasu",
+        "native": "無職転生Ⅲ ～異世界行ったら本気だす～"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 166873,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2",
+                "romaji": "Mushoku Tensei II: Isekai Ittara Honki Dasu Part 2",
+                "native": "無職転生Ⅱ ～異世界行ったら本気だす～ 第2クール"
+              },
+              "startDate": {
+                "year": 2024
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 166873,
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation Season 2 Part 2",
+        "romaji": "Mushoku Tensei II: Isekai Ittara Honki Dasu Part 2",
+        "native": "無職転生Ⅱ ～異世界行ったら本気だす～ 第2クール"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2024
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 146065,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Mushoku Tensei: Jobless Reincarnation Season 2",
+                "romaji": "Mushoku Tensei II: Isekai Ittara Honki Dasu",
+                "native": "無職転生Ⅱ ～異世界行ったら本気だす～"
+              },
+              "startDate": {
+                "year": 2023
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 146065,
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation Season 2",
+        "romaji": "Mushoku Tensei II: Isekai Ittara Honki Dasu",
+        "native": "無職転生Ⅱ ～異世界行ったら本気だす～"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2023
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 127720,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Mushoku Tensei: Jobless Reincarnation Cour 2",
+                "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu Part 2",
+                "native": "無職転生 ～異世界行ったら本気だす～ 第2クール"
+              },
+              "startDate": {
+                "year": 2021
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 127720,
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation Cour 2",
+        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu Part 2",
+        "native": "無職転生 ～異世界行ったら本気だす～ 第2クール"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2021
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 108465,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Mushoku Tensei: Jobless Reincarnation",
+                "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+                "native": "無職転生 ～異世界行ったら本気だす～"
+              },
+              "startDate": {
+                "year": 2021
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 129874,
+      "title": {
+        "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+        "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)",
+        "native": "鬼滅の刃 無限列車編 (TV)"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2021
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 101922,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba",
+                "romaji": "Kimetsu no Yaiba",
+                "native": "鬼滅の刃"
+              },
+              "startDate": {
+                "year": 2019
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 142329,
+      "title": {
+        "english": "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+        "romaji": "Kimetsu no Yaiba: Yuukaku-hen",
+        "native": "鬼滅の刃 遊郭編"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2021
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 129874,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Demon Slayer: Kimetsu no Yaiba Mugen Train Arc",
+                "romaji": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)",
+                "native": "鬼滅の刃 無限列車編 (TV)"
+              },
+              "startDate": {
+                "year": 2021
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 20958,
+      "title": {
+        "english": "Attack on Titan Season 2",
+        "romaji": "Shingeki no Kyojin Season 2",
+        "native": "進撃の巨人 Season２"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2017
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 16498,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Attack on Titan",
+                "romaji": "Shingeki no Kyojin",
+                "native": "進撃の巨人"
+              },
+              "startDate": {
+                "year": 2013
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 99147,
+      "title": {
+        "english": "Attack on Titan Season 3",
+        "romaji": "Shingeki no Kyojin Season 3",
+        "native": "進撃の巨人 Season３"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2018
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 20958,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Attack on Titan Season 2",
+                "romaji": "Shingeki no Kyojin Season 2",
+                "native": "進撃の巨人 Season２"
+              },
+              "startDate": {
+                "year": 2017
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 110277,
+      "title": {
+        "english": "Attack on Titan Final Season",
+        "romaji": "Shingeki no Kyojin: The Final Season",
+        "native": "進撃の巨人 The Final Season"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2020
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 104578,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Attack on Titan Season 3 Part 2",
+                "romaji": "Shingeki no Kyojin Season 3 Part 2",
+                "native": "進撃の巨人 Season３ Part.2"
+              },
+              "startDate": {
+                "year": 2019
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 104578,
+      "title": {
+        "english": "Attack on Titan Season 3 Part 2",
+        "romaji": "Shingeki no Kyojin Season 3 Part 2",
+        "native": "進撃の巨人 Season３ Part.2"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2019
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 99147,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Attack on Titan Season 3",
+                "romaji": "Shingeki no Kyojin Season 3",
+                "native": "進撃の巨人 Season３"
+              },
+              "startDate": {
+                "year": 2018
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 20474,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: Stardust Crusaders",
+        "romaji": "JoJo no Kimyou na Bouken: Stardust Crusaders",
+        "native": "ジョジョの奇妙な冒険 スターダストクルセイダース"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2014
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 14719,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "JoJo's Bizarre Adventure (TV)",
+                "romaji": "JoJo no Kimyou na Bouken (TV)",
+                "native": "ジョジョの奇妙な冒険 (TV)"
+              },
+              "startDate": {
+                "year": 2012
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 20799,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: Stardust Crusaders - Battle in Egypt",
+        "romaji": "JoJo no Kimyou na Bouken: Stardust Crusaders - Egypt-hen",
+        "native": "ジョジョの奇妙な冒険 スターダストクルセイダース エジプト編"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2015
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 20474,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: Stardust Crusaders",
+                "romaji": "JoJo no Kimyou na Bouken: Stardust Crusaders",
+                "native": "ジョジョの奇妙な冒険 スターダストクルセイダース"
+              },
+              "startDate": {
+                "year": 2014
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 21450,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: Diamond is Unbreakable",
+        "romaji": "JoJo no Kimyou na Bouken: Diamond wa Kudakenai",
+        "native": "ジョジョの奇妙な冒険 ダイヤモンドは砕けない"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2016
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 20799,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: Stardust Crusaders - Battle in Egypt",
+                "romaji": "JoJo no Kimyou na Bouken: Stardust Crusaders - Egypt-hen",
+                "native": "ジョジョの奇妙な冒険 スターダストクルセイダース エジプト編"
+              },
+              "startDate": {
+                "year": 2015
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 102883,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: Golden Wind",
+        "romaji": "JoJo no Kimyou na Bouken: Ougon no Kaze",
+        "native": "ジョジョの奇妙な冒険 黄金の風"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2018
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 21450,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: Diamond is Unbreakable",
+                "romaji": "JoJo no Kimyou na Bouken: Diamond wa Kudakenai",
+                "native": "ジョジョの奇妙な冒険 ダイヤモンドは砕けない"
+              },
+              "startDate": {
+                "year": 2016
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 131942,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: STONE OCEAN",
+        "romaji": "JoJo no Kimyou na Bouken: Stone Ocean",
+        "native": "ジョジョの奇妙な冒険 ストーンオーシャン"
+      },
+      "format": "ONA",
+      "startDate": {
+        "year": 2021
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 102883,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: Golden Wind",
+                "romaji": "JoJo no Kimyou na Bouken: Ougon no Kaze",
+                "native": "ジョジョの奇妙な冒険 黄金の風"
+              },
+              "startDate": {
+                "year": 2018
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 146722,
+      "title": {
+        "english": "JoJo's Bizarre Adventure: STONE OCEAN Part 2",
+        "romaji": "JoJo no Kimyou na Bouken: Stone Ocean Part 2",
+        "native": "ジョジョの奇妙な冒険 ストーンオーシャン 2クール"
+      },
+      "format": "ONA",
+      "startDate": {
+        "year": 2022
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 131942,
+              "type": "ANIME",
+              "format": "ONA",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: STONE OCEAN",
+                "romaji": "JoJo no Kimyou na Bouken: Stone Ocean",
+                "native": "ジョジョの奇妙な冒険 ストーンオーシャン"
+              },
+              "startDate": {
+                "year": 2021
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 185874,
+      "title": {
+        "english": "BLEACH: Thousand-Year Blood War - The Calamity",
+        "romaji": "BLEACH: Sennen Kessen-hen - Kashin-tan",
+        "native": "BLEACH 千年血戦篇-禍進譚-"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 169755,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "BLEACH: Thousand-Year Blood War - The Conflict",
+                "romaji": "BLEACH: Sennen Kessen-hen - Soukoku-tan",
+                "native": "BLEACH 千年血戦篇-相剋譚-"
+              },
+              "startDate": {
+                "year": 2024
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 169755,
+      "title": {
+        "english": "BLEACH: Thousand-Year Blood War - The Conflict",
+        "romaji": "BLEACH: Sennen Kessen-hen - Soukoku-tan",
+        "native": "BLEACH 千年血戦篇-相剋譚-"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2024
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 159322,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "BLEACH: Thousand-Year Blood War - The Separation",
+                "romaji": "BLEACH: Sennen Kessen-hen - Ketsubetsu-tan",
+                "native": "BLEACH 千年血戦篇-訣別譚-"
+              },
+              "startDate": {
+                "year": 2023
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 159322,
+      "title": {
+        "english": "BLEACH: Thousand-Year Blood War - The Separation",
+        "romaji": "BLEACH: Sennen Kessen-hen - Ketsubetsu-tan",
+        "native": "BLEACH 千年血戦篇-訣別譚-"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2023
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 116674,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "BLEACH: Thousand-Year Blood War",
+                "romaji": "BLEACH: Sennen Kessen-hen",
+                "native": "BLEACH 千年血戦篇"
+              },
+              "startDate": {
+                "year": 2022
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 116674,
+      "title": {
+        "english": "BLEACH: Thousand-Year Blood War",
+        "romaji": "BLEACH: Sennen Kessen-hen",
+        "native": "BLEACH 千年血戦篇"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2022
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 269,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Bleach",
+                "romaji": "BLEACH",
+                "native": "BLEACH"
+              },
+              "startDate": {
+                "year": 2004
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 14719,
+      "title": {
+        "english": "JoJo's Bizarre Adventure (TV)",
+        "romaji": "JoJo no Kimyou na Bouken (TV)",
+        "native": "ジョジョの奇妙な冒険 (TV)"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2012
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 210482,
+      "title": {
+        "english": "STEEL BALL RUN JoJo's Bizarre Adventure 2nd - 3rd STAGE",
+        "romaji": "JoJo no Kimyou na Bouken: Steel Ball Run - 2nd & 3rd STAGE",
+        "native": "ジョジョの奇妙な冒険 スティール・ボール・ラン 2nd＆3rd STAGE"
+      },
+      "format": "ONA",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 190327,
+              "type": "ANIME",
+              "format": "ONA",
+              "title": {
+                "english": "STEEL BALL RUN JoJo's Bizarre Adventure 1st STAGE",
+                "romaji": "JoJo no Kimyou na Bouken: Steel Ball Run - 1st STAGE",
+                "native": "ジョジョの奇妙な冒険 スティール・ボール・ラン 1st STAGE"
+              },
+              "startDate": {
+                "year": 2026
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 190327,
+      "title": {
+        "english": "STEEL BALL RUN JoJo's Bizarre Adventure 1st STAGE",
+        "romaji": "JoJo no Kimyou na Bouken: Steel Ball Run - 1st STAGE",
+        "native": "ジョジョの奇妙な冒険 スティール・ボール・ラン 1st STAGE"
+      },
+      "format": "ONA",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 146722,
+              "type": "ANIME",
+              "format": "ONA",
+              "title": {
+                "english": "JoJo's Bizarre Adventure: STONE OCEAN Part 2",
+                "romaji": "JoJo no Kimyou na Bouken: Stone Ocean Part 2",
+                "native": "ジョジョの奇妙な冒険 ストーンオーシャン 2クール"
+              },
+              "startDate": {
+                "year": 2022
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "title": {
+        "english": "ONE PIECE",
+        "romaji": "ONE PIECE",
+        "native": "ONE PIECE"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 1999
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 167404,
+              "type": "ANIME",
+              "format": "ONA",
+              "title": {
+                "english": "MONSTERS: 103 Mercies Dragon Damnation",
+                "romaji": "MONSTERS: Ippaku Sanjou Hiryuu Jigoku",
+                "native": "MONSTERS 一百三情飛龍侍極"
+              },
+              "startDate": {
+                "year": 2024
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 1735,
+      "title": {
+        "english": "Naruto: Shippuden",
+        "romaji": "NARUTO: Shippuuden",
+        "native": "NARUTO -ナルト- 疾風伝"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2007
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 20,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Naruto",
+                "romaji": "NARUTO",
+                "native": "NARUTO -ナルト-"
+              },
+              "startDate": {
+                "year": 2002
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 813,
+      "title": {
+        "english": "Dragon Ball Z",
+        "romaji": "Dragon Ball Z",
+        "native": "ドラゴンボールZ"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 1989
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 223,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Dragon Ball",
+                "romaji": "Dragon Ball",
+                "native": "ドラゴンボール"
+              },
+              "startDate": {
+                "year": 1986
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 160803,
+      "title": {
+        "english": "MAGICAL GIRL RAISING PROJECT restart",
+        "romaji": "Mahou Shoujo Ikusei Keikaku: restart",
+        "native": "魔法少女育成計画 restart"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 21340,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Magical Girl Raising Project",
+                "romaji": "Mahou Shoujo Ikusei Keikaku",
+                "native": "魔法少女育成計画"
+              },
+              "startDate": {
+                "year": 2016
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 206814,
+      "title": {
+        "english": "Dragon Ball Super: Beerus",
+        "romaji": "Dragon Ball Super: Beerus",
+        "native": "ドラゴンボール超 ビルス"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2026
+      },
+      "relations": {
+        "edges": [
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 813,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Dragon Ball Z",
+                "romaji": "Dragon Ball Z",
+                "native": "ドラゴンボールZ"
+              },
+              "startDate": {
+                "year": 1989
+              }
+            }
+          },
+          {
+            "relationType": "PREQUEL",
+            "node": {
+              "id": 20635,
+              "type": "ANIME",
+              "format": "TV",
+              "title": {
+                "english": "Dragon Ball Z Kai: The Final Chapters",
+                "romaji": "Dragon Ball Kai (2014)",
+                "native": "ドラゴンボール改 (2014)"
+              },
+              "startDate": {
+                "year": 2014
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 178533,
+      "title": {
+        "english": "Ranma1/2 (2024)",
+        "romaji": "Ranma 1/2 (2024)",
+        "native": "らんま1/2 (2024)"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2024
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 161645,
+      "title": {
+        "english": "The Apothecary Diaries",
+        "romaji": "Kusuriya no Hitorigoto",
+        "native": "薬屋のひとりごと"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2023
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 97940,
+      "title": {
+        "english": "Black Clover",
+        "romaji": "Black Clover",
+        "native": "ブラッククローバー"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2017
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 108465,
+      "title": {
+        "english": "Mushoku Tensei: Jobless Reincarnation",
+        "romaji": "Mushoku Tensei: Isekai Ittara Honki Dasu",
+        "native": "無職転生 ～異世界行ったら本気だす～"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2021
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 101922,
+      "title": {
+        "english": "Demon Slayer: Kimetsu no Yaiba",
+        "romaji": "Kimetsu no Yaiba",
+        "native": "鬼滅の刃"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2019
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 16498,
+      "title": {
+        "english": "Attack on Titan",
+        "romaji": "Shingeki no Kyojin",
+        "native": "進撃の巨人"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2013
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 269,
+      "title": {
+        "english": "Bleach",
+        "romaji": "BLEACH",
+        "native": "BLEACH"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2004
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 167404,
+      "title": {
+        "english": "MONSTERS: 103 Mercies Dragon Damnation",
+        "romaji": "MONSTERS: Ippaku Sanjou Hiryuu Jigoku",
+        "native": "MONSTERS 一百三情飛龍侍極"
+      },
+      "format": "ONA",
+      "startDate": {
+        "year": 2024
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 20,
+      "title": {
+        "english": "Naruto",
+        "romaji": "NARUTO",
+        "native": "NARUTO -ナルト-"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2002
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 223,
+      "title": {
+        "english": "Dragon Ball",
+        "romaji": "Dragon Ball",
+        "native": "ドラゴンボール"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 1986
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 21340,
+      "title": {
+        "english": "Magical Girl Raising Project",
+        "romaji": "Mahou Shoujo Ikusei Keikaku",
+        "native": "魔法少女育成計画"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2016
+      },
+      "relations": {
+        "edges": []
+      }
+    },
+    {
+      "id": 20635,
+      "title": {
+        "english": "Dragon Ball Z Kai: The Final Chapters",
+        "romaji": "Dragon Ball Kai (2014)",
+        "native": "ドラゴンボール改 (2014)"
+      },
+      "format": "TV",
+      "startDate": {
+        "year": 2014
+      },
+      "relations": {
+        "edges": []
+      }
+    }
+  ]
+}

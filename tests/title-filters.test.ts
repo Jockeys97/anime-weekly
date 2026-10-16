@@ -6,6 +6,16 @@ const titles = [
   { key: 'tv:2', genres: ['Action'], providers: { IT: { link: '', providers: [provider(2, 'B'), provider(1, 'A')] } } },
   { key: 'movie:3', providers: {} },
 ];
+it('uses series offers in missing countries, retaining exact-season offers and country boundaries', () => {
+  const entries = [{ key: 'anilist:1', providers: { US: { link: '', providers: [provider(283, 'Crunchyroll')] } },
+    seriesWatch: { providers: { US: { link: '', providers: [provider(8, 'Netflix')] }, IT: { link: '', providers: [provider(8, 'Netflix')] } } } }];
+  const filters = { genre: '', platform: 'netflix', region: 'IT' as const, onlyWatchlist: false, watchlist: [] };
+  expect(filterTitles(entries, filters)).toHaveLength(1);
+  expect(filterTitles(entries, { ...filters, region: 'US' })).toEqual([]);
+  expect(filterTitles(entries, { ...filters, region: 'JP' })).toEqual([]);
+  expect(filterOptions(entries, 'IT').platforms).toEqual([['netflix', 'Netflix']]);
+  expect(filterOptions(entries, 'US').platforms).toEqual([['283', 'Crunchyroll']]);
+});
 it('combines genre, country-specific platform and watchlist filters', () => {
   const filters = { genre: 'Action', platform: '1', region: 'IT' as const, onlyWatchlist: true, watchlist: ['tv:2'] };
   expect(filterTitles(titles, filters).map(title => title.key)).toEqual(['tv:2']);
