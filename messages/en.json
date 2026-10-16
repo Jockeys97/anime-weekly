@@ -347,6 +347,8 @@
   "features": {
     "topFive": "Top 5 episodes this week",
     "topFiveDescription": "Episodes released this week with the highest IMDb ratings. Updated daily.",
+    "episodesAvailableCount": "Rated episodes: {count}/5",
+    "episodesFewerThanFive": "The ranking includes up to 5 episodes from the selected week with a verified IMDb rating. New ratings are checked once a day.",
     "share": "Share",
     "copied": "Link copied",
     "copyLink": "Copy link",

@@ -23,6 +23,7 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
   const data = snapshot?.slug === slug ? snapshot.data : null;
   const top = topWeeklyEpisodes(data?.entries ?? [], slug);
   const pending = !data;
+  const showCount = data?.status === 'ready' || data?.status === 'partial';
   const failureMessage = data?.source === 'imdb-datasets' && data.reason === 'source' ? d.episodesDatasetUnavailable : data?.reason === 'quota' ? d.episodesQuotaUnavailable
     : data?.reason === 'authentication' ? d.episodesAuthenticationUnavailable
     : data?.reason === 'source' ? d.episodesSourceUnavailable
@@ -36,9 +37,10 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
     try { await navigator.clipboard.writeText(url); setStatus(d.copied); } catch { setStatus(`${d.copyLink}: ${url}`); }
   }
   return <section className="weekly-top-five" aria-labelledby="top-five-heading">
-    <div className="top-five-header"><div className="top-five-heading"><span className="top-five-mark" aria-hidden="true">✦</span><div><h2 id="top-five-heading">{d.topFive}</h2><p>{d.topFiveDescription}</p></div></div>
+    <div className="top-five-header"><div className="top-five-heading"><span className="top-five-mark" aria-hidden="true">✦</span><div><div className="top-five-title-row"><h2 id="top-five-heading">{d.topFive}</h2>{showCount && <span className="top-five-count" role="status">{d.episodesAvailableCount.replace('{count}', String(top.length))}</span>}</div><p>{d.topFiveDescription}</p></div></div>
       <div className="top-five-actions"><button type="button" onClick={share}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M5 14v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6" /></svg>{d.share}</button><a href={`/api/ics/week/${slug}`}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-6 4-4 4-2-2"/></svg>{d.calendar}</a></div>
     </div>
+    {showCount && top.length < 5 && <p className="top-five-availability">{d.episodesFewerThanFive}</p>}
     {top.length ? <ol className="top-five-grid" data-count={top.length}>{top.map((title, index) => {
       return <li className={index === 0 ? 'top-five-winner' : undefined} key={title.imdbId}>
         <Link className="top-five-card" prefetch={false} href={`https://www.imdb.com/title/${title.imdbId}/`} target="_blank" rel="noopener noreferrer" title={`${title.seriesName} · ${title.title}`}>

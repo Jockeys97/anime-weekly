@@ -142,6 +142,10 @@
 .top-five-heading{display:flex;align-items:center;gap:13px;min-width:0}
 .top-five-mark{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:12px;background:var(--green);color:var(--dark);font-size:25px}
 .top-five-heading h2{font-size:24px;letter-spacing:-.7px;font-weight:500;line-height:1.2;margin:0 0 6px}
+.top-five-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-bottom:6px}
+.top-five-title-row h2{margin-bottom:0}
+.top-five-count{display:inline-flex;flex-shrink:0;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:600;line-height:1.4;color:var(--ink);background:#eef3e5}
+.top-five-availability{font-size:12px;line-height:1.6;color:var(--muted);padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:#eef3e5;margin:0 0 16px}
 .top-five-heading p{font-size:11px;line-height:1.5;color:var(--muted);margin:0}
 .top-five-actions{display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;max-width:100%}
 .top-five-actions a,.top-five-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:9px 12px;font:inherit;font-size:11px;line-height:1.4;color:var(--ink);border:1px solid var(--line);border-radius:8px;background:transparent;cursor:pointer;text-decoration:none}

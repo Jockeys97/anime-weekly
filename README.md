@@ -268,7 +268,7 @@ A separate data-cache entry keyed solely by date retains the small daily result
 or failed attempt. Changing the candidate list, repeating the job or redeploying
 does not fetch the datasets again on a cache hit. Process-local in-flight calls
 are also deduplicated. Newly identified episodes wait until the next day. The
-weekly snapshot exposes only its best five confirmed episodes. Collection time
+weekly snapshot exposes up to five confirmed rated episodes. The UI shows the available count (for example, 1/5) and explains incomplete rankings while retaining the selected calendar week; it never fills missing positions with unrated episodes or other weeks. Collection time
 and the rating file's Last-Modified timestamp identify the cache and data dates.
 Previously confirmed values survive incomplete metadata or dataset outages;
 a complete daily file removes a matched candidate whose rating cannot be verified.
