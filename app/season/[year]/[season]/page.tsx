@@ -9,6 +9,19 @@ import { getDictionary } from '@/lib/i18n';
 import { currentSeason, parseSeason, SEASONS, seasonPath, shiftSeason, type Season } from '@/lib/season';
 
 import './season-explorer.css';
+import { pageMetadata } from '@/lib/seo';
+import { getWeeklyRatings } from '@/lib/weekly-ratings';
+import { formatWeek, isoWeek } from '@/lib/week';
+import { snapshotCatalog } from '@/lib/snapshot-catalog';
+
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ year: string; season: string }>; searchParams: Promise<{ page?: string | string[] }> }) {
+  const { year, season } = await params;
+  const value = parseSeason(year, season);
+  if (!value) notFound();
+  const { page } = await searchParams;
+  const suffix = typeof page === 'string' && /^[1-9]\d*$/.test(page) && page !== '1' ? `?page=${page}` : '';
+  return pageMetadata(`Anime ${season} ${year}`, `Serie e film anime della stagione ${season} ${year}.`, `${seasonPath(value)}${suffix}`);
+}
 
 export const revalidate = 86400;
 
@@ -24,7 +37,9 @@ export default async function SeasonPage({ params, searchParams }: {
   if (pageQuery != null && (typeof pageQuery !== 'string' || !/^[1-9]\d*$/.test(pageQuery))) notFound();
   const page = pageQuery == null ? 1 : Number(pageQuery);
   if (!Number.isSafeInteger(page) || page > 2147483647) notFound();
-  const data = await getSeason(value.year, value.season, page);
+  const [data, snapshot] = await Promise.all([getSeason(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
+  const summaries = snapshotCatalog(snapshot);
+  const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.
   const locale = await getRequestLocale();
   const d = getDictionary(locale).catalog;
@@ -61,7 +76,7 @@ export default async function SeasonPage({ params, searchParams }: {
         </div>
       </div>
     </section>
-    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} initialProviders={initialProviders} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} initialSummary={summaries[anime.id]} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

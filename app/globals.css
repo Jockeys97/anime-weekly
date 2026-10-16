@@ -203,3 +203,8 @@
 .top-five-winner .top-five-episode-name{color:#d6e2d9}
 .top-five-source{flex-wrap:wrap}
 @media(max-width:640px){.top-five-episode{font-size:10px;margin-top:5px}.top-five-episode-name{font-size:10px}.top-five-card,.top-five-winner .top-five-card{align-items:center}.top-five-title,.top-five-winner .top-five-title{font-size:13px}.top-five-score strong,.top-five-winner .top-five-score strong{font-size:23px}}
+
+.site-support { margin-bottom: 2rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: 12px; }
+.site-support h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+.site-support p { margin: 0 0 .75rem; }
+.site-support a { text-decoration: underline; }

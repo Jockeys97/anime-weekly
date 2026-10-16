@@ -371,5 +371,10 @@
     "episodesDatasetUnavailable": "Les jeux de données IMDb sont temporairement indisponibles. Les notes obtenues restent en cache ; nouvel essai lors de la prochaine mise à jour quotidienne.",
     "datasetAttribution": "Notes des épisodes issues des jeux de données IMDb · mise à jour quotidienne",
     "datasetDate": "Données du"
+  },
+  "support": {
+    "title": "Soutenir le site",
+    "description": "Aidez Anime Weekly à rester en ligne, sans publicité ni liens affiliés.",
+    "link": "Soutenir sur Ko-fi"
   }
 }

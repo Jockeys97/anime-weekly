@@ -85,5 +85,6 @@ export function RatingSummary({ ratings, title, locale, pendingImdb = false, pen
   return <dl className="ratings">
     <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} lookup={imdbLookup} allowRetry={allowRetry} />
     <AnimeRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} />
+    {ratings.malScore != null && ratings.anilistScore != null && <AnimeRatingTile ratings={{ ...ratings, malScore: undefined }} title={title} locale={locale} />}
   </dl>;
 }

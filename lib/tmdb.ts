@@ -304,8 +304,8 @@ export async function getWeeklyRatingSources(week: ISOWeek) {
   });
 }
 export async function getWeeklyRelated(kind: Kind, id: number) { return recommendation(kind, id); }
-export async function getWeeklyProviders(kind: Kind, id: number) {
-  const watch = await tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${id}/watch/providers`).catch(() => null);
+export async function getWeeklyProviders(kind: Kind, id: number, fresh = false) {
+  const watch = await tmdb<{ results: Partial<Record<StreamingRegion, WatchRegion>> }>(`${kind}/${id}/watch/providers`, {}, CACHE_SECONDS, fresh).catch(() => null);
   return { providers: watchProviders(watch), providersUnavailable: watch === null };
 }
 

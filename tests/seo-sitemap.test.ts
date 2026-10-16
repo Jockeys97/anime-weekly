@@ -32,7 +32,9 @@ describe('SEO sitemap', () => {
   });
   it('uses the same base URL for robots and metadata', () => {
     expect(siteUrl({ NEXT_PUBLIC_SITE_URL: 'https://custom.example/path', VERCEL_PROJECT_PRODUCTION_URL: 'production.example' }).href).toBe('https://custom.example/');
-    expect(siteUrl({ VERCEL_PROJECT_PRODUCTION_URL: 'production.example' }).href).toBe('https://production.example/');
+    expect(siteUrl({ NODE_ENV: 'production', VERCEL_PROJECT_PRODUCTION_URL: 'production.example' }).href).toBe('https://weeklyanime.com/');
+    expect(siteUrl({ VERCEL_ENV: 'production' }).href).toBe('https://weeklyanime.com/');
+    expect(siteUrl({ NODE_ENV: 'development', VERCEL_PROJECT_PRODUCTION_URL: 'production.example' }).href).toBe('http://localhost:3000/');
     expect(siteUrl({}).href).toBe('http://localhost:3000/');
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://custom.example');
     expect(robots()).toEqual({ rules: { userAgent: '*', allow: '/', disallow: '/api/' }, sitemap: 'https://custom.example/sitemap.xml' });

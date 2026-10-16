@@ -187,7 +187,7 @@ it.each([null, {}, { ratings: [], sources: {} }, { ratings: {}, sources: null },
 
 it('repairs a legacy episode failure without spending more series-rating quota', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
-  const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [], episodes: { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-14T10:00:00Z' } };
+  const previous = { titles: { 'tv:1': { anilistScore: 81 } }, events: [], availability: { titles: { 'tv:1': { countries: {}, fetchedAt: Date.now() } }, providers: {} }, episodes: { entries: [], status: 'unavailable' as const, updatedAt: '2026-10-14T10:00:00Z' } };
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
   const episodes = { entries: [], status: 'ready' as const, collectorVersion: 4, updatedAt: '2026-10-14T12:00:00Z' };
   vi.mocked(primeWeeklyEpisodes).mockResolvedValue(episodes);
@@ -199,7 +199,7 @@ it('repairs a legacy episode failure without spending more series-rating quota',
 
 it('reuses the completed daily job without invalidation, persistence or vendor calls on manual repeats', async () => {
   vi.stubEnv('CRON_SECRET', 'fixture');
-  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], episodes: { entries: [], status: 'ready', collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } });
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], availability: { titles: {}, providers: {} }, episodes: { entries: [], status: 'ready', collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } });
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
   expect(await response.json()).toMatchObject({ cached: true, indexReady: true, episodeStatus: 'ready' });
   expect(repairLegacyImdbRatingIndex).toHaveBeenCalledOnce();
@@ -226,4 +226,46 @@ it('never caches a missing IMDb value or fills it on a public read', async () =>
   expect(fetch).not.toHaveBeenCalled();
   expect((await GET(new Request('https://example.test/api/revalidate?imdb=bad'))).status).toBe(400);
   expect(readSharedImdbScore).toHaveBeenCalledTimes(1);
+});
+
+it('roundtrips compact provider snapshots and cross-week availability through the cron storage request', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const availability = { titles: { 'tv:1': { countries: { IT: [8], US: [8] }, fetchedAt: Date.now() } }, providers: { 8: { name: 'Netflix', logo: '/logo.png' } } };
+  const snapshot = { titles: { 'tv:1': { imdbRating: '8.1' } }, events: [], availability };
+  const store = { ratings: {}, sources: {}, availability: { ...availability, titles: { 'tv:1': { ...availability.titles['tv:1'], lastSeenAt: Date.now() } } } };
+  const response = await POST(storeRequest('2026-42', JSON.stringify({ snapshot, store }), 'Bearer fixture'));
+  expect(response.status).toBe(200);
+  expect(storeWeeklyRatingsSnapshot).toHaveBeenCalledExactlyOnceWith('2026-42', snapshot);
+  expect(storeRatingsStore).toHaveBeenCalledExactlyOnceWith(store);
+});
+
+it('rejects broken provider references before writing any snapshot', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const snapshot = { titles: {}, events: [], availability: { titles: { 'tv:1': { countries: { US: [8] }, fetchedAt: 1 } }, providers: {} } };
+  const response = await POST(storeRequest('2026-42', JSON.stringify(snapshot), 'Bearer fixture'));
+  expect(response.status).toBe(400);
+  expect(storeWeeklyRatingsSnapshot).not.toHaveBeenCalled();
+  expect(storeRatingsStore).not.toHaveBeenCalled();
+});
+
+it('migrates a same-day snapshot that predates availability collection', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const previous = { titles: {}, events: [], episodes: { entries: [], status: 'ready' as const, collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } };
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ ...previous, availability: { titles: {}, providers: {} }, total: 0, store: { ratings: {}, sources: {} }, storeHits: 0 });
+  await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(primeWeeklyRatings).toHaveBeenCalledOnce();
+  expect(after).toHaveBeenCalledOnce();
+});
+
+it('resumes incomplete availability even after same-day episode collection', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const previous = { titles: { 'tv:1': { anilistScore: 81 } }, names: { 'tv:1': 'Known', 'tv:2': 'Pending' }, events: [],
+    availability: { titles: { 'tv:1': { countries: {}, fetchedAt: Date.now() } }, providers: {} },
+    episodes: { entries: [], status: 'ready' as const, collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } };
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(previous);
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ ...previous, total: 2, store: { ratings: {}, sources: {} }, storeHits: 1 });
+  await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(primeWeeklyRatings).toHaveBeenCalledExactlyOnceWith('2026-42', previous);
+  expect(after).toHaveBeenCalledOnce();
 });

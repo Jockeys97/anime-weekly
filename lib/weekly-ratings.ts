@@ -2,7 +2,8 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_SECONDS } from '@/lib/config';
 import { lookupAnimeRatings } from '@/lib/anime-ratings';
-import { getRatings, getWeeklyRatingSources } from '@/lib/tmdb';
+import { getRatings, getWeeklyRatingSources, getWeeklyProviders } from '@/lib/tmdb';
+import { compactAvailability, PROVIDER_MAX_AGE, type ProviderSnapshot, type ProviderStore } from '@/lib/provider-snapshot';
 import { primeImdbScore } from '@/lib/imdb';
 import { getWeekAirings, type AiringEvent } from '@/lib/airing-schedule';
 import { withTimeout } from '@/lib/async-timeout';
@@ -21,6 +22,7 @@ export interface WeeklyRatings {
   events: AiringEvent[];
   names?: Record<string, string>;
   episodes?: WeeklyEpisodes;
+  availability?: ProviderSnapshot;
 }
 const DAY_MS = 86400000;
 const MAX_RATING_AGE = 30 * DAY_MS;
@@ -79,7 +81,7 @@ export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
       const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 900, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
       if (res.ok) {
         const data = await res.json() as WeeklyRatings;
-        if (data && data.titles && (Object.keys(data.titles).length || data.episodes)) return data;
+        if (data && data.titles && (Object.keys(data.titles).length || data.episodes || data.availability)) return data;
         console.error('[weekly-ratings] endpoint empty', slug);
       } else console.error('[weekly-ratings] endpoint status', res.status);
     } catch (e) { console.error('[weekly-ratings] endpoint error', (e as Error)?.message); }
@@ -100,11 +102,44 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
   const store: RatingsStore = {
     ratings: Object.fromEntries(Object.entries(savedStore.ratings).map(([key, entry]) => [key, { ...entry, values: { ...entry.values } }])),
     sources: Object.fromEntries(Object.entries(savedStore.sources).map(([key, entry]) => [key, { ...entry }])),
+    availability: { titles: Object.fromEntries(Object.entries(savedStore.availability?.titles ?? {}).map(([key, entry]) => [key, { ...entry }])), providers: { ...savedStore.availability?.providers } },
   };
   const deadline = Date.now() + 260000;
   const sources = await getWeeklyRatingSources(week);
   const names = { ...old.names };
   const snapshot: WeeklyRatings = { ...old, titles: { ...old.titles }, events: [...old.events], names };
+  const availability: ProviderSnapshot = { titles: { ...old.availability?.titles }, providers: { ...old.availability?.providers, ...store.availability!.providers } };
+  snapshot.availability = availability;
+  const watchStore = store.availability as ProviderStore;
+  // Availability has its own budget and runs before rating work can exhaust
+  // the cron. Four TMDB requests at a time; successful empty results are data.
+  let watchCursor = 0;
+  let watchSuccesses = 0;
+  const watchDeadline = Math.min(Date.now() + 50000, deadline - 18000);
+  await Promise.all(Array.from({ length: Math.min(4, sources.length) }, async () => {
+    while (watchCursor < sources.length) {
+      const source = sources[watchCursor++];
+      const key = `${source.kind}:${source.id}`;
+      const saved = watchStore.titles[key];
+      const previous = availability.titles[key];
+      const existing = saved && (!previous || saved.fetchedAt >= previous.fetchedAt) ? saved : previous;
+      if (existing) {
+        availability.titles[key] = { countries: existing.countries, fetchedAt: existing.fetchedAt };
+        watchStore.titles[key] = { ...existing, lastSeenAt: Date.now() };
+      }
+      if (existing && Date.now() - existing.fetchedAt < PROVIDER_MAX_AGE) { watchSuccesses++; continue; }
+      if (Date.now() >= watchDeadline) continue;
+      try {
+        const watch = await withTimeout(getWeeklyProviders(source.kind, source.id, true), 13000);
+        if (watch.providersUnavailable) continue;
+        const entry = compactAvailability(watch.providers, availability.providers, Date.now());
+        availability.titles[key] = entry;
+        watchStore.titles[key] = { ...entry, lastSeenAt: Date.now() };
+        watchSuccesses++;
+      } catch { /* Retain previous offers and timestamp so the next run retries. */ }
+    }
+  }));
+  Object.assign(watchStore.providers, availability.providers);
   let storeHits = 0;
   // Populate every source before completed ratings or the time budget skip it.
   for (const source of sources) {
@@ -204,14 +239,18 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
   const events = new Map(old.events.map(event => [event.id, event]));
   for (const event of airings.events) events.set(event.id, event);
   snapshot.events = [...events.values()];
-  if (sources.length && !completed) throw new Error('Weekly ratings unavailable');
+  if (sources.length && !completed && !watchSuccesses) throw new Error('Weekly ratings unavailable');
 
   // Storage happens in a separate request (storeWeeklyRatingsSnapshot):
   // an entry rewritten in the same request that invalidated its tag is
   // treated as stale and lost.
-  for (const entries of [store.ratings, store.sources]) {
+  for (const entries of [store.ratings, store.sources, watchStore.titles]) {
     for (const [key, entry] of Object.entries(entries)) if (Date.now() - entry.lastSeenAt > MAX_STORE_AGE) delete entries[key];
   }
+  const usedProviders = new Set(Object.values(watchStore.titles).flatMap(entry => Object.values(entry.countries).flat()).map(String));
+  for (const id of Object.keys(watchStore.providers)) if (!usedProviders.has(id)) delete watchStore.providers[id];
+  const snapshotProviders = new Set(Object.values(availability.titles).flatMap(entry => Object.values(entry.countries).flat()).map(String));
+  for (const id of Object.keys(availability.providers)) if (!snapshotProviders.has(id)) delete availability.providers[id];
   return { ...snapshot, total: sources.length, store, storeHits };
 }
 

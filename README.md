@@ -32,9 +32,9 @@ Optionally get a free OMDb key at [omdbapi.com/apikey.aspx](https://www.omdbapi.
 
 ## Caching and Vercel Hobby
 
-The home and week routes use static/ISR output with a seven-day interval; historical routes generate on demand. Their render path never reads request cookies, headers or search parameters. Language/country selection and visitor date formatting run in the browser, with Italian and Europe/Rome defaults. The server sends one compact title list (synopses capped at 900 characters), rather than repeating complete titles and provider maps through nested RSC boundaries. Streaming providers, recommendations and translated text load separately after hydration.
+The home and week routes use static/ISR output with a 15-minute interval; historical routes generate on demand. Their render path never reads request cookies, headers or search parameters. Language/country selection and visitor date formatting run in the browser, with Italian and Europe/Rome defaults. The server sends one compact title list (synopses capped at 900 characters), rather than repeating complete titles and provider maps through nested RSC boundaries. Ratings and default-country streaming providers render in the initial HTML from the cron snapshot. All supported countries are included for immediate browser-side filtering without a provider request. Recommendations, calendar date fallbacks and translated text still load separately after hydration.
 
-The authenticated daily cron precomputes IMDb, AniList and MAL scores plus confirmed AniList IDs and broadcast schedules in one weekly `unstable_cache` snapshot, with `revalidate: 604800` and the independent `weekly-ratings` tag. All catalog, search and detail pages read IMDb scores by exact ID from the shared daily IMDb dataset index, then the preserved cross-week/OMDb cache. Cache keys are independent of the interface language and selected week. Weekly pages read snapshots only: neither page rendering, scrolling nor retries call a rating provider. A cold snapshot shows neutral `n/a`; only cron fills it. A missing exact IMDb match or genuinely unrated title can still have no score. No new credentials or paid services are needed. Failed raw rating responses are fetched without caching, and error bodies/statuses are never stored in the snapshot. Valid AniList fallback scores survive Jikan failures; quota errors leave IMDb neutral.
+The authenticated daily cron precomputes IMDb, AniList and MAL scores plus confirmed AniList IDs and broadcast schedules in one weekly `unstable_cache` snapshot, with `revalidate: 604800` and the independent `weekly-ratings` tag. All catalog, search and detail pages read IMDb scores by exact ID from the shared daily IMDb dataset index, then the preserved cross-week/OMDb cache. Cache keys are independent of the interface language and selected week. Weekly pages read snapshots only: neither page rendering, scrolling nor retries call a rating provider. A cold snapshot shows neutral `n/a` and the localized “No offers found” message; only cron fills ratings and weekly providers. Missing anime scores no longer trigger `/api/weekly-ratings` on a visit. A missing exact IMDb match or genuinely unrated title can still have no score. No new credentials or paid services are needed. Failed raw rating responses are fetched without caching, and error bodies/statuses are never stored in the snapshot. Valid AniList fallback scores survive Jikan failures; quota errors leave IMDb neutral.
 
 Import this repository into Vercel: the Next.js defaults require no custom build configuration. Set credentials and a long random `CRON_SECRET` in **Vercel Project Settings > Environment Variables**, or with:
 
@@ -79,13 +79,12 @@ In caso contrario, `/my-anime` e gli endpoint di autenticazione restituiscono
 relativo provider. Ridistribuisci l'app dopo aver modificato la configurazione,
 per aggiornare anche il menu delle pagine statiche.
 
-Registra esattamente questi redirect URI nelle applicazioni dei provider,
-sostituendo `https://example.com` con l'origine dell'app:
+Registra esattamente questi redirect URI nelle applicazioni dei provider per la produzione:
 
-- Trakt: `https://example.com/api/auth/trakt/callback`
-- MyAnimeList: `https://example.com/api/auth/mal/callback`
+- Trakt: `https://weeklyanime.com/api/auth/trakt/callback`
+- MyAnimeList: `https://weeklyanime.com/api/auth/mal/callback`
 
-I redirect vengono calcolati dall'origine della richiesta. Usa HTTPS anche per
+I redirect vengono calcolati dall'origine della richiesta; quando l'host coincide con il dominio canonico, usano l'origine canonica. Per usare OAuth su host legacy o di anteprima, registra anche i relativi callback: stato e cookie restano sullo stesso host. Usa HTTPS anche per
 lo sviluppo OAuth: i cookie sono sempre `Secure`, `HttpOnly` e `SameSite=Lax`.
 Trakt usa sempre authorization code con stato casuale e PKCE `S256`, con o senza
 client secret; MAL usa PKCE con metodo `plain`, come richiesto dal servizio.
@@ -135,7 +134,7 @@ Vitest covers ISO week ranges, year boundaries, strict week parsing/formatting, 
 
 UI dictionaries live in `messages/` for English, Italian, Spanish, French, German and Portuguese. `lib/i18n.ts` exposes `getDictionary(locale)`, `defaultLocale` and `locales`. Data titles and provider names remain upstream source content.
 
-`components/SponsorSlot.tsx` is an unobtrusive placeholder. `components/ProviderLink.tsx` calls `lib/affiliate.ts`; no affiliate is enabled, but an explicit optional query parameter can be passed later.
+`components/SponsorSlot.tsx` remains an unobtrusive placeholder. No ads or affiliate links are enabled. The optional support section and footer link are controlled by `NEXT_PUBLIC_KOFI_URL`: set it to your HTTPS Ko-fi page and redeploy. Missing, malformed or non-HTTPS values hide both entirely. Links open in a new tab with `rel="noopener noreferrer"`. Support copy is available in all six dictionaries; no embed, tracking script or extra dependency is added.
 
 Credits appear in the footer: TMDB disclaimer, JustWatch streaming attribution, OMDb IMDb rating credit, AniList and MyAnimeList via Jikan.
 
@@ -143,13 +142,13 @@ API references: [TMDB TV discovery](https://developer.themoviedb.org/reference/d
 
 ## Verification status in the supplied workspace
 
-All 95 Vitest tests pass, including the existing calendar tests and new offline anime matching, formatting and mocked API tests. ESLint and `tsc --noEmit` also pass with the existing installed dependencies; no dependency installation was needed.
+For the canonical-domain/provider-snapshot update, the requested `npx tsc --noEmit`, `npm run lint` and `npm test` could not run in the supplied workspace: dependencies are absent, and `npm ci --offline` fails because the local cache lacks required packages. No network requests or env-file changes were made. Run these checks after restoring the locked dependencies. Added offline tests cover canonical URLs/redirects, snapshot providers and retention/refresh, initial HTML ratings/providers, OAuth host behavior and support gating.
 
-Production build verification remains incomplete in this restricted workspace: the default Turbopack build fails when its CSS worker tries to bind a local port (`Operation not permitted`), and the webpack fallback fails while parsing TypeScript `--showConfig` output. No live upstream calls were made. Run the production build and live API checks in an environment that permits them.
+Production build and live upstream checks were not run for this update under the offline constraint. A fallback check parsed all TypeScript/TSX sources and tests and exercised canonical URLs, redirect host patterns, compact provider storage/validation, support gating, and mocked cron reuse/refresh/failure retention. These checks passed; they do not replace TypeScript, ESLint, Vitest or a production build with the locked dependencies.
 
 ## Rating source links and logos
 
-Rating cards link directly to the matched IMDb, MyAnimeList or AniList title in a new tab. The displayed anime score retains the existing MAL-first/AniList-fallback policy. IMDb links remain available when TMDB supplies an ID even without an OMDb key; unknown IDs render non-clickable cards. Vote counts and MAL members appear beneath their scores.
+Rating cards link directly to the matched IMDb, MyAnimeList or AniList title in a new tab. When both MAL and AniList scores exist, both appear alongside IMDb; missing scores remain neutral. IMDb links remain available when TMDB supplies an ID even without an OMDb key; unknown IDs render non-clickable cards. Vote counts and MAL members appear beneath their scores.
 
 Brand marks in `public/logos` are bundled from [Simple Icons](https://github.com/simple-icons/simple-icons), distributed under CC0. Brand names and logos remain the property of their respective owners.
 
@@ -197,7 +196,7 @@ Inherited IMDb ratings and links are labelled as the original series rating. MAL
 
 ## Progressive weekly guide
 
-The shared weekly shell streams a compact TMDB catalog behind Suspense and remains eligible for ISR. Rating tiles display cached cron results immediately, or `n/a` on a cold cache; they have no client rating lookup or retry request. Visible cards fetch streaming/recommendations and schedules separately, with two browser requests at a time, bounded queue and body deadlines, error states and retry controls. Switching language updates interface text and lazy synopsis translations without making the weekly render request-specific.
+The shared weekly shell streams a compact TMDB catalog behind Suspense and remains eligible for ISR. Rating tiles display cached cron results immediately, or `n/a` on a cold cache; they have no client rating lookup or retry request. Visible cards fetch recommendations and calendar date fallbacks separately, with two browser requests at a time, bounded queue and body deadlines, error states and retry controls. Switching language updates interface text and lazy synopsis translations without making the weekly render request-specific.
 
 Weekly rating matching has a twelve-second budget per title, including queue time. The cron uses a 260-second overall budget and preserves confirmed scores/matches when an optional source fails. Expired queued requests are skipped rather than consuming upstream quota later. Long service cooldowns suppress subsequent lookups instead of retrying early.
 
@@ -287,3 +286,16 @@ Required IMDb attribution is shown in the footer; the ranking links to the
 source and shows the file date. Full TSV files are not redistributed.
 
 IMDb index migration: an authenticated cron may repair a pre-migration incomplete index once per date, reusing legacy partitions if complete or streaming only the rating file once. It does not call OMDb or redownload episode metadata. Success and failure attempts are cached; normal collection remains daily. JustWatch recovery preserves each verified package icon and uses its own image host, separately from TMDB logo paths.
+
+
+## Canonical production domain
+
+`https://weeklyanime.com` is the production origin. `lib/seo.ts` uses it when `NEXT_PUBLIC_SITE_URL` is unset in production; local development defaults to `http://localhost:3000`. An explicit `NEXT_PUBLIC_SITE_URL` overrides the SEO base. Sitemap URLs, robots' Sitemap URL, metadataBase, page-specific absolute canonical/Open Graph URLs and detail JSON-LD use the same base. Twitter images resolve through metadataBase. Locale preferences share URLs, so no hreflang alternates are advertised.
+
+Next redirects the legacy `anime-weekly.vercel.app` host and `anime-weekly-[a-z0-9-]+.vercel.app` preview hosts with HTTP 308 to the canonical domain, preserving paths and query parameters. `/api/` paths are excluded, including cron, snapshot/IMDb reads and Trakt/MAL callbacks. The favicon redirect remains in place. Server self-fetches in `lib/weekly-ratings.ts` and `lib/imdb.ts` deliberately continue using `VERCEL_PROJECT_PRODUCTION_URL` independently of `NEXT_PUBLIC_SITE_URL`.
+
+## Weekly availability snapshots
+
+The cron stores `availability` beside weekly ratings: each TMDB title has `fetchedAt` and country-to-provider-ID arrays, with one shared provider-ID-to-name/logo table. Only supported countries and subscription/free/ad-supported offers are stored; no rental or purchase offers are added. The cross-week ratings store also keeps availability by media type/ID and `lastSeenAt`. Entries refresh after seven days, including previously empty successful results. Fresh entries are reused across weeks, stale offers survive upstream failures without renewing `fetchedAt`, and omitted work resumes on later cron runs. Availability uses up to four concurrent TMDB requests within a 50-second share of the existing cron budget, before rating work; it never calls OMDb, AniList or Jikan. Unseen store entries expire after 120 days and unused provider-table entries are pruned.
+
+Old snapshots/stores without availability remain readable. The next authenticated cron migrates them even if episode collection already completed that day. Provider-only successes can be saved if rating services fail. Storage still happens through the separate authenticated POST after tag invalidation, and invalid provider references are rejected before either cache is written. Weekly HTML is invalidated only after the snapshot is available. Season cards reuse cached weekly matches/scores/providers by confirmed AniList ID where available; their existing discovery/enrichment remains available for other titles. Detail ratings and watch availability already render through server components and retain that flow. Language detection and preferences are unchanged.

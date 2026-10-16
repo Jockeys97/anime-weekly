@@ -1,28 +1,26 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
-import { getQuickWeekData, getWeeklySource, getWeeklyRelated, getWeeklyProviders, getTMDBWeekEpisodes } from '@/lib/tmdb';
+import { getQuickWeekData, getWeeklySource, getWeeklyRelated, getTMDBWeekEpisodes } from '@/lib/tmdb';
+import { expandAvailability } from '@/lib/provider-snapshot';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
 import type { WeeklyTitleDetails, WeeklySchedule, WeeklyCalendarSchedule } from '@/lib/weekly-details';
 import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
-class PartialDetails extends Error { constructor(readonly result: WeeklyTitleDetails) { super('Weekly enrichment incomplete'); } }
 const cachedTitle = unstable_cache(async (week: string, kind: 'tv' | 'movie', id: number): Promise<WeeklyTitleDetails | null> => {
   const raw = await getWeeklySource(parseWeek(week)!, kind, id);
   if (!raw) return null;
-  // This endpoint only enriches streaming/recommendations. Ratings and detail
-  // IDs arrive in the static catalog from the cron snapshot, never from clients.
-  const [recommendation, watch] = await withTimeout(Promise.all([
-    getWeeklyRelated(kind, id), getWeeklyProviders(kind, id),
+  // Only recommendations need live TMDB data. Providers and ratings use cron
+  // snapshots, including when an older browser calls this enrichment endpoint.
+  const [recommendation, snapshot] = await withTimeout(Promise.all([
+    getWeeklyRelated(kind, id), getWeeklyRatings(week),
   ]), 18000);
-  const result: WeeklyTitleDetails = { id, kind, recommendation, ...watch };
-  if (watch.providersUnavailable) throw new PartialDetails(result);
+  const result: WeeklyTitleDetails = { id, kind, recommendation, providers: expandAvailability(snapshot.availability, `${kind}:${id}`), providersUnavailable: false };
   return result;
-}, ['weekly-title-watch-v2'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
+}, ['weekly-title-watch-v3-snapshot'], { revalidate: CACHE_SECONDS, tags: [CACHE_TAG] });
 export async function getWeeklyTitleDetails(week: string, kind: 'tv' | 'movie', id: number): Promise<WeeklyTitleDetails | null> {
-  try { return await cachedTitle(week, kind, id); }
-  catch (error) { if (error instanceof PartialDetails) return error.result; throw error; }
+  return cachedTitle(week, kind, id);
 }
 class PartialSchedule extends Error { constructor(readonly result: WeeklySchedule) { super('Weekly schedule incomplete'); } }
 const cachedEpisodes = unstable_cache(async (week: string, id: number) => {

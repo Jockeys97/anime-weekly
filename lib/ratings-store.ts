@@ -1,6 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import type { Ratings } from '@/lib/ratings';
+import type { ProviderStore } from '@/lib/provider-snapshot';
 const WEEKLY_RATINGS_TAG = 'weekly-ratings';
 interface StoredRating {
   values: Ratings;
@@ -17,6 +18,7 @@ interface StoredSource {
 export interface RatingsStore {
   ratings: Record<string, StoredRating>;
   sources: Record<string, StoredSource>;
+  availability?: ProviderStore;
 }
 const emptyStore = (): RatingsStore => ({ ratings: {}, sources: {} });
 let pendingStore: RatingsStore | undefined;

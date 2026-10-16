@@ -377,5 +377,10 @@
     "episodesDatasetUnavailable": "The IMDb datasets are temporarily unavailable. Collected ratings remain cached; we will try again at the next daily update.",
     "datasetAttribution": "Episode ratings from IMDb datasets · updated daily",
     "datasetDate": "Data from"
+  },
+  "support": {
+    "title": "Support the site",
+    "description": "Help keep Anime Weekly running, with no ads or affiliate links.",
+    "link": "Support on Ko-fi"
   }
 }

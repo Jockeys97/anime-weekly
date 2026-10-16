@@ -43,6 +43,20 @@ describe('personal anime feature gate', () => {
 });
 
 describe('encrypted cookies and OAuth flow', () => {
+  it.each(['trakt', 'mal'] as const)('keeps %s authorization and token callback URIs on the request host', async provider => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://weeklyanime.com');
+    for (const host of ['weeklyanime.com', 'anime-weekly.vercel.app', 'anime-weekly-feature-team.vercel.app']) {
+      const base = `https://${host}`;
+      const response = oauthLogin(new Request(`${base}/api/auth/${provider}/login`), provider);
+      expect(new URL(response.headers.get('location')!).searchParams.get('redirect_uri')).toBe(`${base}/api/auth/${provider}/callback`);
+      const flow = createOAuthFlow(provider);
+      upstream.mockResolvedValue(Response.json({ access_token: 'access', refresh_token: 'refresh', expires_in: 3600 }));
+      await oauthCallback(new Request(`${base}/api/auth/${provider}/callback?code=code&state=${flow.state}`), provider, reader(provider, flow));
+      const init = upstream.mock.calls.at(-1)![1];
+      const payload = provider === 'trakt' ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));
+      expect(payload.redirect_uri).toBe(`${base}/api/auth/${provider}/callback`);
+    }
+  });
   it('roundtrips without exposing tokens and rejects tampering, other keys and contexts', () => {
     const token: AuthToken = { accessToken: 'private-access', refreshToken: 'private-refresh', expiresAt: Date.now() + 3600000 };
     const name = tokenCookie('trakt'), encoded = encryptCookie(token, name);
@@ -107,7 +121,7 @@ describe('encrypted cookies and OAuth flow', () => {
     expect(init.cache).toBe('no-store');
     if (provider === 'trakt') expect(init.headers).toMatchObject({
       'Content-Type': 'application/json', Accept: 'application/json', 'trakt-api-key': 'trakt-id',
-      'trakt-api-version': '2', 'User-Agent': 'AnimeWeekly/0.1.0 (+https://anime-weekly.vercel.app)',
+      'trakt-api-version': '2', 'User-Agent': 'AnimeWeekly/0.1.0 (+https://weeklyanime.com)',
     });
     else expect(init.headers).not.toHaveProperty('trakt-api-key');
     const payload = provider === 'trakt' ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));

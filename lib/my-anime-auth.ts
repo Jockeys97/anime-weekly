@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { myAnimeConfig, type AnimeProvider } from '@/lib/my-anime-config';
 import { throttle } from '@/lib/rate-limited-fetch';
 import { traktHeaders } from '@/lib/trakt-headers';
+import { siteUrl } from '@/lib/seo';
 
 export const traktFetch = throttle(350);
 export const malFetch = throttle(1000);
@@ -54,7 +55,13 @@ export function validOAuthState(flow: OAuthFlow | null, state: string | null, _p
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 export function tokenHash(token: string): string { return createHash('sha256').update(token).digest('hex'); }
-const callbackUri = (origin: string, provider: AnimeProvider) => `${origin}/api/auth/${provider}/callback`;
+const callbackUri = (origin: string, provider: AnimeProvider) => {
+  const canonical = siteUrl();
+  const request = new URL(origin);
+  // Keep state cookies and callback origins aligned on legacy/preview hosts.
+  const base = request.host === canonical.host ? canonical.origin : request.origin;
+  return `${base}/api/auth/${provider}/callback`;
+};
 const flowPath = (provider: AnimeProvider) => `/api/auth/${provider}`;
 function clearFlow(response: NextResponse, provider: AnimeProvider) {
   response.cookies.set(flowCookie(provider), '', { ...secureCookie, path: flowPath(provider), maxAge: 0 });

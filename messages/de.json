@@ -371,5 +371,10 @@
     "episodesDatasetUnavailable": "Die IMDb-Datensätze sind vorübergehend nicht verfügbar. Bereits abgerufene Bewertungen bleiben gespeichert; ein neuer Versuch erfolgt beim nächsten täglichen Update.",
     "datasetAttribution": "Folgenbewertungen aus IMDb-Datensätzen · täglich aktualisiert",
     "datasetDate": "Daten vom"
+  },
+  "support": {
+    "title": "Unterstütze die Website",
+    "description": "Hilf Anime Weekly online zu bleiben, ohne Werbung oder Affiliate-Links.",
+    "link": "Auf Ko-fi unterstützen"
   }
 }

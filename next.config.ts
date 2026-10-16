@@ -1,5 +1,11 @@
 import type { NextConfig } from 'next';
-const config: NextConfig = { async redirects() { return [{ source: '/favicon.ico', destination: '/icon.svg', permanent: false }]; }, staticPageGenerationTimeout: 300,
+const config: NextConfig = { async redirects() { return [
+  ...['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({
+    source: '/:path((?!api/).*)', has: [{ type: 'host' as const, value: host }],
+    destination: 'https://weeklyanime.com/:path*', permanent: true,
+  })),
+  { source: '/favicon.ico', destination: '/icon.svg', permanent: false },
+]; }, staticPageGenerationTimeout: 300,
   // Local previews can reuse public catalog data without copying credentials.
   // Production always keeps its own API route, even if the flag is set.
   async rewrites() {

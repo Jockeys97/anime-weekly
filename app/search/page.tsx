@@ -8,6 +8,11 @@ import { AnimeSearchFilters } from '@/components/AnimeSearchFilters';
 import { discoverAnime } from '@/lib/anilist';
 import { parseAnimeFilters, searchHref, type AnimeFilters, type SearchParams } from '@/lib/anime-search';
 import { getDictionary, type Locale } from '@/lib/i18n';
+import { pageMetadata } from '@/lib/seo';
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const filters = parseAnimeFilters(await searchParams);
+  return pageMetadata('Cerca anime', 'Cerca serie e film anime, voti e piattaforme streaming.', searchHref(filters, filters.page));
+}
 export const revalidate = 86400;
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await connection();

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { myAnimeConfig, type AnimeProvider } from '@/lib/my-anime-config';
@@ -10,7 +11,7 @@ import './my-anime.css';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'I miei anime', robots: { index: false, follow: false } };
+export const metadata: Metadata = { ...pageMetadata('I miei anime', 'Il tuo calendario anime personale.', '/my-anime'), robots: { index: false, follow: false } };
 export default async function MyAnimePage({ searchParams }: { searchParams: Promise<{ auth?: string }> }) {
   const config = myAnimeConfig();
   if (!config.enabled) notFound();

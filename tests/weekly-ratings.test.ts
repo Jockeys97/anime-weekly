@@ -33,7 +33,7 @@ function fixtureFetch(imdbFailure = false, animeFailure = false) {
       return Response.json({ data: { Page: { media: [{ id: 123, idMal: 456, type: 'ANIME', format: 'TV', title: { english: 'Ranma ½', native: 'らんま1/2' }, startDate: { year: 2024 }, averageScore: 81 }] } } });
     }
     if (url.includes('jikan')) return Response.json({ data: { score: 8.25, members: 1000 } });
-    if (url.includes('/watch/providers')) return Response.json({ results: {} });
+    if (url.includes('/watch/providers')) return imdbFailure && animeFailure ? new Response(null, { status: 503 }) : Response.json({ results: {} });
     if (url.includes('/recommendations') || url.includes('/similar')) return Response.json({ results: [] });
     throw new Error(`Unexpected offline fixture: ${url}`);
   });
@@ -123,7 +123,7 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   const previous = { titles: { 'tv:1': { anilistId: 123, malId: 456, anilistScore: 81, imdbId: 'tt123', imdbRating: '8.1', imdbVotes: '2,123' } }, events: [{ id: 4, mediaId: 123, episode: 2, airingAt: 1791990000 }] };
   const first = primeWeeklyRatings('2026-42', previous); await vi.runAllTimersAsync();
   await storePrimedSnapshot('2026-42', await first);
-  expect(await readWeeklyRatingsSnapshot('2026-42')).toEqual({ ...previous, names: { 'tv:1': 'Ranma ½' } });
+  expect(await readWeeklyRatingsSnapshot('2026-42')).toMatchObject({ ...previous, names: { 'tv:1': 'Ranma ½' }, availability: { titles: { 'tv:1': { countries: {} } }, providers: {} } });
   failed = false;
   const retry = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   expect((await retry).titles['tv:1']).toMatchObject({ ...previous.titles['tv:1'], malScore: 8.25 });
@@ -193,7 +193,8 @@ it('merges display names for completed TV and movie sources and retains undiscov
   expect(result.names).toEqual({ 'tv:1': 'Ranma ½', 'movie:1': 'Movie title', 'tv:99': 'Retained title' });
   expect(result.titles).toEqual(previous.titles);
   expect(previous.names).toEqual({ 'tv:1': 'Old title', 'tv:99': 'Retained title' });
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(fetchMock.mock.calls.every(([url]) => String(url).includes('/watch/providers'))).toBe(true);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   await storePrimedSnapshot('2026-42', result);
   expect((await readWeeklyRatingsSnapshot('2026-42')).names).toEqual(result.names);
 });
@@ -289,6 +290,8 @@ it('drops ratings and source mappings unseen for 120 days but retains active sta
   const expired = Date.now() - 121 * 86400000;
   primed.store.ratings['imdb:tt999'] = { values: { imdbRating: '9' }, fetchedAt: expired, lastSeenAt: expired };
   primed.store.sources['movie:999'] = { imdbId: 'tt999', fetchedAt: expired, lastSeenAt: expired };
+  primed.store.availability!.titles['movie:999'] = { countries: { US: [9] }, fetchedAt: expired, lastSeenAt: expired };
+  primed.store.availability!.providers[9] = { name: 'Unused provider', logo: null };
   primed.store.ratings['mal:789'] = { values: { malScore: 8 }, fetchedAt: expired, lastSeenAt: Date.now() - 119 * 86400000 };
   primed.store.ratings['imdb:tt123'].lastSeenAt = expired;
   await storePrimedSnapshot('2026-42', primed);
@@ -296,6 +299,8 @@ it('drops ratings and source mappings unseen for 120 days but retains active sta
   const result = await second;
   expect(result.store.ratings).not.toHaveProperty('imdb:tt999');
   expect(result.store.sources).not.toHaveProperty('movie:999');
+  expect(result.store.availability!.titles).not.toHaveProperty('movie:999');
+  expect(result.store.availability!.providers).not.toHaveProperty('9');
   expect(result.store.ratings).toHaveProperty('mal:789');
   expect(result.store.ratings).toHaveProperty('imdb:tt123');
 });
@@ -330,4 +335,64 @@ it('fetches missing IMDb votes without refetching completed anime scores', async
   expect(result.titles['tv:1'].imdbVotes).toBe('2,123');
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(0);
+});
+
+it('reuses providers across weeks for seven days, retains stale offers on failure and retries without rating quota', async () => {
+  const base = fixtureFetch();
+  const netflix = { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png' };
+  let watchFailure = false;
+  let watchEmpty = false;
+  const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+    if (String(input).includes('/watch/providers')) {
+      if (watchFailure) return new Response(null, { status: 503 });
+      return Response.json({ results: watchEmpty ? {} : { IT: { link: 'https://www.themoviedb.org/tv/1/watch', flatrate: [netflix] }, US: { link: 'https://www.themoviedb.org/tv/1/watch', free: [netflix] } } });
+    }
+    return base(input, init);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { primeWeeklyRatings, readRatingsStore } = await import('../lib/weekly-ratings');
+  const prime = async (slug: string) => { const pending = primeWeeklyRatings(slug); await vi.runAllTimersAsync(); return pending; };
+  const first = await prime('2026-42');
+  expect(first.availability).toEqual({ titles: { 'tv:1': { countries: { IT: [8], US: [8] }, fetchedAt: expect.any(Number) } }, providers: { 8: { name: 'Netflix', logo: '/netflix.png' } } });
+  expect(first.store.availability?.titles['tv:1'].lastSeenAt).toEqual(expect.any(Number));
+  await storePrimedSnapshot('2026-42', first);
+  expect((await readRatingsStore()).availability).toEqual(first.store.availability);
+  vi.setSystemTime(Date.now() + 6 * 86400000);
+  fetchMock.mockClear();
+  const reused = await prime('2026-43');
+  expect(reused.availability).toEqual(first.availability);
+  expect(fetchMock.mock.calls.filter(([url]) => /watch\/providers|omdbapi|jikan|external_ids/.test(String(url)))).toHaveLength(0);
+  expect(reused.store.availability?.titles['tv:1'].lastSeenAt).toBeGreaterThan(first.store.availability!.titles['tv:1'].lastSeenAt);
+  await storePrimedSnapshot('2026-43', reused);
+  vi.setSystemTime(Date.now() + 86400000);
+  watchFailure = true;
+  const failed = await prime('2026-43');
+  expect(failed.availability).toEqual(first.availability);
+  expect(failed.store.availability!.titles['tv:1'].fetchedAt).toBe(first.store.availability!.titles['tv:1'].fetchedAt);
+  await storePrimedSnapshot('2026-43', failed);
+  watchFailure = false; watchEmpty = true;
+  fetchMock.mockClear();
+  const refreshed = await prime('2026-43');
+  expect(refreshed.availability!.titles['tv:1'].countries).toEqual({});
+  expect(refreshed.availability!.titles['tv:1'].fetchedAt).toBeGreaterThan(first.availability!.titles['tv:1'].fetchedAt);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/watch/providers'))).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|jikan|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+});
+
+it('warms availability even when all ratings are missing', async () => {
+  const base = fixtureFetch(true, true);
+  vi.stubGlobal('fetch', vi.fn(async (input: string | URL, init?: RequestInit) => String(input).includes('/watch/providers') ? Response.json({ results: {} }) : base(input, init)));
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const pending = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
+  expect((await pending).availability?.titles['tv:1'].countries).toEqual({});
+});
+
+it('reads provider-only snapshots through the legacy production API host independently of the SEO base', async () => {
+  vi.stubEnv('VERCEL_ENV', 'production'); vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'anime-weekly.vercel.app');
+  vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://weeklyanime.com');
+  const snapshot = { titles: {}, events: [], availability: { titles: { 'tv:1': { countries: {}, fetchedAt: Date.now() } }, providers: {} } };
+  const fetchMock = vi.fn(async () => Response.json(snapshot)); vi.stubGlobal('fetch', fetchMock);
+  const { getWeeklyRatings } = await import('../lib/weekly-ratings');
+  expect(await getWeeklyRatings('2026-42')).toEqual(snapshot);
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.vercel.app/api/revalidate?ratings=2026-42', expect.objectContaining({ next: { revalidate: 900, tags: ['weekly-ratings'] } }));
 });

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export function siteUrl(env: Record<string, string | undefined> = process.env): URL {
-  const configured = env.NEXT_PUBLIC_SITE_URL?.trim() || env.VERCEL_PROJECT_PRODUCTION_URL?.trim() || 'http://localhost:3000';
+  const configured = env.NEXT_PUBLIC_SITE_URL?.trim() || (env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production' ? 'https://weeklyanime.com' : 'http://localhost:3000');
   const url = new URL(/^https?:\/\//i.test(configured) ? configured : `https://${configured}`);
   return new URL(url.origin);
 }

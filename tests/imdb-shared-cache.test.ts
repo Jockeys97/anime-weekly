@@ -54,6 +54,7 @@ it('reads a freshly updated cross-week store even when the old weekly IMDb cache
 });
 it('uses the cache-only collector endpoint if the reader has an isolated route cache', async () => {
   vi.stubEnv('VERCEL_ENV', 'production'); vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'anime.example');
+  vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://weeklyanime.com');
   const fetch = vi.fn(async (url: string) => { expect(url).toContain('/api/revalidate?imdb='); return Response.json({ imdbId: 'tt2560140', imdbRating: '9.1', imdbStatus: 'ready' }); });
   vi.stubGlobal('fetch', fetch);
   const { getImdbScore } = await import('../lib/imdb');

@@ -371,5 +371,10 @@
     "episodesDatasetUnavailable": "I dataset IMDb sono temporaneamente non disponibili. I voti già raccolti restano salvati; nuovo tentativo al prossimo aggiornamento giornaliero.",
     "datasetAttribution": "Voti degli episodi dai dataset IMDb · aggiornamento giornaliero",
     "datasetDate": "Dati del"
+  },
+  "support": {
+    "title": "Sostieni il sito",
+    "description": "Aiuta Anime Weekly a restare online, senza pubblicità né link affiliati.",
+    "link": "Sostieni su Ko-fi"
   }
 }

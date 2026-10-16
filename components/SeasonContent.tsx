@@ -8,10 +8,10 @@ import { mergePlatformSnapshot, type PlatformSnapshot } from '@/lib/platform-dat
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { CatalogWatchProvider } from '@/components/CatalogWatchContext';
-export function SeasonContent({ entries, locale, providerUrl }: { entries: { id: number; genres: string[]; card: ReactNode }[]; locale: Locale; providerUrl: string }) {
+export function SeasonContent({ entries, locale, providerUrl, initialProviders }: { entries: { id: number; genres: string[]; card: ReactNode }[]; locale: Locale; providerUrl: string; initialProviders?: PlatformSnapshot }) {
   const { region, platformFilter: platform, setPlatformFilter: setPlatform } = useStreamingCountry(); const watchlist = useWatchlist();
   const [genre, setGenre] = useState(''); const [onlyWatchlist, setOnlyWatchlist] = useState(false);
-  const [providers, setProviders] = useState<PlatformSnapshot | null>(null);
+  const [providers, setProviders] = useState<PlatformSnapshot | null>(initialProviders ?? null);
   const [pending, setPending] = useState(true);
   const [attempt, retry] = useState(0);
   useEffect(() => {

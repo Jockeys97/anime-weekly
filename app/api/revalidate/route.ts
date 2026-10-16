@@ -10,6 +10,7 @@ import { formatWeek, isoWeek } from '@/lib/week';
 import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
 import { topWeeklyEpisodes, needsEpisodeRepair, japanDate, EPISODE_COLLECTOR_VERSION, type WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
+import { PROVIDER_MAX_AGE, validProviderSnapshot } from '@/lib/provider-snapshot';
 export const maxDuration = 300;
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as (WeeklyRatings & { snapshot?: WeeklyRatings; store?: RatingsStore }) | null;
   const snapshot = body?.snapshot ?? body;
   if (!snapshot || !snapshot.titles || typeof snapshot.titles !== 'object' || Array.isArray(snapshot.titles) || !Array.isArray(snapshot.events)) return Response.json({ error: 'invalid snapshot' }, { status: 400 });
+  if (snapshot.availability !== undefined && !validProviderSnapshot(snapshot.availability)) return Response.json({ error: 'invalid availability' }, { status: 400 });
   const store = body?.store;
   if (store !== undefined && !validStore(store)) return Response.json({ error: 'invalid store' }, { status: 400 });
   await storeWeeklyRatingsSnapshot(slug, snapshot);
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
 function validStore(store: RatingsStore): boolean {
   const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
   if (!record(store) || !record(store.ratings) || !record(store.sources)) return false;
+  if (store.availability !== undefined && !validProviderSnapshot(store.availability, true)) return false;
   const timestamps = (entry: Record<string, unknown>) => typeof entry.fetchedAt === 'number' && Number.isFinite(entry.fetchedAt) && typeof entry.lastSeenAt === 'number' && Number.isFinite(entry.lastSeenAt);
   return Object.entries(store.ratings).every(([key, entry]) => /^(imdb:tt\d+|anilist:[1-9]\d*|mal:[1-9]\d*)$/.test(key) && record(entry) && timestamps(entry) && record(entry.values))
     && Object.entries(store.sources).every(([key, entry]) => /^(tv|movie):[1-9]\d*$/.test(key) && record(entry) && timestamps(entry));
@@ -76,7 +79,11 @@ export async function GET(request: Request) {
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
   const week = isoWeek(new Date());
   const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
-  if (previous.episodes?.collectorVersion === EPISODE_COLLECTOR_VERSION && previous.episodes.updatedAt && Number.isFinite(Date.parse(previous.episodes.updatedAt)) && japanDate(new Date(previous.episodes.updatedAt)) === japanDate()) {
+  const providersReady = Boolean(previous.availability && [...new Set([...Object.keys(previous.titles), ...Object.keys(previous.names ?? {})])].every(key => {
+    const entry = previous.availability!.titles[key];
+    return entry && Date.now() - entry.fetchedAt < PROVIDER_MAX_AGE;
+  }));
+  if (providersReady && previous.episodes?.collectorVersion === EPISODE_COLLECTOR_VERSION && previous.episodes.updatedAt && Number.isFinite(Date.parse(previous.episodes.updatedAt)) && japanDate(new Date(previous.episodes.updatedAt)) === japanDate()) {
     const indexReady = await repairLegacyImdbRatingIndex();
     console.info('[imdb-index] daily index verified', { ready: indexReady });
     return Response.json({ revalidated: true, cached: true, indexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
@@ -91,7 +98,7 @@ export async function GET(request: Request) {
   try {
     const [ratings, episodes] = await Promise.allSettled([
       // Repair a pre-fix episode snapshot once without warming series scores again.
-      needsEpisodeRepair(previous.episodes)
+      providersReady && needsEpisodeRepair(previous.episodes)
         ? Promise.resolve({ ...previous, total: Object.keys(previous.titles).length, store: await readRatingsStore(), storeHits: 0 })
         : primeWeeklyRatings(formatWeek(week), previous),
       primeWeeklyEpisodes(formatWeek(week), previous.episodes),
