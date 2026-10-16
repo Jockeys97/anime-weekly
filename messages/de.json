@@ -44,6 +44,8 @@
     "imdbUnavailable": "Nicht verfügbar",
     "imdbErrorDetail": "Die Bewertung konnte nicht geladen werden. Versuche es erneut.",
     "imdbUnavailableDetail": "Für diesen Titel ist noch keine IMDb-Bewertung verfügbar.",
+    "malUnavailableDetail": "Für diesen Titel ist noch keine MyAnimeList-Bewertung verfügbar.",
+    "malErrorDetail": "Die MyAnimeList-Bewertung ist vorübergehend nicht verfügbar.",
     "imdbUnmatchedDetail": "Keine bestätigte IMDb-Zuordnung für diesen Titel.",
     "imdb": "IMDb",
     "animeScore": "Anime-Bewertung",

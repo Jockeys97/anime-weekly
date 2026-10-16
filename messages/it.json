@@ -95,6 +95,8 @@
     "imdbUnavailable": "Non disponibile",
     "imdbErrorDetail": "Il voto non è stato recuperato. Riprova.",
     "imdbUnavailableDetail": "Non è ancora disponibile un voto IMDb per questo titolo.",
+    "malUnavailableDetail": "Non è ancora disponibile un voto MyAnimeList per questo titolo.",
+    "malErrorDetail": "Il voto MyAnimeList è temporaneamente non disponibile.",
     "imdbUnmatchedDetail": "Nessun abbinamento IMDb confermato per questo titolo.",
     "imdb": "IMDb",
     "liked": "Se ti è piaciuto",

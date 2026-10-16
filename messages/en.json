@@ -49,6 +49,8 @@
     "imdbUnavailable": "Unavailable",
     "imdbErrorDetail": "Could not retrieve the score. Try again.",
     "imdbUnavailableDetail": "No IMDb score is currently available for this title.",
+    "malUnavailableDetail": "No MyAnimeList score is currently available for this title.",
+    "malErrorDetail": "The MyAnimeList score is temporarily unavailable.",
     "imdbUnmatchedDetail": "No confirmed IMDb match for this title.",
     "imdb": "IMDb",
     "animeScore": "Anime score",

@@ -44,6 +44,8 @@
     "imdbUnavailable": "No disponible",
     "imdbErrorDetail": "No se pudo recuperar la puntuación. Vuelve a intentarlo.",
     "imdbUnavailableDetail": "No hay puntuación IMDb disponible para este título.",
+    "malUnavailableDetail": "No hay puntuación MyAnimeList disponible para este título.",
+    "malErrorDetail": "La puntuación MyAnimeList no está disponible temporalmente.",
     "imdbUnmatchedDetail": "No hay una coincidencia IMDb confirmada para este título.",
     "imdb": "IMDb",
     "animeScore": "Puntuación anime",

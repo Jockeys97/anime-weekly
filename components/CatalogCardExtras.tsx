@@ -8,7 +8,7 @@ import { invalidateCatalogCard, loadCatalogCard } from '@/lib/catalog-card-clien
 import type { CatalogCardSummary } from '@/lib/catalog-card-summary';
 import { useCatalogWatch } from '@/components/CatalogWatchContext';
 
-export function CatalogCardExtras({ id, name, score, locale = 'en', initialSummary }: { id: number; name: string; score: number | null; locale?: Locale; initialSummary?: CatalogCardSummary }) {
+export function CatalogCardExtras({ id, malId, name, score, locale = 'en', initialSummary }: { id: number; malId?: number | null; name: string; score: number | null; locale?: Locale; initialSummary?: CatalogCardSummary }) {
   const container = useRef<HTMLDivElement>(null);
   const [summary, setSummary] = useState<CatalogCardSummary | null>(initialSummary ?? null);
   const [failed, setFailed] = useState(false);
@@ -39,7 +39,7 @@ export function CatalogCardExtras({ id, name, score, locale = 'en', initialSumma
   const availability = earlyWatch && (!summary || summary.availability.providersUnavailable || !Object.keys(summary.availability.providers).length)
     ? earlyWatch : summary?.availability ?? earlyWatch;
   return <div ref={container} className="catalog-card-extras" aria-busy={pending}>
-    <RatingSummary ratings={summary?.ratings ?? { anilistId: id, anilistScore: score, ...(failed ? { imdbStatus: 'error' as const } : {}) }} title={name} locale={locale} imdbLookup={failed ? null : undefined} allowRetry={!initialSummary} />
+    <RatingSummary ratings={{ malId: malId ?? undefined, ...summary?.ratings, anilistId: id, anilistScore: score, ...(failed ? { imdbStatus: 'error' as const } : {}) }} title={name} locale={locale} imdbLookup={failed ? null : undefined} allowRetry={!initialSummary} />
     {failed && <p className="catalog-enrichment-error" role="status">{d.catalog.enrichmentUnavailable} <button type="button" onClick={() => { invalidateCatalogCard(id); setSummary(null); setFailed(false); setAttempt(value => value + 1); }}>{d.error.retry}</button></p>}
     <StreamingAvailability locale={locale} seriesWatch={availability?.seriesWatch} recoveryId={!initialSummary && (summary || earlyWatch) ? id : undefined} anime={{
       id: availability?.match?.id ?? 0, kind: availability?.match?.kind ?? 'tv', name,
