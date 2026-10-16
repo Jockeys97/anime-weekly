@@ -91,7 +91,7 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
   const initialReady = formatAnimeScore({ malScore: ratings.malScore }).startsWith('MAL ');
   const current = !initialReady && loaded?.query === query ? { ...ratings, ...loaded.ratings } : ratings;
   const ready = formatAnimeScore({ malScore: current.malScore }).startsWith('MAL ');
-  const needsLookup = Boolean(query && !initialReady && (!ratings.malStatus || attempt > 0) && !pending);
+  const needsLookup = Boolean(query && !initialReady && (!ratings.malStatus || ratings.malStatus === 'error' || attempt > 0) && !pending);
   useEffect(() => {
     if (!needsLookup) return;
     let active = true;

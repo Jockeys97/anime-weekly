@@ -141,7 +141,7 @@
     "justwatch": "Données de streaming fournies par JustWatch",
     "omdb": "Notes IMDb : jeux de données quotidiens IMDb · OMDb en complément",
     "anilist": "Identification des anime et notes alternatives par AniList",
-    "mal": "Notes MyAnimeList via Jikan",
+    "mal": "Notes MyAnimeList via Tenrai",
     "note": "Les dates et la disponibilité proviennent des sources citées. Aucune note n’est estimée."
   },
   "language": {
@@ -401,5 +401,27 @@
     "title": "Soutenir le site",
     "description": "Aidez Anime Weekly à rester en ligne, sans publicité ni liens affiliés.",
     "link": "Soutenir sur Ko-fi"
+  },
+  "episodeChart": {
+    "title": "Notes des épisodes",
+    "eyebrow": "Par saison",
+    "description": "Notes des épisodes de la série IMDb :",
+    "chooseSeason": "Choisir une saison",
+    "season": "Saison",
+    "specials": "Épisodes spéciaux",
+    "ratedEpisodes": "épisodes notés",
+    "average": "de moyenne",
+    "chartLabel": "Graphique des notes ; défilement horizontal",
+    "episode": "Épisode",
+    "votes": "votes",
+    "openImdb": "Voir sur IMDb",
+    "scrollHint": "Faites défiler pour voir les autres épisodes. Sélectionnez une barre pour ouvrir sa page IMDb.",
+    "note": "Notes des épisodes IMDb · cache quotidien. Seuls les épisodes notés sont affichés ; la numérotation IMDb peut différer des saisons anime. La ligne pointillée indique la moyenne des épisodes affichés.",
+    "updated": "Données du",
+    "loading": "Chargement des notes des épisodes depuis le cache…",
+    "noRatings": "Cette série n’a aucun épisode noté dans le dernier jeu de données IMDb.",
+    "notCached": "L’index quotidien des épisodes n’est pas encore disponible. Il sera rempli à la prochaine mise à jour programmée.",
+    "noMatch": "Une correspondance exacte avec la série IMDb est nécessaire pour afficher les notes.",
+    "retry": "Consulter à nouveau le cache"
   }
 }

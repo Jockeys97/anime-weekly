@@ -22,7 +22,7 @@ export function MyAnimeStatsView({ data, locale }: { data: PersonalAnimeStats; l
     <p className="my-anime-updated">{d.statsUpdated.replace('{time}', new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(new Date(data.updatedAt)))}</p>
   </>;
 }
-export function MyAnimeStats({ locale, refreshKey, onLoadingChange }: { locale: string; refreshKey: number; onLoadingChange: (loading: boolean) => void }) {
+export function MyAnimeStats({ locale, refreshKey }: { locale: string; refreshKey: number }) {
   const d = getDictionary(locale).myAnime;
   const [result, setResult] = useState<{ key: string; data: PersonalAnimeStats | null; error: boolean } | null>(null);
   const [retry, setRetry] = useState(0);
@@ -37,23 +37,21 @@ export function MyAnimeStats({ locale, refreshKey, onLoadingChange }: { locale: 
   }, [data, error, loading, retry]);
   useEffect(() => {
     const controller = new AbortController();
-    onLoadingChange(true);
     void withTimeout((async () => {
-      const response = await fetch('/api/my-anime/stats', { cache: 'no-store', signal: controller.signal });
+      const response = await fetch('/api/my-anime/stats', { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(25000)]) });
       if (!response.ok) throw new Error('Stats unavailable');
       const result = await response.json() as PersonalAnimeStats;
       if (result.status !== 'ready' || !Number.isFinite(result.minutes) || !Number.isFinite(Date.parse(result.updatedAt))) throw new Error('Invalid statistics');
       return result;
-    })(), 55000).then(data => { if (!controller.signal.aborted) setResult({ key, data, error: false }); })
-      .catch(() => { if (!controller.signal.aborted) setResult(previous => ({ key, data: previous?.data ?? null, error: true })); })
-      .finally(() => { if (!controller.signal.aborted) onLoadingChange(false); });
+    })(), 25000).then(data => { if (!controller.signal.aborted) setResult({ key, data, error: false }); })
+      .catch(() => { if (!controller.signal.aborted) setResult(previous => ({ key, data: previous?.data ?? null, error: true })); });
     return () => controller.abort();
-  }, [key, onLoadingChange]);
+  }, [key]);
   return <section className="my-anime-stats" aria-labelledby="my-anime-stats-title" aria-busy={loading}>
     <header><div><p className="eyebrow">{d.statsEyebrow}</p><h2 id="my-anime-stats-title">{d.statsTitle}</h2></div><span className="my-anime-anime-only">✦ {d.animeOnly}</span></header>
     {loading && !data ? <div className="my-anime-stats-loading" role="status">{d.statsLoading}<div aria-hidden="true">{[0, 1, 2, 3].map(key => <span key={key} />)}</div></div>
       : data ? <MyAnimeStatsView data={data} locale={locale} /> : null}
-    {data?.syncing && <p className="my-anime-note" role="status">{d.statsLoading}</p>}
+    {data?.syncing && <p className="my-anime-note" role="status">{d.statsPartial} {!loading && <button type="button" onClick={() => { continuations.current = 0; setRetry(value => value + 1); }}>{d.retry}</button>}</p>}
     {error && <p className="my-anime-stats-warning" role="status">{d.statsUnavailable} <button type="button" disabled={loading} onClick={() => { continuations.current = 0; setRetry(value => value + 1); }}>{d.retry}</button></p>}
   </section>;
 }

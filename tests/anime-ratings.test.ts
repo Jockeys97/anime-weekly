@@ -15,13 +15,13 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('anime rating lookups (offline)', () => {
   it('uses an exact MAL ID with a daily cache and prefers its score', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { score: 8.12, members: 1200000 } }));
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { mal_id: 123, score: 8.12, members: 1200000 } }));
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeRatingsById } = await import('../lib/anime-ratings');
     const { formatAnimeScore } = await import('../lib/ratings');
     const ratings = await getAnimeRatingsById(123, 81);
     expect(formatAnimeScore(ratings)).toBe('MAL 8.12 · 1.2M members');
-    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://api.jikan.moe/v4/anime/123', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://api.tenrai.org/v1/anime/123', expect.objectContaining({
       cache: 'force-cache', next: { revalidate: 86400, tags: ['anime-week'] },
     }));
   });
@@ -37,7 +37,7 @@ describe('anime rating lookups (offline)', () => {
       if (failure === 'network') throw new Error('offline');
       if (failure === 'http') return new Response(null, { status: 503 });
       if (failure === 'json') return new Response('invalid JSON');
-      return Response.json({ data: { score: null, members: 100 } });
+      return Response.json({ data: { mal_id: 123, score: null, members: 100 } });
     }));
     const { getAnimeRatingsById } = await import('../lib/anime-ratings');
     const { formatAnimeScore } = await import('../lib/ratings');
@@ -45,7 +45,7 @@ describe('anime rating lookups (offline)', () => {
   });
   it('recovers exact-ID lookups after repeated failures and 150 seconds of process uptime', async () => {
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline'))
-      .mockRejectedValueOnce(new Error('offline')).mockResolvedValue(Response.json({ data: { score: 8 } }));
+      .mockRejectedValueOnce(new Error('offline')).mockResolvedValue(Response.json({ data: { mal_id: 123, score: 8 } }));
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeRatingsById } = await import('../lib/anime-ratings');
     for (let i = 0; i < 3; i++) {
@@ -60,7 +60,7 @@ describe('anime rating lookups (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
   it('searches the original first, then display title, and fetches only the matched MAL ID', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(noMatch()).mockResolvedValueOnce(matchResponse()).mockResolvedValueOnce(Response.json({ data: { score: 8.12, members: 1200000 } }));
+    const fetchMock = vi.fn().mockResolvedValueOnce(noMatch()).mockResolvedValueOnce(matchResponse()).mockResolvedValueOnce(Response.json({ data: { mal_id: 123, score: 8.12, members: 1200000 } }));
     vi.stubGlobal('fetch', fetchMock);
     const { getAnimeRatings } = await import('../lib/anime-ratings');
     const pending = getAnimeRatings(search);
@@ -68,9 +68,9 @@ describe('anime rating lookups (offline)', () => {
     expect(await pending).toEqual({ malScore: 8.12, malMembers: 1200000, anilistScore: 81, anilistId: 1, malId: 123 });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.search).toBe('Original');
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.search).toBe('Display');
-    expect(fetchMock.mock.calls[2][0]).toBe('https://api.jikan.moe/v4/anime/123');
+    expect(fetchMock.mock.calls[2][0]).toBe('https://api.tenrai.org/v1/anime/123');
     for (const [url, init] of fetchMock.mock.calls) {
-      expect(init).toMatchObject({ cache: 'force-cache', next: { revalidate: url.includes('jikan') ? 86400 : 604800, tags: ['anime-week'] } });
+      expect(init).toMatchObject({ cache: 'force-cache', next: { revalidate: url.includes('tenrai') ? 86400 : 604800, tags: ['anime-week'] } });
     }
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
@@ -113,7 +113,7 @@ describe('anime rating lookups (offline)', () => {
       starts[service].push(Date.now());
       // A response slower than the minimum spacing must still be serialized.
       await new Promise(resolve => setTimeout(resolve, service === 'anilist' ? 800 : 900));
-      return service === 'anilist' ? matchResponse() : Response.json({ data: { score: 8, members: 100 } });
+      return service === 'anilist' ? matchResponse() : Response.json({ data: { mal_id: 123, score: 8, members: 100 } });
     }));
     const { getAnimeRatings } = await import('../lib/anime-ratings');
     const pending = Promise.all([getAnimeRatings(search), getAnimeRatings(search), getAnimeRatings(search)]);

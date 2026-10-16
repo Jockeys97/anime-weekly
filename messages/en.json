@@ -122,7 +122,7 @@
     "justwatch": "Streaming data provided by JustWatch",
     "omdb": "IMDb ratings: daily IMDb datasets · OMDb fallback",
     "anilist": "Anime matching and fallback scores by AniList",
-    "mal": "MyAnimeList scores via Jikan",
+    "mal": "MyAnimeList scores via Tenrai",
     "note": "Release dates and availability come from the credited sources. No ratings are estimated."
   },
   "notFound": {
@@ -407,5 +407,27 @@
     "title": "Support the site",
     "description": "Help keep Anime Weekly running, with no ads or affiliate links.",
     "link": "Support on Ko-fi"
+  },
+  "episodeChart": {
+    "title": "Episode ratings",
+    "eyebrow": "By season",
+    "description": "Episode ratings for the IMDb series:",
+    "chooseSeason": "Choose a season",
+    "season": "Season",
+    "specials": "Specials",
+    "ratedEpisodes": "rated episodes",
+    "average": "average",
+    "chartLabel": "Episode ratings chart; scroll horizontally",
+    "episode": "Episode",
+    "votes": "votes",
+    "openImdb": "View on IMDb",
+    "scrollHint": "Scroll to see more episodes. Select a bar to open its IMDb page.",
+    "note": "IMDb episode ratings · daily cache. Only rated episodes are shown; numbering follows IMDb and may differ from anime seasons. The dashed line is the average of the displayed episodes.",
+    "updated": "Data from",
+    "loading": "Loading cached episode ratings…",
+    "noRatings": "There are no rated episodes for this series in the latest IMDb dataset.",
+    "notCached": "The daily episode index is not available yet. It will be populated by the next scheduled update.",
+    "noMatch": "An exact IMDb series match is needed to show episode ratings.",
+    "retry": "Check cache again"
   }
 }

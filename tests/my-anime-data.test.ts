@@ -92,6 +92,15 @@ describe('private personalized data', () => {
     airings.mockResolvedValue({ events: [], unavailable: true });
     expect((await getPersonalWeek({ mal: token('m') }, week)).unavailable).toContain('anilist');
   });
+  it('keeps a partial calendar visible without caching a temporary Trakt error', async () => {
+    trakt.mockRejectedValue(new Error('temporary failure'));
+    const result = await getPersonalWeek({ trakt: token('partial-account'), mal: token('working-mal') }, week);
+    expect(result.unavailable).toContain('trakt');
+    expect(result.releases).toHaveLength(1);
+    const loader = cache.mock.calls[0][0];
+    // A successful loader would be persisted by Next; this partial result rejects.
+    await expect(loader()).rejects.toMatchObject({ data: { unavailable: ['trakt'] } });
+  });
   it('includes confirmed MAL anime outside a cold/empty weekly snapshot', async () => {
     snapshot.mockResolvedValue({ titles: {}, events: [] });
     const data = await getPersonalWeek({ mal: token('m') }, week);

@@ -32,7 +32,7 @@ function fixtureFetch(imdbFailure = false, animeFailure = false) {
       if (animeFailure) return Response.json({ errors: [{ message: 'Rate limited' }] });
       return Response.json({ data: { Page: { media: [{ id: 123, idMal: 456, type: 'ANIME', format: 'TV', title: { english: 'Ranma ½', native: 'らんま1/2' }, startDate: { year: 2024 }, averageScore: 81 }] } } });
     }
-    if (url.includes('jikan')) return Response.json({ data: { score: 8.25, members: 1000 } });
+    if (url.includes('tenrai')) return Response.json({ data: { mal_id: 456, score: 8.25, members: 1000 } });
     if (url.includes('/watch/providers')) return imdbFailure && animeFailure ? new Response(null, { status: 503 }) : Response.json({ results: {} });
     if (url.includes('/recommendations') || url.includes('/similar')) return Response.json({ results: [] });
     throw new Error(`Unexpected offline fixture: ${url}`);
@@ -60,14 +60,14 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   expect(await repeated).toMatchObject({ ...snapshot, total, storeHits: 1 });
   expect(await getWeeklyRatings('2026-43')).toEqual({ titles: {}, events: [] });
   expect(fetchMock).toHaveBeenCalledTimes(calls + 3); // Discovery and airing schedules refresh; completed rating sources do not.
-  for (const [input, init] of fetchMock.mock.calls) if (/anilist|jikan|omdbapi/.test(String(input))) {
+  for (const [input, init] of fetchMock.mock.calls) if (/anilist|tenrai|omdbapi/.test(String(input))) {
     expect(init?.cache).toBe('no-store'); // Only validated snapshots persist.
   }
   const { getWeeklyTitleDetails, getWeeklyTitleSchedule } = await import('../lib/weekly-enrichment');
   const details = await getWeeklyTitleDetails('2026-42', 'tv', 1);
   expect(details).not.toHaveProperty('ratings');
   expect((await getWeeklyTitleSchedule('2026-42', 'tv', 1))?.events).toEqual(primed.events);
-  expect(fetchMock.mock.calls.filter(([url]) => /anilist|jikan|omdbapi/.test(String(url)))).toHaveLength(5);
+  expect(fetchMock.mock.calls.filter(([url]) => /anilist|tenrai|omdbapi/.test(String(url)))).toHaveLength(5);
 });
 it('stores AniList/MAL successes together, but never persists OMDb quota errors', async () => {
   vi.stubGlobal('fetch', fixtureFetch(true));
@@ -106,7 +106,7 @@ it('retries missing scores on a warm snapshot without querying completed sources
   expect(completed.titles['tv:1']).toMatchObject({ malScore: 8.25, anilistScore: 81, imdbRating: '8.1' });
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1']).not.toHaveProperty('imdbRating');
   await storePrimedSnapshot('2026-42', completed);
-  expect(retryFetch.mock.calls.some(([url]) => String(url).includes('jikan') || String(url).includes('/external_ids'))).toBe(false);
+  expect(retryFetch.mock.calls.some(([url]) => String(url).includes('tenrai') || String(url).includes('/external_ids'))).toBe(false);
   expect(retryFetch.mock.calls.filter(([url, init]) => String(url).includes('anilist') && !String(init?.body).includes('airingSchedules'))).toHaveLength(0);
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1'].imdbRating).toBe('8.1');
 });
@@ -114,7 +114,7 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   const base = fixtureFetch();
   let failed = true;
   const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-    if (String(input).includes('jikan') && failed) throw new Error('offline');
+    if (String(input).includes('tenrai') && failed) throw new Error('offline');
     if (String(init?.body).includes('airingSchedules') && failed) throw new Error('offline');
     return base(input, init);
   });
@@ -130,12 +130,12 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   expect(fetchMock.mock.calls.some(([url]) => /omdbapi|external_ids/.test(String(url)))).toBe(false);
   expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('anilist') && !String(init?.body).includes('airingSchedules'))).toHaveLength(0);
 });
-it('stops OMDb after quota errors and Jikan after timeouts while continuing AniList', async () => {
+it('stops OMDb after quota errors and Tenrai after timeouts while continuing AniList', async () => {
   const base = fixtureFetch(true);
   const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes('/discover/tv?')) return Response.json({ results: [1, 2, 3].map(id => ({ id, name: 'Ranma1/2', original_name: 'らんま1/2', first_air_date: '2024-10-05' })), total_pages: 1 });
-    if (url.includes('jikan')) throw new DOMException('Timed out', 'TimeoutError');
+    if (url.includes('tenrai')) throw new DOMException('Timed out', 'TimeoutError');
     return base(input, init);
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -144,7 +144,7 @@ it('stops OMDb after quota errors and Jikan after timeouts while continuing AniL
   const result = await pending;
   expect(result.total).toBe(3);
   expect(Object.values(result.titles).every(rating => rating.anilistScore === 81)).toBe(true);
-  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('tenrai'))).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
 });
 it('resumes titles omitted by the previous run budget and keeps saved scores', async () => {
@@ -199,7 +199,7 @@ it('merges display names for completed TV and movie sources and retains undiscov
   expect((await readWeeklyRatingsSnapshot('2026-42')).names).toEqual(result.names);
 });
 
-it('reuses stable ratings across weeks without OMDb, AniList score, Jikan or ID lookups', async () => {
+it('reuses stable ratings across weeks without OMDb, AniList score, Tenrai or ID lookups', async () => {
   const fetchMock = fixtureFetch(); vi.stubGlobal('fetch', fetchMock);
   const { primeWeeklyRatings, readRatingsStore, getWeeklyRatings } = await import('../lib/weekly-ratings');
   const first = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
@@ -218,7 +218,7 @@ it('reuses stable ratings across weeks without OMDb, AniList score, Jikan or ID 
   const reused = await second;
   expect(reused.titles).toEqual(primed.titles);
   expect(reused.storeHits).toBe(1);
-  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|jikan|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
   expect(reused.store.ratings['imdb:tt123'].fetchedAt).toBe(saved.ratings['imdb:tt123'].fetchedAt);
   expect(saved.ratings['imdb:tt123'].lastSeenAt).toBeLessThan(reused.store.ratings['imdb:tt123'].lastSeenAt);
   await storePrimedSnapshot('2026-43', reused);
@@ -236,7 +236,7 @@ it('refreshes values older than 30 days and overwrites scores only on success', 
   const refreshedFetch = vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes('omdbapi')) return Response.json({ Response: 'True', imdbRating: '8.8', imdbVotes: '3,456' });
-    if (url.includes('jikan')) return Response.json({ data: { score: 8.75, members: 2000 } });
+    if (url.includes('tenrai')) return Response.json({ data: { mal_id: 456, score: 8.75, members: 2000 } });
     const response = await base(input, init);
     if (url.includes('anilist') && !String(init?.body).includes('airingSchedules')) {
       const body = await response.json(); body.data.Page.media[0].averageScore = 88;
@@ -264,7 +264,7 @@ it('keeps stale scores and fetchedAt timestamps when refreshes fail, then retrie
   vi.setSystemTime(Date.now() + 31 * 86400000);
   const failedBase = fixtureFetch(true, true);
   vi.stubGlobal('fetch', vi.fn(async (input: string | URL, init?: RequestInit) => {
-    if (String(input).includes('jikan')) throw new Error('offline');
+    if (String(input).includes('tenrai')) throw new Error('offline');
     return failedBase(input, init);
   }));
   const failed = primeWeeklyRatings('2026-47'); await vi.runAllTimersAsync();
@@ -315,7 +315,7 @@ it('refreshes only stale MAL and does not renew the AniList fallback timestamp',
   const fetchMock = fixtureFetch(); vi.stubGlobal('fetch', fetchMock);
   const pending = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync();
   const refreshed = await pending;
-  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('tenrai'))).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('omdbapi') || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
   expect(refreshed.store.ratings['anilist:123'].fetchedAt).toBe(primed.store.ratings['anilist:123'].fetchedAt);
   expect(refreshed.store.ratings['mal:456'].fetchedAt).toBeGreaterThan(primed.store.ratings['mal:456'].fetchedAt);
@@ -334,7 +334,7 @@ it('fetches missing IMDb votes without refetching completed anime scores', async
   const result = await pending;
   expect(result.titles['tv:1'].imdbVotes).toBe('2,123');
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('omdbapi'))).toHaveLength(1);
-  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('jikan'))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('tenrai'))).toHaveLength(0);
 });
 
 it('reuses providers across weeks for seven days, retains stale offers on failure and retries without rating quota', async () => {
@@ -361,7 +361,7 @@ it('reuses providers across weeks for seven days, retains stale offers on failur
   fetchMock.mockClear();
   const reused = await prime('2026-43');
   expect(reused.availability).toEqual(first.availability);
-  expect(fetchMock.mock.calls.filter(([url]) => /watch\/providers|omdbapi|jikan|external_ids/.test(String(url)))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url]) => /watch\/providers|omdbapi|tenrai|external_ids/.test(String(url)))).toHaveLength(0);
   expect(reused.store.availability?.titles['tv:1'].lastSeenAt).toBeGreaterThan(first.store.availability!.titles['tv:1'].lastSeenAt);
   await storePrimedSnapshot('2026-43', reused);
   vi.setSystemTime(Date.now() + 86400000);
@@ -376,7 +376,7 @@ it('reuses providers across weeks for seven days, retains stale offers on failur
   expect(refreshed.availability!.titles['tv:1'].countries).toEqual({});
   expect(refreshed.availability!.titles['tv:1'].fetchedAt).toBeGreaterThan(first.availability!.titles['tv:1'].fetchedAt);
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/watch/providers'))).toHaveLength(1);
-  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|jikan|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
 });
 
 it('warms availability even when all ratings are missing', async () => {

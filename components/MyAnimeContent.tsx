@@ -17,7 +17,7 @@ export function MyAnimeContent({ providers, connected, data, start, end, authErr
   data: PersonalWeekData | null; start: string; end: string; authError: boolean;
 }) {
   const locale = useLocale(), d = getDictionary(locale).myAnime, router = useRouter();
-  const [updating, setUpdating] = useState(false), [statsLoading, setStatsLoading] = useState(connected.trakt);
+  const [updating, setUpdating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0), [refreshError, setRefreshError] = useState<'cooldown' | 'error' | null>(null);
   const groups = groupPersonalReleases(data?.releases ?? []);
   const days = [...new Set(groups.map(group => group.day))];
@@ -44,10 +44,10 @@ export function MyAnimeContent({ providers, connected, data, start, end, authErr
           : <a className="my-anime-connect" href={`/api/auth/${provider}/login`}>{d.connect.replace('{provider}', names[provider])}</a>}
       </section>)}
     </div>
-    {connected.trakt && <MyAnimeStats locale={locale} refreshKey={refreshKey} onLoadingChange={setStatsLoading} />}
+    {connected.trakt && <MyAnimeStats locale={locale} refreshKey={refreshKey} />}
     {data && <section aria-label={d.weekLabel} className="my-anime-calendar">
       <header className="my-anime-calendar-heading"><div><p className="eyebrow">{d.animeOnly}</p><h2>{d.calendarTitle}</h2><p className="my-anime-note">{d.animeOnlyNote}</p></div>
-        <button type="button" className="my-anime-refresh" disabled={updating || (connected.trakt && statsLoading)} onClick={refresh}><span aria-hidden="true">↻</span> {updating ? d.refreshing : d.refresh}</button></header>
+        <button type="button" className="my-anime-refresh" disabled={updating} onClick={refresh}><span aria-hidden="true">↻</span> {updating ? d.refreshing : d.refresh}</button></header>
       {refreshError && <p className="my-anime-notice" role="status">{refreshError === 'cooldown' ? d.refreshCooldown : d.refreshError}</p>}
       {!!data.unavailable.length && <p className="my-anime-notice" role="status">{d.unavailable.replace('{providers}', data.unavailable.map(provider => names[provider]).join(', '))}</p>}
       {!!data.unmatched && <p className="my-anime-note">{d.unmatched.replace('{count}', String(data.unmatched))}</p>}

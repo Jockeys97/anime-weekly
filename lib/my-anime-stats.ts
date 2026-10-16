@@ -6,6 +6,10 @@ import { resolvePersonalAnime } from '@/lib/my-anime-identity';
 import { animeHistoryStats, type TraktHistoryPlay, type PersonalAnimeStats } from '@/lib/my-anime-stats-model';
 import type { TraktShow } from '@/lib/my-anime-week';
 import { personalCacheTag, personalAggregates } from '@/lib/my-anime-cache';
+import { withTimeout } from '@/lib/async-timeout';
+const HISTORY_BUDGET_MS = 8000;
+const IDENTITY_BUDGET_MS = 10000;
+const REQUEST_BUDGET_MS = 22000;
 interface HistoryPage { plays: TraktHistoryPlay[]; shows: TraktShow[]; pages: number; partial: boolean; capturedAt: string }
 function historyPage(token: string, page: number, capturedAt?: string, maxWaitMs = 15000): Promise<HistoryPage> {
   // Cache compact private pages too, so a large import resumes without fetching
@@ -26,7 +30,7 @@ function historyPage(token: string, page: number, capturedAt?: string, maxWaitMs
   }, ['my-anime-history-v1', tokenHash(token), String(page), capturedAt ?? 'latest'], { revalidate: 900, tags: [personalCacheTag(token)] })();
 }
 async function loadStats(token: string): Promise<PersonalAnimeStats> {
-  const deadline = Date.now() + 25000;
+  const deadline = Date.now() + HISTORY_BUDGET_MS;
   const history = new Map<number, TraktHistoryPlay>(), shows = new Map<number, TraktShow>();
   let partial = false, loaded = false, syncing = false, capturedAt: string | undefined;
   // Imports exceeding one request's budget resume from private cached pages.
@@ -34,7 +38,7 @@ async function loadStats(token: string): Promise<PersonalAnimeStats> {
   for (let page = 1; page <= 1000; page++) {
     if (Date.now() >= deadline) { partial = true; syncing = true; break; }
     try {
-      const result = await historyPage(token, page, capturedAt, Math.max(1, deadline - Date.now()));
+      const result = await withTimeout(historyPage(token, page, capturedAt, Math.max(1, deadline - Date.now())), Math.max(1, deadline - Date.now()));
       loaded = true; capturedAt = result.capturedAt; partial ||= result.partial;
       for (const play of result.plays) history.set(play.id, play);
       for (const show of result.shows) shows.set(show.ids.trakt, show);
@@ -43,7 +47,7 @@ async function loadStats(token: string): Promise<PersonalAnimeStats> {
     } catch { partial = true; syncing = Date.now() >= deadline; break; }
   }
   if (!loaded) throw new Error('Watched history unavailable');
-  const resolved = await resolvePersonalAnime([...shows.values()], [], 25000);
+  const resolved = await resolvePersonalAnime([...shows.values()], [], IDENTITY_BUDGET_MS);
   if (!resolved.identities.size && resolved.unavailable && !resolved.deferred) throw new Error('Anime identities unavailable');
   const data = { ...animeHistoryStats([...history.values()], resolved.identities, partial || resolved.unavailable || resolved.unmatched > 0, resolved.unmatched),
     syncing: syncing || resolved.deferred, updatedAt: capturedAt! };
@@ -59,18 +63,19 @@ export async function getPersonalStats(token: string): Promise<PersonalAnimeStat
   // during a continuation. Page/catalog caches execute in the request context.
   const request = (async () => {
     try {
-      const cached = await personalAggregates.get(hash) as PersonalAnimeStats | null;
-      if (cached?.status === 'ready' && !cached.syncing && Number.isFinite(cached.minutes)
+      const cached = await withTimeout(personalAggregates.get(hash), 500) as PersonalAnimeStats | null;
+      if (cached?.status === 'ready' && !cached.syncing && !cached.partial && Number.isFinite(cached.minutes)
         && Date.now() - Date.parse(cached.updatedAt) < 900000) return cached;
     } catch { /* The private page cache can still serve the import. */ }
     const data = await loadStats(token);
-    if (!data.syncing) {
-      try { await personalAggregates.set(hash, data, { ttl: 900, tags: [personalCacheTag(token)] }); }
+    if (!data.syncing && !data.partial) {
+      try { await withTimeout(personalAggregates.set(hash, data, { ttl: 900, tags: [personalCacheTag(token)] }), 500); }
       catch { /* Return valid totals even if the aggregate cache is unavailable. */ }
     }
     return data;
-  })().catch((): PersonalAnimeStats => ({ status: 'unavailable', series: 0, episodes: 0, plays: 0, rewatches: 0, minutes: 0, missingRuntimePlays: 0,
+  })();
+  const bounded = withTimeout(request, REQUEST_BUDGET_MS).catch((): PersonalAnimeStats => ({ status: 'unavailable', series: 0, episodes: 0, plays: 0, rewatches: 0, minutes: 0, missingRuntimePlays: 0,
       unmatched: 0, partial: true, updatedAt: new Date().toISOString() }));
-  pending.set(hash, request);
-  try { return await request; } finally { pending.delete(hash); }
+  pending.set(hash, bounded);
+  try { return await bounded; } finally { pending.delete(hash); }
 }

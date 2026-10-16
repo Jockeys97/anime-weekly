@@ -16,7 +16,7 @@ it('caches exact-title results daily, coalesces concurrent calls and retains rea
   expect(first).toEqual({ malId: 123, malStatus: 'ready', malScore: 8.12, malMembers: 1200000, malScoredBy: 456789 });
   expect(second).toEqual(first);
   expect(await getMyAnimeListScore(123)).toEqual(first);
-  expect(jikanFetch).toHaveBeenCalledExactlyOnceWith('https://api.jikan.moe/v4/anime/123', { cache: 'no-store', next: undefined }, 8000);
+  expect(jikanFetch).toHaveBeenCalledExactlyOnceWith('https://api.tenrai.org/v1/anime/123', { cache: 'no-store', next: undefined }, 8000);
 });
 it.each([429, 500])('does not cache HTTP %s as an absent score', async status => {
   vi.mocked(jikanFetch).mockResolvedValueOnce(new Response(null, { status })).mockResolvedValueOnce(Response.json({ data }));
@@ -28,8 +28,8 @@ it.each([{ ...data, mal_id: 124 }, { ...data, score: 12 }, { ...data, score: '8.
   vi.mocked(jikanFetch).mockResolvedValueOnce(Response.json({ data: value }));
   expect(await getMyAnimeListScore(123)).toEqual({ malId: 123, malStatus: 'error' });
 });
-it('caches a confirmed unrated title without inventing a score or confusing members with votes', async () => {
-  vi.mocked(jikanFetch).mockResolvedValue(Response.json({ data: { mal_id: 123, score: null, members: 100, scored_by: null } }));
+it.each([null, 0])('caches a confirmed unrated title (%s) without inventing a score or confusing members with votes', async score => {
+  vi.mocked(jikanFetch).mockResolvedValue(Response.json({ data: { mal_id: 123, score, members: 100, scored_by: null } }));
   expect(await getMyAnimeListScore(123)).toEqual({ malId: 123, malStatus: 'unavailable', malScore: null, malMembers: 100 });
   await getMyAnimeListScore(123);
   expect(jikanFetch).toHaveBeenCalledTimes(1);

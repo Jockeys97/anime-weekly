@@ -13,9 +13,10 @@ import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import type { AniListAnime } from '@/lib/anilist';
 import { displayTitle } from '@/lib/title-text';
+import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode;
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes }: {
+  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode;
 }) {
   const locale = useLocale();
   const d = getDictionary(locale);
@@ -63,6 +64,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability }
         <a className="catalog-details" href={`https://anilist.co/anime/${anime.id}`} target="_blank" rel="noopener noreferrer">{c.source} ↗</a>
       </div>
     </article>
+    {episodes && <Suspense fallback={<EpisodeChartLoading />}>{episodes}</Suspense>}
     <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} locale={locale} />
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
