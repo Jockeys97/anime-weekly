@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { AnimeActions } from '@/components/AnimeActions';
 import { VisitorDate } from '@/components/VisitorTime';
 import { AnimeTrailer } from '@/components/AnimeTrailer';
-import { AnimeRatingTile, ImdbRatingTile, MyAnimeListRatingTile } from '@/components/RatingSummary';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
@@ -41,18 +40,8 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
         <h1>{name}</h1>
         <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
         {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
-        <Suspense fallback={<p className="synopsis detail-synopsis" role="status">{d.language.loadingSynopsis}</p>}>
-          {synopsis}
-        </Suspense>
-        <dl className="ratings">
-          <Suspense fallback={<ImdbRatingTile ratings={{}} title={name} locale={locale} pending />}>
-            {imdb}
-          </Suspense>
-          <Suspense fallback={<><AnimeRatingTile ratings={{ anilistId: anime.id, anilistScore: anime.averageScore }} title={name} locale={locale} />
-            <MyAnimeListRatingTile ratings={{ malId: anime.idMal ?? undefined }} title={name} locale={locale} pending /></>}>
-            {ratings}
-          </Suspense>
-        </dl>
+        {synopsis}
+        <dl className="ratings">{imdb}{ratings}</dl>
         <Suspense fallback={<DubbingStatus malId={anime.idMal} locale={locale} followLocale />}>{dubbing}</Suspense>
         <dl className="detail-facts">
           <div><dt>{c.format}</dt><dd>{format}</dd></div>
@@ -71,9 +60,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
     <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
       <StreamingCountrySelector locale={locale} />
-      <Suspense fallback={<p className="detail-loading" role="status">{c.loadingAvailability}</p>}>
-        {availability}
-      </Suspense>
+      {availability}
       <p className="catalog-intro">{c.availabilityNote}</p>
     </section>
   </main>;

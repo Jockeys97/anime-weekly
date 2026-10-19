@@ -33,6 +33,10 @@ async function matchingRows(file: keyof typeof files, wanted: Set<string>, signa
   if (!response.ok || !response.body) throw new Error('IMDb dataset unavailable');
   const input = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
   const output = createGunzip();
+  // The episode iterator starts after the rating index is ready. Corrupt gzip
+  // can emit an error before that iterator subscribes; pipeline still rejects
+  // and is awaited below, but the stream also needs an immediate listener.
+  output.on('error', () => undefined);
   const transfer = pipeline(input, output, { signal });
   // Attach immediately: transfer can reject while the iterator consumes data.
   void transfer.catch(() => undefined);

@@ -1,4 +1,5 @@
 import type { Locale } from '@/lib/locales';
+import { withTimeout } from '@/lib/async-timeout';
 export interface SynopsisResult { synopsis: string | null; language: Locale | null; source: 'tmdb' | 'deepl' | null }
 const requests = new Map<string, { expires: number; promise: Promise<SynopsisResult> }>();
 export function synopsisQuery(locale: Locale, kind: 'tv' | 'movie', anilistId: number, titles: string[], year?: number): string {
@@ -10,12 +11,12 @@ export function synopsisQuery(locale: Locale, kind: 'tv' | 'movie', anilistId: n
 export function loadSynopsis(query: string): Promise<SynopsisResult> {
   const existing = requests.get(query);
   if (existing && existing.expires > Date.now()) return existing.promise;
-  const promise = fetch(`/api/synopsis?${query}`, { signal: AbortSignal.timeout(30000) }).then(async response => {
+  const promise = withTimeout(fetch(`/api/synopsis?${query}`, { signal: AbortSignal.timeout(30000) }).then(async response => {
     if (!response.ok) throw new Error('Synopsis unavailable');
     const data = await response.json() as SynopsisResult;
     if (!data.synopsis) requests.delete(query);
     return data;
-  }).catch(error => { requests.delete(query); throw error; });
+  }), 30000).catch(error => { requests.delete(query); throw error; });
   if (requests.size >= 200) requests.delete(requests.keys().next().value!);
   requests.set(query, { expires: Date.now() + 600000, promise });
   return promise;

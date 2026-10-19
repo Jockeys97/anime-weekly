@@ -8,7 +8,7 @@ import { getAnime } from '../lib/anilist';
 import { getMyAnimeListScore } from '../lib/myanimelist';
 import { GET } from '../app/api/myanimelist/route';
 beforeEach(async () => { (await import('./helpers/next-cache')).clearNextCache(); });
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { vi.resetAllMocks(); vi.useRealTimers(); });
 const data = { mal_id: 123, score: 8.12, members: 1200000, scored_by: 456789 };
 it('caches exact-title results daily, coalesces concurrent calls and retains real vote counts', async () => {
   vi.mocked(jikanFetch).mockResolvedValue(Response.json({ data }));
@@ -52,4 +52,14 @@ it('returns retryable, non-cacheable errors instead of a false n/a', async () =>
   expect(response.status).toBe(503);
   expect(response.headers.get('cache-control')).toBe('no-store');
   expect(await response.json()).toEqual({ malId: 123, malStatus: 'error' });
+});
+it('bounds response-body stalls and releases the shared pending request for recovery', async () => {
+  vi.useFakeTimers();
+  vi.mocked(jikanFetch).mockResolvedValueOnce({ ok: true, json: () => new Promise(() => {}) } as unknown as Response)
+    .mockResolvedValueOnce(Response.json({ data }));
+  const pending = getMyAnimeListScore(123);
+  await vi.advanceTimersByTimeAsync(8000);
+  expect((await pending).malStatus).toBe('error');
+  expect((await getMyAnimeListScore(123)).malScore).toBe(8.12);
+  expect(jikanFetch).toHaveBeenCalledTimes(2);
 });

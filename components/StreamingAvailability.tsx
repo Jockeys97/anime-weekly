@@ -23,12 +23,14 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
   const key = `${recoveryId}:${region}`;
   type RecoveryResult = { status: 'ready'; data: Recovery | null } | { status: 'error' };
   const [results, setResults] = useState<Record<string, RecoveryResult>>({});
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const needsRecovery = Boolean(recoveryId && !base.providers[region]?.providers.length && !loading);
   const result = needsRecovery ? results[key] : undefined;
   const recovered = result?.status === 'ready' ? result.data : null;
   useEffect(() => {
     if (!needsRecovery || key in results) return;
     const controller = new AbortController();
+    const timer = setTimeout(() => setBusyKey(key), 0);
     // A failed request is not proof that the country has no streaming offers.
     // Bound both fetching and reading the body, and let the visitor retry.
     void withTimeout((async () => {
@@ -40,11 +42,11 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
     })(), 25000)
       .then(data => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: { status: 'ready', data: data?.providers ? data : null } })); })
       .catch(() => { if (!controller.signal.aborted) setResults(previous => ({ ...previous, [key]: { status: 'error' } })); });
-    return () => controller.abort();
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [needsRecovery, key, recoveryId, region, results]);
   const source = recovered || base;
   const availability = source.providers[region];
-  const pending = needsRecovery && !(key in results);
+  const pending = needsRecovery && busyKey === key && !(key in results);
   const content = <>
     {(useSeries || recovered?.series) && <p className="streaming-note" role="note"><strong>{d.title.seriesWatch}: {source.name}.</strong> {d.title.seriesWatchNote}</p>}
     {recovered?.recovered && availability?.link && <p className="streaming-note"><a href={availability.link} target="_blank" rel="noopener noreferrer">{d.title.recoveredWatchSource} ↗</a></p>}
@@ -55,7 +57,7 @@ export function StreamingAvailability({ anime, seriesWatch, recoveryId, locale =
         label={`${source.name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`}>
         {(provider.logo_path || provider.logo_url) && <Image src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" width={24} height={24} />}
         <span>{provider.provider_name}</span><span className="provider-external" aria-hidden="true">↗</span>
-      </ProviderLink>) : result?.status === 'error' ? <p role="status">{d.state.providersError} <button type="button" onClick={() => {
+      </ProviderLink>) : result?.status === 'error' ? <p role="status">n/d · {d.state.providersError} <button type="button" onClick={() => {
         setResults(previous => { const next = { ...previous }; delete next[key]; return next; });
       }}>{d.error.retry}</button></p> : <p>{source.providersUnavailable ? d.state.providersError : d.title.noWatchData}</p>}
     </div></div></div>

@@ -30,7 +30,14 @@ function SourceTile({ source, name, href, title, children, locale, tileRef }: {
 }
 
 export interface ImdbLookup { tmdbId: number; kind: 'tv' | 'movie' }
-export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup, allowRetry = true, followLocale = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; lookup?: ImdbLookup | null; allowRetry?: boolean; followLocale?: boolean }) {
+async function loadImdbRating(query: string): Promise<Ratings> {
+  return withTimeout((async () => {
+    const response = await fetch(`/api/imdb?${query}`, { signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error('IMDb unavailable');
+    return await response.json() as Ratings;
+  })(), 15000);
+}
+export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup, allowRetry = true, followLocale = false, autoLoad = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; lookup?: ImdbLookup | null; allowRetry?: boolean; followLocale?: boolean; autoLoad?: boolean }) {
   const selectedLocale = useLocale();
   locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
@@ -44,28 +51,37 @@ export function ImdbRatingTile({ ratings, title, locale, pending = false, lookup
   const value = formatRating(current.imdbRating);
   const ready = value !== 'n/a';
   const error = current.imdbStatus === 'error' && current.imdbErrorReason !== 'quota' && current.imdbErrorReason !== 'authentication';
+  const serverReady = formatRating(ratings.imdbRating) !== 'n/a';
+  useEffect(() => {
+    if (!autoLoad || serverReady || !query || pending) return;
+    let active = true;
+    // Only missing server values are recovered. This endpoint reads the shared
+    // dataset/cron cache and cannot make visitor-triggered OMDb requests.
+    void loadImdbRating(query).then(result => {
+      if (active) setRetried({ query, ratings: { ...ratings, ...result } });
+    }).catch(() => {
+      if (active) setRetried({ query, ratings: { ...ratings, imdbStatus: 'error' } });
+    });
+    return () => { active = false; };
+  }, [autoLoad, serverReady, query, pending, ratings]);
   const retry = async () => {
     if (!query) return;
     setBusy(true);
     try {
-      const result = await withTimeout((async () => {
-        const response = await fetch(`/api/imdb?${query}`, { signal: AbortSignal.timeout(15000) });
-        if (!response.ok) throw new Error('IMDb unavailable');
-        return await response.json() as Ratings;
-      })(), 15000);
+      const result = await loadImdbRating(query);
       setRetried({ query, ratings: { ...ratings, ...result } });
     } catch { setRetried({ query, ratings: { ...ratings, imdbStatus: 'error' } }); }
     finally { setBusy(false); }
   };
   return <SourceTile source="imdb" name={d.title.imdb} href={ratingSourceLink('imdb', current)} title={current.imdbSeriesTitle || title} locale={locale}>
-    <dd className={`rating-value${!waiting && !ready ? ' rating-value-state' : ''}`}>{waiting ? '…' : ready ? value : error ? d.title.imdbError : 'n/a'}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className={`rating-value${!waiting && !ready ? ' rating-value-state' : ''}`}>{waiting ? '…' : ready ? value : autoLoad ? 'n/d' : error ? d.title.imdbError : 'n/a'}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
     <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : ready ? <>{formatVotes(current.imdbVotes)} {d.title.voteCount}</> : error ? d.title.imdbErrorDetail : current.imdbStatus === 'unmatched' ? d.title.imdbUnmatchedDetail : d.title.imdbUnavailableDetail}</dd>
     {allowRetry && !waiting && !ready && query && <dd className="rating-detail"><button type="button" onClick={retry}>{d.error.retry}</button></dd>}
     {current.imdbSeriesTitle && <dd className="rating-detail">{d.title.seriesRating}: {current.imdbSeriesTitle}</dd>}
   </SourceTile>;
 }
 
-export function AnimeRatingTile({ ratings, title, locale, pending = false, followLocale = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean }) {
+export function AnimeRatingTile({ ratings, title, locale, pending = false, followLocale = false, unavailableLabel = 'n/a' }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean; unavailableLabel?: string }) {
   const selectedLocale = useLocale();
   locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
@@ -74,12 +90,12 @@ export function AnimeRatingTile({ ratings, title, locale, pending = false, follo
   const isAnilist = animeScore.startsWith('AniList ');
   const failed = !isAnilist && ratings.animeStatus === 'error';
   return <SourceTile source="anilist" name="AniList" href={ratingSourceLink('anilist', ratings)} title={title} locale={locale}>
-    <dd className={`rating-value${failed ? ' rating-value-state' : ''}`}>{waiting ? '…' : isAnilist ? `${ratings.anilistScore}%` : failed ? d.title.imdbError : 'n/a'}</dd>
+    <dd className={`rating-value${failed ? ' rating-value-state' : ''}`}>{waiting ? '…' : isAnilist ? `${ratings.anilistScore}%` : failed ? d.title.imdbError : unavailableLabel}</dd>
     <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : failed ? d.title.imdbErrorDetail : d.title.animeScore}</dd>
   </SourceTile>;
 }
 
-export function MyAnimeListRatingTile({ ratings, title, locale, pending = false, followLocale = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean }) {
+export function MyAnimeListRatingTile({ ratings, title, locale, pending = false, followLocale = false, eager = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean; eager?: boolean }) {
   const selectedLocale = useLocale();
   locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
@@ -88,6 +104,7 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
     : ratingSourceLink('anilist', ratings) ? `anilist=${ratings.anilistId}` : '';
   const [loaded, setLoaded] = useState<{ query: string; ratings: Ratings } | null>(null);
   const [attempt, retry] = useState(0);
+  const [loading, setLoading] = useState<string | null>(null);
   const initialReady = formatAnimeScore({ malScore: ratings.malScore }).startsWith('MAL ');
   const current = !initialReady && loaded?.query === query ? { ...ratings, ...loaded.ratings } : ratings;
   const ready = formatAnimeScore({ malScore: current.malScore }).startsWith('MAL ');
@@ -98,21 +115,25 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
     let observer: IntersectionObserver | undefined;
     const load = () => {
       observer?.disconnect();
-      void loadMalRating(query).then(result => { if (active) setLoaded({ query, ratings: result }); })
-        .catch(() => { if (active) setLoaded({ query, ratings: { malStatus: 'error' } }); });
+      setLoading(query);
+      // Include time spent in the shared catalog queue. A stalled observer or
+      // queued request must never leave a visible tile loading indefinitely.
+      void withTimeout(loadMalRating(query), 20000).then(result => { if (active) setLoaded({ query, ratings: result }); })
+        .catch(() => { if (active) setLoaded({ query, ratings: { malStatus: 'error' } }); })
+        .finally(() => { if (active) setLoading(null); });
     };
-    if (typeof IntersectionObserver === 'undefined') load();
-    else {
+    const timer = eager || typeof IntersectionObserver === 'undefined' ? setTimeout(load, 0) : undefined;
+    if (timer === undefined) {
       observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) load(); }, { rootMargin: '100px' });
       if (tile.current) observer.observe(tile.current);
     }
-    return () => { active = false; observer?.disconnect(); };
-  }, [needsLookup, query, attempt]);
-  const waiting = usePendingTimeout(pending && !initialReady) || (needsLookup && loaded?.query !== query);
+    return () => { active = false; clearTimeout(timer); observer?.disconnect(); };
+  }, [needsLookup, query, attempt, eager]);
+  const waiting = usePendingTimeout(pending && !initialReady) || (needsLookup && !ready && loading === query && loaded?.query !== query);
   const failed = current.malStatus === 'error';
   const members = formatMembers(current.malMembers);
   return <SourceTile source="myanimelist" name="MyAnimeList" href={ratingSourceLink('myanimelist', current)} title={title} locale={locale} tileRef={tile}>
-    <dd className={`rating-value${!waiting && !ready ? ' rating-value-state' : ''}`}>{waiting ? '…' : ready ? current.malScore!.toFixed(2) : failed ? d.title.imdbError : 'n/a'}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
+    <dd className={`rating-value${!waiting && !ready ? ' rating-value-state' : ''}`}>{waiting ? '…' : ready ? current.malScore!.toFixed(2) : eager ? 'n/d' : failed ? d.title.imdbError : 'n/a'}{!waiting && ready && <span className="rating-scale"> / 10</span>}</dd>
     <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : failed ? d.title.malErrorDetail : !ready ? d.title.malUnavailableDetail
       : Number.isSafeInteger(current.malScoredBy) && current.malScoredBy! >= 0 ? `${formatVotes(String(current.malScoredBy))} ${d.title.voteCount}`
         : members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>

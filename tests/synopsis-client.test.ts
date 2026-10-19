@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LocalizedSynopsis } from '../components/LocalizedSynopsis';
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 it('hides English while translation is pending and renders a supplied server translation immediately', () => {
   const props = { original: 'English original', titles: ['Example'], anilistId: 1, locale: 'it' as const, kind: 'tv' as const };
   const pending = renderToStaticMarkup(React.createElement(LocalizedSynopsis, props));
@@ -28,4 +28,15 @@ it('shares completed and in-flight requests across client remounts', async () =>
   await first;
   await loadSynopsis('locale=it&anilist=1');
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+it('settles a stalled response body and allows a later translation retry', async () => {
+  vi.useFakeTimers();
+  const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: () => new Promise(() => {}) })
+    .mockResolvedValueOnce(Response.json({ synopsis: 'Trama recuperata', language: 'it', source: 'tmdb' }));
+  vi.stubGlobal('fetch', fetchMock);
+  const { loadSynopsis } = await import('../lib/synopsis-client');
+  const pending = expect(loadSynopsis('stalled-body')).rejects.toThrow('timed out');
+  await vi.advanceTimersByTimeAsync(30000);
+  await pending;
+  expect((await loadSynopsis('stalled-body')).synopsis).toBe('Trama recuperata');
 });

@@ -3,15 +3,16 @@ import { unstable_cache } from 'next/cache';
 import { jikanFetch } from '@/lib/rate-limited-fetch';
 import type { Ratings } from '@/lib/ratings';
 import { MAL_API_BASE, parseMalRating } from '@/lib/mal-provider';
+import { withTimeout } from '@/lib/async-timeout';
 
 export const MAL_REVALIDATE = 86400;
-const cachedScore = unstable_cache(async (id: number): Promise<Ratings> => {
+const cachedScore = unstable_cache((id: number): Promise<Ratings> => withTimeout((async () => {
   // Cache the validated result, rather than an HTTP error or a response for a
   // different anime. An unrated title is a valid daily result; an outage is not.
   const response = await jikanFetch(`${MAL_API_BASE}/anime/${id}`, { cache: 'no-store', next: undefined }, 8000);
   if (!response.ok) throw new Error('MyAnimeList unavailable');
   return parseMalRating(await response.json(), id);
-}, ['myanimelist-score-tenrai-v2'], { revalidate: MAL_REVALIDATE, tags: ['myanimelist-scores'] });
+})(), 8000), ['myanimelist-score-tenrai-v2'], { revalidate: MAL_REVALIDATE, tags: ['myanimelist-scores'] });
 
 const pending = new Map<number, Promise<Ratings>>();
 export async function getMyAnimeListScore(id: number): Promise<Ratings> {
