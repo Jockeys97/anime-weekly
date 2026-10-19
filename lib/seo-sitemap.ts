@@ -4,7 +4,8 @@ import { languageAlternates } from '@/lib/locale-routing';
 import type { MetadataRoute } from 'next';
 import { platformPaths } from '@/lib/platforms';
 import { currentSeason, SEASONS, seasonPath } from '@/lib/season';
-import { formatWeek, isoWeek, shiftWeek, weekRange } from '@/lib/week';
+import { formatWeek, isoWeek, parseWeek, shiftWeek } from '@/lib/week';
+import type { ArchivedWeek } from '@/lib/week-archive';
 import { siteUrl } from '@/lib/seo';
 
 export interface SitemapAnime { id: number; name?: string; updatedAt?: number | null }
@@ -22,17 +23,26 @@ export function sitemapUrls(date = new Date(), base = siteUrl()): string[] {
   return sitemapIds(date).map(id => new URL(`/sitemaps/sitemap/${id}.xml`, base).href);
 }
 
-export function buildPagesSitemap(date = new Date(), base = siteUrl()): MetadataRoute.Sitemap {
+export function buildPagesSitemap(date = new Date(), base = siteUrl(), archivedWeeks: readonly ArchivedWeek[] = []): MetadataRoute.Sitemap {
   const week = isoWeek(date);
   const paths = ['/', '/season', '/piattaforma',
     ...sitemapSeasons(date).map(seasonPath), ...platformPaths()];
   const entries: MetadataRoute.Sitemap = paths.map(path => ({
     url: new URL(path, base).href, alternates: { languages: languageAlternates(path, base) }, changeFrequency: 'daily', lastModified: date,
   }));
-  for (const offset of [-1, 0, 1]) {
+  for (const offset of [0, 1]) {
     const value = shiftWeek(week, offset);
     entries.push({ url: new URL(`/week/${formatWeek(value)}`, base).href, alternates: { languages: languageAlternates(`/week/${formatWeek(value)}`, base) },
-      changeFrequency: 'daily', lastModified: offset < 0 ? weekRange(value).end : date });
+      changeFrequency: 'daily', lastModified: date });
+  }
+  const seen = new Set<string>();
+  for (const archived of archivedWeeks) {
+    if (!parseWeek(archived.week) || archived.week >= formatWeek(week) || !(archived.titleCount > 0)
+      || !Number.isFinite(Date.parse(archived.uploadedAt)) || seen.has(archived.week)) continue;
+    seen.add(archived.week);
+    const path = `/week/${archived.week}`;
+    entries.push({ url: new URL(path, base).href, alternates: { languages: languageAlternates(path, base) },
+      changeFrequency: 'yearly', lastModified: archived.uploadedAt });
   }
   return localizedEntries(entries);
 }
@@ -59,6 +69,6 @@ function localizedEntries(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap
   return entries.flatMap(entry => locales.map(locale => ({ ...entry, url: entry.alternates!.languages![locale] as string })));
 }
 
-export function buildSitemap(ids: readonly number[], date = new Date(), base = siteUrl()): MetadataRoute.Sitemap {
-  return [...buildPagesSitemap(date, base), ...buildAnimeSitemap(ids.map(id => ({ id })), base)];
+export function buildSitemap(ids: readonly number[], date = new Date(), base = siteUrl(), archivedWeeks: readonly ArchivedWeek[] = []): MetadataRoute.Sitemap {
+  return [...buildPagesSitemap(date, base, archivedWeeks), ...buildAnimeSitemap(ids.map(id => ({ id })), base)];
 }

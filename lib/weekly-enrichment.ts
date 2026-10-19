@@ -1,9 +1,9 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { CACHE_SECONDS, CACHE_TAG } from '@/lib/config';
-import { getQuickWeekData, getWeeklySource, getWeeklyRelated, getTMDBWeekEpisodes } from '@/lib/tmdb';
+import { getQuickWeekData, getWeeklySource, getWeeklyRelated, getTMDBWeekEpisodes, type WeekData } from '@/lib/tmdb';
 import { expandAvailability } from '@/lib/provider-snapshot';
-import { getWeeklyRatings } from '@/lib/weekly-ratings';
+import { getWeeklyRatings, type WeeklyRatings } from '@/lib/weekly-ratings';
 import { withTimeout } from '@/lib/async-timeout';
 import { parseWeek } from '@/lib/week';
 import type { WeeklyTitleDetails, WeeklySchedule, WeeklyCalendarSchedule } from '@/lib/weekly-details';
@@ -45,11 +45,12 @@ export async function getWeeklyTitleSchedule(week: string, kind: 'tv' | 'movie',
 // Resolve the whole calendar without waiting for viewport-based watch lookups
 // or a successful ratings cron. Cached TMDB episode dates remain available
 // when the AniList snapshot is cold; no rating provider is called here.
-export async function getWeeklyCalendarSchedule(slug: string): Promise<WeeklyCalendarSchedule> {
+export async function getWeeklyCalendarSchedule(slug: string, sources?: { catalog: WeekData; snapshot: WeeklyRatings }): Promise<WeeklyCalendarSchedule> {
   const deadline = Date.now() + 23000;
   const week = parseWeek(slug);
   if (!week) throw new Error('Invalid week');
-  const [catalog, snapshot] = await withTimeout(Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(slug)]), 10000);
+  const [catalog, snapshot] = sources ? [sources.catalog, sources.snapshot]
+    : await withTimeout(Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(slug)]), 10000);
   if (catalog.status !== 'ready') throw new Error('Weekly source unavailable');
   const anilistIds: Record<string, number> = {};
   const titles = catalog.titles.map(title => {

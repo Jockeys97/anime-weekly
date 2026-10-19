@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: vi.fn().mockResolvedValue([]) }));
+import { listArchivedWeeks } from '../lib/week-archive';
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), animeName: (item: { title: { english: string } }) => item.title.english }));
 import { getSeason } from '../lib/anilist';
@@ -14,7 +16,7 @@ describe('SEO sitemap', () => {
   it('includes weeks across year boundaries, three calendar years, platforms and valid unique anime', () => {
     const urls = buildSitemap([21, 21, -1, NaN, 2147483648, 42], new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example')).filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => entry.url);
     expect(urls).toContain('https://anime.example/');
-    expect(urls).toContain('https://anime.example/week/2025-52');
+    expect(urls).not.toContain('https://anime.example/week/2025-52');
     expect(urls).toContain('https://anime.example/week/2026-01');
     expect(urls).toContain('https://anime.example/week/2026-02');
     expect(urls.filter(url => /\/season\//.test(url))).toHaveLength(12);
@@ -34,10 +36,19 @@ describe('SEO sitemap', () => {
     expect(entries.find(entry => entry.url.endsWith('/anime/2'))).not.toHaveProperty('lastModified');
     expect(entries.find(entry => entry.url.endsWith('/anime/3'))).not.toHaveProperty('lastModified');
   });
-  it('uses past week end dates and real generation time for other pages', () => {
+  it('uses only nonempty archives for closed weeks and their actual upload dates, preserving hreflang', () => {
     const date = new Date('2026-01-01T12:00:00Z');
-    const entries = buildSitemap([], date);
-    expect(entries.find(entry => entry.url.endsWith('/week/2025-52'))?.lastModified).toBe('2025-12-28');
+    const uploadedAt = '2025-12-29T06:01:00Z';
+    const entries = buildSitemap([], date, new URL('https://anime.example'), [
+      { week: '2025-52', titleCount: 1, uploadedAt }, { week: '2025-52', titleCount: 1, uploadedAt },
+      { week: '2025-51', titleCount: 0, uploadedAt }, { week: '2026-01', titleCount: 1, uploadedAt },
+      { week: '2025-50', titleCount: 1, uploadedAt: 'bad-date' }, { week: 'bad-week', titleCount: 1, uploadedAt },
+    ]);
+    const archives = entries.filter(entry => entry.url.endsWith('/week/2025-52'));
+    expect(archives).toHaveLength(6);
+    expect(archives[0].lastModified).toBe(uploadedAt);
+    expect(archives[0].alternates?.languages).toMatchObject({ it: 'https://anime.example/week/2025-52', en: 'https://anime.example/en/week/2025-52' });
+    expect(entries.some(entry => entry.url.endsWith('/week/2025-51'))).toBe(false);
     expect(entries.find(entry => entry.url.endsWith('/week/2026-01'))?.lastModified).toEqual(date);
     expect(entries.find(entry => entry.url.endsWith('/season/2024/winter'))?.lastModified).toEqual(date);
   });
@@ -71,7 +82,9 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2025.xml',
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(60 * 6);
+    vi.mocked(listArchivedWeeks).mockResolvedValue([]);
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(59 * 6);
+    expect(listArchivedWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);
     expect(getSeason).toHaveBeenCalledTimes(12);

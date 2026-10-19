@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: async () => [] }));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));

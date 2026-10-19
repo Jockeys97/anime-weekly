@@ -7,12 +7,13 @@ import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { loadWeeklyEpisodes } from '@/lib/weekly-episode-client';
 import { topWeeklyEpisodes, type WeeklyEpisodes } from '@/lib/weekly-episodes';
-export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initialEpisodes?: WeeklyEpisodes }) {
+export function WeeklyTopFive({ slug, initialEpisodes, frozen = false }: { slug: string; initialEpisodes?: WeeklyEpisodes; frozen?: boolean }) {
   const locale = useLocale();
   const dictionary = getDictionary(locale);
   const d = dictionary.features;
   const [snapshot, setSnapshot] = useState<{ slug: string; data: WeeklyEpisodes } | null>(() => initialEpisodes ? { slug, data: initialEpisodes } : null);
   useEffect(() => {
+    if (frozen) return;
     const age = initialEpisodes?.updatedAt ? Date.now() - Date.parse(initialEpisodes.updatedAt) : Infinity;
     if (initialEpisodes?.status === 'ready' && age >= 0 && age < 300000) return;
     const controller = new AbortController();
@@ -20,7 +21,7 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
       .then(data => { if (!controller.signal.aborted) setSnapshot({ slug, data }); })
       .catch(() => { if (!controller.signal.aborted) setSnapshot({ slug, data: { entries: [], status: 'unavailable' } }); });
     return () => controller.abort();
-  }, [slug, initialEpisodes]);
+  }, [slug, initialEpisodes, frozen]);
   const data = snapshot?.slug === slug ? snapshot.data : null;
   const top = topWeeklyEpisodes(data?.entries ?? [], slug);
   const pending = !data;

@@ -5,6 +5,11 @@ import { readImdbEpisodeChart } from '../lib/imdb-episode-index';
 vi.mock('../lib/imdb-datasets', () => ({ repairLegacyImdbRatingIndex: vi.fn(), ensureImdbEpisodeIndex: vi.fn() }));
 import { repairLegacyImdbRatingIndex, ensureImdbEpisodeIndex } from '../lib/imdb-datasets';
 vi.mock('server-only', () => ({}));
+vi.mock('../lib/week-archive', async () => {
+  const { formatWeek, isoWeek } = await import('../lib/week');
+  return { writeWeekArchive: vi.fn(), isClosedWeek: (week: { year: number; week: number }) => formatWeek(week) < formatWeek(isoWeek(new Date())) };
+});
+import { writeWeekArchive } from '../lib/week-archive';
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('next/server', () => ({ after: vi.fn((callback: () => Promise<void>) => { background.tasks.push(callback()); }) }));
 vi.mock('../lib/weekly-ratings', () => ({ WEEKLY_PAGE_TAG: 'weekly-page-output', WEEKLY_RATINGS_TAG: 'weekly-ratings', primeWeeklyRatings: vi.fn(), readWeeklyRatingsSnapshot: vi.fn(), storeWeeklyRatingsSnapshot: vi.fn(), storeRatingsStore: vi.fn(), readRatingsStore: vi.fn(), isWeeklyRatingComplete: (rating: { malScore?: number; anilistScore?: number; imdbRating?: string }) => rating.malScore != null && rating.anilistScore != null && Boolean(rating.imdbRating) }));
@@ -18,12 +23,107 @@ import { after } from 'next/server';
 import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore } from '../lib/weekly-ratings';
 import { GET, POST, maxDuration } from '../app/api/revalidate/route';
 beforeEach(() => {
+  vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
+  vi.mocked(writeWeekArchive).mockResolvedValue({ week: '2026-41', status: 'written', titleCount: 1 });
   vi.mocked(repairLegacyImdbRatingIndex).mockResolvedValue(true);
   vi.mocked(ensureImdbEpisodeIndex).mockResolvedValue(true);
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-14T12:00:00Z'));
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ stored: true })));
+});
+
+it.each(['2026-42', '2026-43', '2026-54', '2025-53', '', '../2026-41'])('rejects an invalid or open archive week: %s', async archive => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const response = await GET(new Request(`https://example.test/api/revalidate?archive=${encodeURIComponent(archive)}`, { headers: { Authorization: 'Bearer fixture' } }));
+  expect(response.status).toBe(400);
+  expect(writeWeekArchive).not.toHaveBeenCalled(); expect(primeWeeklyRatings).not.toHaveBeenCalled();
+});
+
+it('authenticates manual archives before public read modes and performs only the requested archive work', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  expect((await GET(new Request('https://example.test/api/revalidate?archive=2026-41&ratings=2026-42'))).status).toBe(401);
+  expect(writeWeekArchive).not.toHaveBeenCalled(); expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
+  const response = await GET(new Request('https://example.test/api/revalidate?archive=2026-41', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(await response.json()).toEqual({ week: '2026-41', status: 'written', titleCount: 1 });
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(writeWeekArchive).toHaveBeenCalledExactlyOnceWith({ year: 2026, week: 41 });
+  expect(primeWeeklyRatings).not.toHaveBeenCalled(); expect(after).not.toHaveBeenCalled();
+});
+
+it('reports manual storage failures so the cron caller can log and retry them', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  vi.mocked(writeWeekArchive).mockResolvedValue({ week: '2026-41', status: 'failed' });
+  expect((await GET(new Request('https://example.test/api/revalidate?archive=2026-41', { headers: { Authorization: 'Bearer fixture' } }))).status).toBe(503);
+});
+
+it('archives the previous UTC ISO week in a fresh authenticated request after normal daily persistence', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture'); vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'fixture-token');
+  vi.setSystemTime(new Date('2025-12-29T06:00:00Z'));
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ titles: {}, events: [], total: 0, storeHits: 0, store: { ratings: {}, sources: {} } });
+  const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(response.status).toBe(200); expect(fetch).not.toHaveBeenCalled();
+  await finishBackground();
+  expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://example.test/api/revalidate?store=2026-01');
+  expect(fetch).toHaveBeenNthCalledWith(2, new URL('https://example.test/api/revalidate?archive=2025-52&background=1'), expect.objectContaining({ method: 'POST', body: JSON.stringify({ titles: {}, events: [] }), headers: { authorization: 'Bearer fixture', 'content-type': 'application/json' }, cache: 'no-store', signal: expect.any(AbortSignal) }));
+  expect(writeWeekArchive).not.toHaveBeenCalled(); // The self-request gets a fresh function budget.
+});
+
+it('still schedules archiving when the daily collector is already complete, and tolerates Blob request failure', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture'); vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'fixture-token');
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [], availability: { titles: {}, providers: {} }, episodes: { entries: [], status: 'ready', collectorVersion: 4, updatedAt: '2026-10-14T06:00:00Z' } });
+  vi.mocked(fetch).mockRejectedValue(new Error('Storage invocation unavailable'));
+  const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+    expect(await response.json()).toMatchObject({ revalidated: true, cached: true });
+    await finishBackground();
+    expect(fetch).toHaveBeenCalledOnce(); expect(log).toHaveBeenCalled();
+    expect(primeWeeklyRatings).not.toHaveBeenCalled();
+  } finally { log.mockRestore(); }
+});
+
+it('schedules archiving even when the daily rating collectors fail', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture'); vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'fixture-token');
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
+  vi.mocked(primeWeeklyRatings).mockRejectedValue(new Error('Unavailable'));
+  const response = await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(response.status).toBe(200);
+  await finishBackground();
+  expect(fetch).toHaveBeenCalledExactlyOnceWith(new URL('https://example.test/api/revalidate?archive=2026-41&background=1'), expect.anything());
+});
+
+it('acknowledges authenticated cron archive dispatch before doing background work', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const response = await GET(new Request('https://example.test/api/revalidate?archive=2026-41&background=1', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(response.status).toBe(202);
+  expect(await response.json()).toEqual({ week: '2026-41', status: 'scheduled' });
+  await finishBackground();
+  expect(writeWeekArchive).toHaveBeenCalledExactlyOnceWith({ year: 2026, week: 41 });
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+});
+
+it('captures closed-week ratings before invalidation and carries them through the separate archive POST', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture'); vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'fixture-token');
+  const closed = { titles: { 'tv:1': { imdbRating: '8.1' } }, events: [{ id: 1, mediaId: 123, episode: 2, airingAt: 1791450000 }] };
+  vi.mocked(readWeeklyRatingsSnapshot).mockImplementation(async slug => slug === '2026-41' ? closed : { titles: {}, events: [] });
+  vi.mocked(primeWeeklyRatings).mockResolvedValue({ titles: {}, events: [], total: 0, storeHits: 0, store: { ratings: {}, sources: {} } });
+  vi.mocked(fetch).mockImplementation(async (input, init) => POST(new Request(input, init)));
+  await GET(new Request('https://example.test/api/revalidate', { headers: { Authorization: 'Bearer fixture' } }));
+  expect(readWeeklyRatingsSnapshot).toHaveBeenNthCalledWith(1, '2026-41');
+  expect(vi.mocked(readWeeklyRatingsSnapshot).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidateTag).mock.invocationCallOrder[0]);
+  await finishBackground();
+  expect(JSON.parse(vi.mocked(fetch).mock.calls[1][1]?.body as string)).toEqual(closed);
+  expect(writeWeekArchive).toHaveBeenCalledExactlyOnceWith({ year: 2026, week: 41 }, closed);
+});
+
+it('rejects malformed archive POST snapshots before scheduling or writing', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const response = await POST(new Request('https://example.test/api/revalidate?archive=2026-41&background=1', {
+    method: 'POST', headers: { authorization: 'Bearer fixture' }, body: JSON.stringify({ titles: [], events: [] }),
+  }));
+  expect(response.status).toBe(400); expect(after).not.toHaveBeenCalled(); expect(writeWeekArchive).not.toHaveBeenCalled();
 });
 async function finishBackground() {
   await vi.runAllTimersAsync();

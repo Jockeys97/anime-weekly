@@ -95,7 +95,7 @@ export function AnimeRatingTile({ ratings, title, locale, pending = false, follo
   </SourceTile>;
 }
 
-export function MyAnimeListRatingTile({ ratings, title, locale, pending = false, followLocale = false, eager = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean; eager?: boolean }) {
+export function MyAnimeListRatingTile({ ratings, title, locale, pending = false, followLocale = false, eager = false, frozen = false }: { ratings: Ratings; title: string; locale?: Locale; pending?: boolean; followLocale?: boolean; eager?: boolean; frozen?: boolean }) {
   const selectedLocale = useLocale();
   locale = followLocale ? selectedLocale : locale;
   const d = getDictionary(locale);
@@ -108,7 +108,7 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
   const initialReady = formatAnimeScore({ malScore: ratings.malScore }).startsWith('MAL ');
   const current = !initialReady && loaded?.query === query ? { ...ratings, ...loaded.ratings } : ratings;
   const ready = formatAnimeScore({ malScore: current.malScore }).startsWith('MAL ');
-  const needsLookup = Boolean(query && !initialReady && (!ratings.malStatus || ratings.malStatus === 'error' || attempt > 0) && !pending);
+  const needsLookup = Boolean(!frozen && query && !initialReady && (!ratings.malStatus || ratings.malStatus === 'error' || attempt > 0) && !pending);
   useEffect(() => {
     if (!needsLookup) return;
     let active = true;
@@ -137,14 +137,14 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
     <dd className="rating-detail" role={waiting ? 'status' : undefined}>{waiting ? d.catalog.loadingRatings : failed ? d.title.malErrorDetail : !ready ? d.title.malUnavailableDetail
       : Number.isSafeInteger(current.malScoredBy) && current.malScoredBy! >= 0 ? `${formatVotes(String(current.malScoredBy))} ${d.title.voteCount}`
         : members !== 'n/a' ? `${members} ${d.title.members}` : d.title.animeScore}</dd>
-    {!waiting && failed && query && <dd className="rating-detail"><button type="button" onClick={() => { setLoaded(null); retry(value => value + 1); }}>{d.error.retry}</button></dd>}
+    {!frozen && !waiting && failed && query && <dd className="rating-detail"><button type="button" onClick={() => { setLoaded(null); retry(value => value + 1); }}>{d.error.retry}</button></dd>}
   </SourceTile>;
 }
 
-export function RatingSummary({ ratings, title, locale, pendingImdb = false, pendingAnime = false, imdbLookup, allowRetry = true }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean; pendingAnime?: boolean; imdbLookup?: ImdbLookup | null; allowRetry?: boolean }) {
+export function RatingSummary({ ratings, title, locale, pendingImdb = false, pendingAnime = false, imdbLookup, allowRetry = true, frozen = false }: { ratings: Ratings; title: string; locale?: Locale; pendingImdb?: boolean; pendingAnime?: boolean; imdbLookup?: ImdbLookup | null; allowRetry?: boolean; frozen?: boolean }) {
   return <dl className="ratings">
-    <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} lookup={imdbLookup} allowRetry={allowRetry} />
+    <ImdbRatingTile ratings={ratings} title={title} locale={locale} pending={pendingImdb} lookup={imdbLookup} allowRetry={!frozen && allowRetry} />
     <AnimeRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} />
-    <MyAnimeListRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} />
+    <MyAnimeListRatingTile ratings={ratings} title={title} locale={locale} pending={pendingAnime} frozen={frozen} />
   </dl>;
 }

@@ -5,8 +5,8 @@ import { revalidateTag } from 'next/cache';
 import { after } from 'next/server';
 import { CACHE_TAG } from '@/lib/config';
 import { isWeeklyRatingComplete, primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore, WEEKLY_PAGE_TAG, WEEKLY_RATINGS_TAG, type WeeklyRatings, type RatingsStore } from '@/lib/weekly-ratings';
-import { parseWeek } from '@/lib/week';
-import { formatWeek, isoWeek } from '@/lib/week';
+import { formatWeek, isoWeek, parseWeek, shiftWeek, type ISOWeek } from '@/lib/week';
+import { isClosedWeek, writeWeekArchive } from '@/lib/week-archive';
 import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
 import { topWeeklyEpisodes, needsEpisodeRepair, japanDate, EPISODE_COLLECTOR_VERSION, type WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
@@ -28,6 +28,11 @@ function authorized(request: Request): boolean {
 // after the GET invalidated the previous entry's tag.
 export async function POST(request: Request) {
   if (!authorized(request)) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  if (new URL(request.url).searchParams.has('archive')) {
+    const snapshot: unknown = await request.json().catch(() => null);
+    if (!validArchiveRatings(snapshot)) return Response.json({ error: 'invalid snapshot' }, { status: 400 });
+    return archiveResponse(request, snapshot);
+  }
   const slug = new URL(request.url).searchParams.get('store');
   if (!slug || !parseWeek(slug)) return Response.json({ error: 'invalid week' }, { status: 400 });
   const body = await request.json().catch(() => null) as (WeeklyRatings & { snapshot?: WeeklyRatings; store?: RatingsStore }) | null;
@@ -42,6 +47,30 @@ export async function POST(request: Request) {
   return Response.json({ stored: true, titles: Object.keys(snapshot.titles).length });
 }
 
+function validArchiveRatings(value: unknown): value is WeeklyRatings {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as WeeklyRatings;
+  return Boolean(snapshot.titles && typeof snapshot.titles === 'object' && !Array.isArray(snapshot.titles))
+    && Array.isArray(snapshot.events)
+    && (snapshot.availability === undefined || validProviderSnapshot(snapshot.availability));
+}
+
+async function archiveResponse(request: Request, capturedRatings?: WeeklyRatings) {
+  if (!authorized(request)) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  const archive = new URL(request.url).searchParams.get('archive')!;
+  const week = parseWeek(archive);
+  if (!week || !isClosedWeek(week)) return Response.json({ error: 'archive requires a closed ISO week' }, { status: 400 });
+  const write = () => capturedRatings ? writeWeekArchive(week, capturedRatings) : writeWeekArchive(week);
+  if (new URL(request.url).searchParams.get('background') === '1') {
+    // Acknowledge dispatch immediately; the archive now has its own function
+    // budget even if the calling daily cron is near its deadline.
+    after(async () => { await write(); });
+    return Response.json({ week: archive, status: 'scheduled' }, { status: 202, headers: { 'cache-control': 'no-store' } });
+  }
+  const result = await write();
+  return Response.json(result, { status: result.status === 'failed' ? 503 : 200, headers: { 'cache-control': 'no-store' } });
+}
+
 function validStore(store: RatingsStore): boolean {
   const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
   if (!record(store) || !record(store.ratings) || !record(store.sources)) return false;
@@ -51,7 +80,28 @@ function validStore(store: RatingsStore): boolean {
     && Object.entries(store.sources).every(([key, entry]) => /^(tv|movie):[1-9]\d*$/.test(key) && record(entry) && timestamps(entry));
 }
 
+// Use a fresh invocation after the daily collectors: they can consume nearly
+// the full 300-second budget. No Blob token means no additional request.
+async function archiveLastClosedWeek(request: Request, closedWeek: ISOWeek, capturedRatings: WeeklyRatings) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) return;
+  const url = new URL(request.url);
+  url.search = new URLSearchParams({ archive: formatWeek(closedWeek), background: '1' }).toString();
+  try {
+    const response = await fetch(url, {
+      method: 'POST', body: JSON.stringify(capturedRatings),
+      headers: { authorization: request.headers.get('authorization') || '', 'content-type': 'application/json' },
+      cache: 'no-store', signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) console.error('[week-archive] cron archive request failed', response.status);
+  } catch (error) { console.error('[week-archive] cron archive request failed', error); }
+}
+
 export async function GET(request: Request) {
+  const archive = new URL(request.url).searchParams.get('archive');
+  if (archive !== null) {
+    // Handle before all public read modes, even if their parameters coexist.
+    return archiveResponse(request);
+  }
   // Public read-only mode: serve the cron-written snapshot from this same
   // bundle (unstable_cache entries are only reliably readable here). Never
   // calls rating APIs; a cold cache returns an empty snapshot.
@@ -88,6 +138,11 @@ export async function GET(request: Request) {
   const expected = Buffer.from(`Bearer ${secret}`);
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
   const week = isoWeek(new Date());
+  // The global ratings tag below also expires last week's entry. Capture it
+  // first, then deliver it to the archive invocation after the current work.
+  const closedRatings = process.env.BLOB_READ_WRITE_TOKEN?.trim()
+    ? await readWeeklyRatingsSnapshot(formatWeek(shiftWeek(week, -1))).catch(() => ({ titles: {}, events: [] }))
+    : { titles: {}, events: [] };
   const previous = await readWeeklyRatingsSnapshot(formatWeek(week));
   const providersReady = Boolean(previous.availability && [...new Set([...Object.keys(previous.titles), ...Object.keys(previous.names ?? {})])].every(key => {
     const entry = previous.availability!.titles[key];
@@ -97,6 +152,7 @@ export async function GET(request: Request) {
     const indexReady = await repairLegacyImdbRatingIndex();
     const episodeIndexReady = await ensureImdbEpisodeIndex().catch(() => false);
     console.info('[imdb-index] daily indexes verified', { ready: indexReady, episodeIndexReady });
+    if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) after(() => archiveLastClosedWeek(request, shiftWeek(week, -1), closedRatings));
     return Response.json({ revalidated: true, cached: true, indexReady, episodeIndexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
   }
   revalidateTag(CACHE_TAG, { expire: 0 });
@@ -130,6 +186,7 @@ export async function GET(request: Request) {
       await fetch(`${origin}/api/revalidate?store=${encodeURIComponent(slug)}`, {
         method: 'POST', headers: { authorization: request.headers.get('authorization') || '', 'content-type': 'application/json' }, body: JSON.stringify({ snapshot: toStore, store }),
       }).catch(() => undefined);
+      await archiveLastClosedWeek(request, shiftWeek(week, -1), closedRatings);
     });
     total = snapshot.total;
     complete = Object.keys(snapshot.titles).length >= total && Object.values(snapshot.titles).every(isWeeklyRatingComplete);
@@ -139,6 +196,7 @@ export async function GET(request: Request) {
     // Still refresh discovery/page paths if optional rating services fail.
     // Failed loaders never replace a successful snapshot with an error.
     unavailable = 1;
+    if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) after(() => archiveLastClosedWeek(request, shiftWeek(week, -1), closedRatings));
   }
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.

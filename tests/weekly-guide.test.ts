@@ -2,6 +2,8 @@
 import React from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
+vi.mock('../lib/week-archive', () => ({ readWeekArchive: vi.fn() }));
+import { readWeekArchive, type WeekArchive } from '../lib/week-archive';
 vi.mock('../lib/request-locale', () => ({ getRequestLocale: async () => 'it' }));
 vi.mock('../lib/tmdb', () => ({ getCachedWeekData: vi.fn(), getQuickWeekData: vi.fn(), isOMDBConfigured: () => true }));
 vi.mock('../lib/weekly-ratings', () => ({ getWeeklyRatings: vi.fn(), trackWeeklyPage: async () => null }));
@@ -65,4 +67,26 @@ it.each(['en', 'it'] as const)('renders every cached rating and default-country 
   expect(html).toContain('n/a');
   for (const placeholder of ['Caricamento dei voti', 'Caricamento della disponibilità', 'Loading ratings', 'Loading streaming availability']) expect(html).not.toContain(placeholder);
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it.each(['en', 'it', 'fr'] as const)('renders a closed archived week with localized %s UI and no live loaders', async locale => {
+  vi.stubGlobal('React', React);
+  const archive: WeekArchive = {
+    version: 1, week: '2026-41', language: 'en', savedAt: '2026-10-12T06:00:00Z', titleCount: 1,
+    data: { status: 'ready', titles: [{ id: 1, kind: 'tv', name: 'Saved title', overview: 'Saved story', poster: null, ratings: {}, recommendation: null, providers: {}, providersUnavailable: false }] },
+    ratings: { titles: { 'tv:1': { anilistId: 123, imdbRating: '8.1', malScore: 8.2 } }, events: [], episodes: { entries: [], status: 'pending' } },
+    calendar: { events: [], episodeDates: [{ seriesId: 1, season: 1, episode: 2, date: '2026-10-08' }], anilistIds: { 'tv:1': 123 }, unavailable: false },
+  };
+  vi.mocked(readWeekArchive).mockResolvedValue(archive);
+  const shell = WeeklyGuide({ week: { year: 2026, week: 41 }, locale });
+  const section = shell.props.children.find((child: unknown) => React.isValidElement(child) && child.type === 'section')!;
+  const catalog = section.props.children[0].props.children;
+  const result = await catalog.type(catalog.props);
+  const content = result.props.children[1];
+  expect(content.props).toMatchObject({ frozen: true, initialCalendar: archive.calendar, initialEpisodes: archive.ratings.episodes });
+  const html = renderToStaticMarkup(React.createElement(LocaleProvider, { locale, children: React.createElement(StreamingCountryProvider, { children: result }) }));
+  expect(html).toContain('Saved title'); expect(html).toContain('Saved story'); expect(html).toContain('8.1');
+  expect(html).toContain(getDictionary(locale).week.releases);
+  expect(html).not.toContain(getDictionary(locale).calendar.loading);
+  expect(getQuickWeekData).not.toHaveBeenCalled(); expect(getWeeklyRatings).not.toHaveBeenCalled();
 });
