@@ -3,14 +3,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { JsonLd } from '../components/JsonLd';
 import { animeBreadcrumbs, animeItemList } from '../lib/structured-data';
-import Home from '../app/page';
-import WeekPage from '../app/week/[week]/page';
-import SeasonPage from '../app/season/[year]/[season]/page';
+import Home from '../app/[locale]/page';
+import WeekPage from '../app/[locale]/week/[week]/page';
+import SeasonPage from '../app/[locale]/season/[year]/[season]/page';
 import { getSeason } from '../lib/anilist';
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/server', () => ({ connection: async () => {} }));
-vi.mock('../lib/request-locale', () => ({ getRequestLocale: async () => 'en' }));
 vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getSeason: vi.fn() }));
 vi.mock('../lib/weekly-ratings', () => ({ getWeeklyRatings: async () => ({ titles: {}, events: [] }) }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
@@ -47,7 +46,7 @@ it('uses only known season data in Italian anime breadcrumbs', () => {
 });
 
 it('renders WebSite SearchAction once on home and only breadcrumbs on a week archive', async () => {
-  const home = scripts(renderToStaticMarkup(React.createElement(Home)));
+  const home = scripts(renderToStaticMarkup(await Home()));
   expect(home).toHaveLength(1);
   expect(home[0]).toMatchObject({ '@type': 'WebSite', url: 'https://weeklyanime.com/', potentialAction: {
     '@type': 'SearchAction', target: 'https://weeklyanime.com/search?q={search_term_string}', 'query-input': 'required name=search_term_string',
@@ -60,13 +59,13 @@ it('renders WebSite SearchAction once on home and only breadcrumbs on a week arc
   ] });
 });
 
-it('lists only the current season page and keeps Italian breadcrumbs for an English UI', async () => {
+it('lists only the current season page with localized breadcrumbs for an English URL', async () => {
   vi.mocked(getSeason).mockResolvedValue({ media: [{ id: 42, title: { english: 'Titolo', romaji: null, native: null } }] as Awaited<ReturnType<typeof getSeason>>['media'], pageInfo: { currentPage: 2, hasNextPage: false } });
-  const html = renderToStaticMarkup(await SeasonPage({ params: Promise.resolve({ year: '2026', season: 'fall' }), searchParams: Promise.resolve({ page: '2' }) }));
+  const html = renderToStaticMarkup(await SeasonPage({ params: Promise.resolve({ year: '2026', season: 'fall', locale: 'en' }), searchParams: Promise.resolve({ page: '2' }) }));
   expect(getSeason).toHaveBeenCalledExactlyOnceWith(2026, 'fall', 2);
   const data = scripts(html);
   expect(data).toHaveLength(2);
-  expect(data[0].itemListElement).toEqual([{ '@type': 'ListItem', position: 1, name: 'Titolo', url: 'https://weeklyanime.com/anime/42' }]);
-  expect(data[1].itemListElement.map((item: { name: string }) => item.name)).toEqual(['Home', 'Stagioni', 'Stagione Autunno 2026']);
+  expect(data[0].itemListElement).toEqual([{ '@type': 'ListItem', position: 1, name: 'Titolo', url: 'https://weeklyanime.com/en/anime/42' }]);
+  expect(data[1].itemListElement.map((item: { name: string }) => item.name)).toEqual(['Home', 'Seasons', 'Season Fall 2026']);
   expect(html).toContain('lang="en"');
 });

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
+import { getDictionary } from '@/lib/i18n';
 import { pageMetadata } from '@/lib/seo';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
@@ -12,7 +14,11 @@ import './my-anime.css';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { ...pageMetadata('I miei anime', 'Il tuo calendario anime personale.', '/my-anime'), robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: { params?: LocaleParams }): Promise<Metadata> {
+  const locale = await getRequestLocale(params);
+  const d = getDictionary(locale).myAnime;
+  return { ...pageMetadata(d.title, d.description, '/my-anime', undefined, locale), robots: { index: false, follow: false } };
+}
 export default async function MyAnimePage({ searchParams }: { searchParams: Promise<{ auth?: string }> }) {
   const config = myAnimeConfig();
   if (!config.enabled) notFound();

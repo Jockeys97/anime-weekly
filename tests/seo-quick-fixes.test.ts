@@ -9,9 +9,9 @@ vi.mock('next/server', () => ({ connection: vi.fn() }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), discoverAnime: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 
-import { generateMetadata as searchMetadata } from '../app/search/page';
-import WeekPage, { generateMetadata as weekMetadata } from '../app/week/[week]/page';
-import SeasonPage, { generateMetadata as seasonMetadata } from '../app/season/[year]/[season]/page';
+import { generateMetadata as searchMetadata } from '../app/[locale]/search/page';
+import WeekPage, { generateMetadata as weekMetadata } from '../app/[locale]/week/[week]/page';
+import SeasonPage, { generateMetadata as seasonMetadata } from '../app/[locale]/season/[year]/[season]/page';
 import { WeeklyHeading } from '../components/WeeklyContent';
 import { LocaleProvider } from '../components/LanguageSelector';
 import { getSeason } from '../lib/anilist';

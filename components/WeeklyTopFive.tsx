@@ -1,6 +1,7 @@
 'use client';
+import { localePath } from '@/lib/locale-routing';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import Image from 'next/image';
 import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
@@ -30,7 +31,7 @@ export function WeeklyTopFive({ slug, initialEpisodes }: { slug: string; initial
     : data?.reason === 'metadata' ? d.episodesMetadataUnavailable : d.episodesUnavailable;
   const [status, setStatus] = useState('');
   async function share() {
-    const url = new URL(`/week/${slug}`, window.location.origin).href;
+    const url = new URL(localePath(`/week/${slug}`, locale), window.location.origin).href;
     try {
       if (navigator.share) { await navigator.share({ title: d.topFive, url }); return; }
     } catch (error) { if (error instanceof Error && error.name === 'AbortError') return; }

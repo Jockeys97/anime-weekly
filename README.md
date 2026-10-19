@@ -32,7 +32,7 @@ Optionally get a free OMDb key at [omdbapi.com/apikey.aspx](https://www.omdbapi.
 
 ## Caching and Vercel Hobby
 
-The home and week routes use static/ISR output with a 15-minute interval; historical routes generate on demand. Their render path never reads request cookies, headers or search parameters. Language/country selection and visitor date formatting run in the browser, with Italian and Europe/Rome defaults. The server sends one compact title list (synopses capped at 900 characters), rather than repeating complete titles and provider maps through nested RSC boundaries. Ratings and default-country streaming providers render in the initial HTML from the cron snapshot. All supported countries are included for immediate browser-side filtering without a provider request. Recommendations, calendar date fallbacks and translated text still load separately after hydration.
+The home and week routes use static/ISR output with a 15-minute interval; historical routes generate on demand. Their render path never reads request cookies, headers or search parameters. URL language is rendered on the server; country selection and visitor date formatting run in the browser, with Italy and Europe/Rome defaults for Italian URLs. The server sends one compact title list (synopses capped at 900 characters), rather than repeating complete titles and provider maps through nested RSC boundaries. Ratings and default-country streaming providers render in the initial HTML from the cron snapshot. All supported countries are included for immediate browser-side filtering without a provider request. Recommendations, calendar date fallbacks and translated text still load separately after hydration.
 
 The authenticated daily cron precomputes IMDb, AniList and MAL scores plus confirmed AniList IDs and broadcast schedules in one weekly `unstable_cache` snapshot, with `revalidate: 604800` and the independent `weekly-ratings` tag. All catalog, search and detail pages read IMDb scores by exact ID from the shared daily IMDb dataset index, then the preserved cross-week/OMDb cache. Cache keys are independent of the interface language and selected week. Weekly pages read snapshots only: neither page rendering, scrolling nor retries call a rating provider. A cold snapshot shows neutral `n/a` and the localized “No offers found” message; only cron fills ratings and weekly providers. Missing anime scores no longer trigger `/api/weekly-ratings` on a visit. A missing exact IMDb match or genuinely unrated title can still have no score. No new credentials or paid services are needed. Failed raw rating responses are fetched without caching, and error bodies/statuses are never stored in the snapshot. Valid AniList fallback scores survive Tenrai failures; quota errors leave IMDb neutral.
 
@@ -164,7 +164,7 @@ The guide has one country selector, defaulting to United States. Every title dis
 
 ## Visitor language and localized synopses
 
-The weekly browser UI resolves language from a supported `anime-language` preference (read through a separate endpoint), then browser languages including regional variants such as `it-IT` and `pt-BR`. The shared HTML defaults to Italian. Catalog/detail segments continue to read request locale independently. A header selector offers six languages and saves a manual choice for one year. Streaming country remains an independent preference, defaulting to Italy for Italian and US otherwise. Weekly HTML is shared and cached; request-specific catalog/detail HTML remains separate.
+The URL determines the language of both server HTML and the browser UI: Italian is unprefixed, while other languages use their locale prefix. A header selector offers six languages, saves a manual choice for one year and navigates to the equivalent localized URL. Existing cookies do not override the language of a deep URL. Only a first human visit to `/` without the cookie can receive a temporary redirect based on browser language. Streaming country remains independent, defaulting to Italy for Italian and US otherwise. Weekly HTML is cached separately per language.
 
 Weekly static discovery uses English titles; translated synopses load lazily for the selected language. AniList descriptions are English; catalog and detail pages fetch matching TMDB translations lazily as synopsis blocks enter the viewport. Matching requires exact normalized title aliases, Japanese animation metadata when available, and a release year within one year. Uncertain matches, distinct seasons, missing translations and unavailable upstreams keep the original English synopsis with an explicit translated notice. The lookup never calls the English text a translation, does not guess an adaptation, and needs no new API credentials beyond existing TMDB configuration. Country names use localized ISO display names.
 
@@ -290,7 +290,7 @@ IMDb index migration: an authenticated cron may repair a pre-migration incomplet
 
 ## Canonical production domain
 
-`https://weeklyanime.com` is the production origin. `lib/seo.ts` uses it when `NEXT_PUBLIC_SITE_URL` is unset in production; local development defaults to `http://localhost:3000`. An explicit `NEXT_PUBLIC_SITE_URL` overrides the SEO base. Sitemap URLs, robots' Sitemap URL, metadataBase, page-specific absolute canonical/Open Graph URLs and detail JSON-LD use the same base. Twitter images resolve through metadataBase. Locale preferences share URLs, so no hreflang alternates are advertised.
+`https://weeklyanime.com` is the production origin. `lib/seo.ts` uses it when `NEXT_PUBLIC_SITE_URL` is unset in production; local development defaults to `http://localhost:3000`. An explicit `NEXT_PUBLIC_SITE_URL` overrides the SEO base. Sitemap URLs, robots' Sitemap URL, metadataBase, page-specific absolute canonical/Open Graph URLs and detail JSON-LD use the same base. Twitter images resolve through metadataBase. Each locale has its own canonical URL and reciprocal hreflang links, including Italian as x-default.
 
 Next redirects the legacy `anime-weekly.vercel.app` host and `anime-weekly-[a-z0-9-]+.vercel.app` preview hosts with HTTP 308 to the canonical domain, preserving paths and query parameters. `/api/` paths are excluded, including cron, snapshot/IMDb reads and Trakt/MAL callbacks. The favicon redirect remains in place. Server self-fetches in `lib/weekly-ratings.ts` and `lib/imdb.ts` deliberately continue using `VERCEL_PROJECT_PRODUCTION_URL` independently of `NEXT_PUBLIC_SITE_URL`.
 
@@ -298,7 +298,7 @@ Next redirects the legacy `anime-weekly.vercel.app` host and `anime-weekly-[a-z0
 
 The cron stores `availability` beside weekly ratings: each TMDB title has `fetchedAt` and country-to-provider-ID arrays, with one shared provider-ID-to-name/logo table. Only supported countries and subscription/free/ad-supported offers are stored; no rental or purchase offers are added. The cross-week ratings store also keeps availability by media type/ID and `lastSeenAt`. Entries refresh after seven days, including previously empty successful results. Fresh entries are reused across weeks, stale offers survive upstream failures without renewing `fetchedAt`, and omitted work resumes on later cron runs. Availability uses up to four concurrent TMDB requests within a 50-second share of the existing cron budget, before rating work; it never calls OMDb, AniList or Tenrai. Unseen store entries expire after 120 days and unused provider-table entries are pruned.
 
-Old snapshots/stores without availability remain readable. The next authenticated cron migrates them even if episode collection already completed that day. Provider-only successes can be saved if rating services fail. Storage still happens through the separate authenticated POST after tag invalidation, and invalid provider references are rejected before either cache is written. Weekly HTML is invalidated only after the snapshot is available. Season cards reuse cached weekly matches/scores/providers by confirmed AniList ID where available; their existing discovery/enrichment remains available for other titles. Detail ratings and watch availability already render through server components and retain that flow. Language detection and preferences are unchanged.
+Old snapshots/stores without availability remain readable. The next authenticated cron migrates them even if episode collection already completed that day. Provider-only successes can be saved if rating services fail. Storage still happens through the separate authenticated POST after tag invalidation, and invalid provider references are rejected before either cache is written. Weekly HTML is invalidated only after the snapshot is available. Season cards reuse cached weekly matches/scores/providers by confirmed AniList ID where available; their existing discovery/enrichment remains available for other titles. Detail ratings and watch availability already render through server components and retain that flow. URL language is independent of the cached availability snapshot.
 ### Personal anime dashboard
 
 `/my-anime` accepts only confirmed anime identities from Trakt. Extended Trakt metadata excludes live action; shows outside the weekly selection are checked against Japanese animation metadata on TMDB and conservative AniList title/year matches. Unmatched or ambiguous shows are omitted and reported, not guessed. Public metadata lookups are cached and AniList searches are batched. Covers come from AniList/TMDB. Episodes on the same day are grouped into one series card; season 0 is labeled as a special, without changing provider episode numbering.
@@ -358,3 +358,43 @@ by exact ID and displayed with localized status labels; original datasets are no
 Dubbing reports use a compact, keyboard-accessible audio/language/status disclosure on both detail and list views. Source, consulted date and the regional-availability qualification stay available inside the disclosure. A small decorative flag follows the audio language (GB, IT, ES, FR, DE, PT); it does not claim a regional dub variant or availability in that country.
 
 A dubbing flag is only shown for a full or partial MyDubList report. Unverified and pending lookups use a neutral question mark and a “Language checked” label instead of “Audio”, so a selected interface language cannot be mistaken for an existing audio track. An absent entry remains unverified, never an inferred “no dub”.
+
+
+### Localized URLs and SEO
+
+Italian uses the original unprefixed URLs. English, Spanish, French, German and
+Portuguese use `/en`, `/es`, `/fr`, `/de` and `/pt` (for example,
+`/en/anime/21` and `/fr/season/2026/fall?page=2`). Proxy rewrites unprefixed
+page requests to the internal `/it` route; explicit `/it/...` URLs redirect to
+the unprefixed equivalent. API, sitemap and static asset URLs are unchanged.
+
+The URL always determines the server and client language. A visitor with an
+`anime-language=en` cookie opening `/anime/21` sees Italian, with no deep-page
+redirect or post-hydration language change. The selector saves the HttpOnly
+cookie through `/api/language`, then navigates to the equivalent localized URL,
+preserving query parameters and the fragment. Internal links and search forms
+stay in the current URL language.
+
+Only a human's visit to exactly `/` may redirect (307): without a cookie it
+follows Accept-Language; with a saved non-Italian `anime-language` cookie it
+goes to that locale's home. Italian, unsupported preferences, empty
+user agents and crawler/preview user agents stay at `/`. The proxy runs before
+the CDN cache. Redirects carry `private, no-store`, a one-year cookie and
+`Vary: Accept-Language, Cookie, User-Agent`; the shared Italian document remains
+independent of cookies and request headers.
+
+Every indexable page has a self canonical, six language alternates and
+`x-default` pointing to Italian, including paginated season URLs. Query searches
+remain noindex. JSON-LD uses the same localized URL family. The existing page
+and year sitemap shards list all six versions with reciprocal alternates, sharing
+catalog fetches and modification dates. No locale-specific catalog crawl is run.
+Only home/platform index pages are prerendered for the six locales; week, anime
+and provider detail pages remain on-demand ISR. Season/search pages retain their
+existing dynamic rendering and cached data behavior. The global 404 document
+keeps malformed anime URLs at HTTP 404 before any loading boundary streams.
+
+Translation availability still depends on upstream sources; missing translations
+retain the existing labelled original-language fallback. Numeric anime IDs that
+do not exist retain the existing cached-loader behavior (a streamed 200 shell
+with noindex is possible); malformed IDs are rejected before streaming with a
+real 404 in every locale.

@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
+  experimental: { globalNotFound: true },
   async redirects() { return [
   ...['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({
     source: '/:path((?!api/).*)', has: [{ type: 'host' as const, value: host }],

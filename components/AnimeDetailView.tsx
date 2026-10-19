@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { AnimeActions } from '@/components/AnimeActions';
 import { VisitorDate } from '@/components/VisitorTime';
 import { AnimeTrailer } from '@/components/AnimeTrailer';

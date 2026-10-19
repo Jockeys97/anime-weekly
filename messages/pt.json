@@ -442,5 +442,18 @@
     "note": "Há dublagem indicada para esta entrada MAL. A disponibilidade por plataforma e país deve ser verificada separadamente.",
     "entry": "Entrada MAL exata",
     "checked": "Consultado em"
+  },
+  "seo": {
+    "weekDescription": "Estreias de anime, avaliações e plataformas: {dates}, semana {week}.",
+    "platformsTitle": "Anime por plataforma e país",
+    "platformsIntro": "Escolhe onde ver e o país do catálogo.",
+    "platformTitle": "Anime na {provider} em {country}",
+    "platformDescription": "Séries e filmes de anime japonês por popularidade. A disponibilidade pode mudar. Dados TMDB / JustWatch.",
+    "platformEmpty": "Nenhum anime disponível nesta plataforma e país.",
+    "platformUnavailable": "O catálogo está indisponível. Tenta mais tarde.",
+    "watchTitle": "onde ver em streaming",
+    "animeYear": "Anime {format} de {year}.",
+    "animeScore": "Nota {score}/10.",
+    "animeFallback": "Sinopse, avaliações e onde ver {name}."
   }
 }

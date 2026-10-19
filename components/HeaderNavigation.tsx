@@ -1,11 +1,12 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
+import { stripLocale } from '@/lib/locale-routing';
 import { usePathname } from 'next/navigation';
 import { getDictionary, type Locale } from '@/lib/i18n';
 
 export function HeaderNavigation({ locale, myAnimeEnabled = false }: { locale: Locale; myAnimeEnabled?: boolean }) {
-  const pathname = usePathname();
+  const pathname = stripLocale(usePathname());
   const d = getDictionary(locale).catalog;
   const items = [
     { href: '/', label: d.weekly, active: pathname === '/' || pathname.startsWith('/week/'), icon: 'week' },

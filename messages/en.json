@@ -448,5 +448,18 @@
     "note": "A dub is reported for this MAL entry. Availability on each platform and in each country must be checked separately.",
     "entry": "Exact MAL entry",
     "checked": "Checked"
+  },
+  "seo": {
+    "weekDescription": "Anime releases, ratings and streaming platforms: {dates}, week {week}.",
+    "platformsTitle": "Anime by platform and country",
+    "platformsIntro": "Choose where to watch and the streaming catalog country.",
+    "platformTitle": "Anime on {provider} in {country}",
+    "platformDescription": "Japanese anime series and movies ordered by popularity. Catalog availability may change. Data TMDB / JustWatch.",
+    "platformEmpty": "No anime available for this platform and country.",
+    "platformUnavailable": "The catalog is currently unavailable. Try again later.",
+    "watchTitle": "where to watch online",
+    "animeYear": "{format} anime from {year}.",
+    "animeScore": "Rating {score}/10.",
+    "animeFallback": "Synopsis, ratings and where to stream {name}."
   }
 }

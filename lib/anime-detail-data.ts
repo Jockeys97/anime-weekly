@@ -1,4 +1,5 @@
 import 'server-only';
+import type { Locale } from '@/lib/locales';
 import { cache } from 'react';
 import { animeDescription, type AniListAnime } from '@/lib/anilist';
 import { withTimeout } from '@/lib/async-timeout';
@@ -40,7 +41,7 @@ export async function readDetailRatings(anime: AniListAnime): Promise<Ratings> {
 // Share completed values between metadata and the page. The short deadline also
 // covers service queues and response bodies; cached loaders may finish warming
 // after it expires, while the visitor can make one bounded client attempt.
-export const getAnimeDetailData = cache(async (anime: AniListAnime) => {
+export const getAnimeDetailData = cache(async (anime: AniListAnime, locale: Locale = 'it') => {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const stored = withTimeout(readDetailRatings(anime), SERVER_WAIT_MS).catch((): Ratings => ({}));
@@ -52,7 +53,7 @@ export const getAnimeDetailData = cache(async (anime: AniListAnime) => {
   }));
   const availability = withTimeout(getCachedDetailAvailability(anime), SERVER_WAIT_MS)
     .catch((): DetailAvailability => ({ match: null, ratings: {}, providers: {}, providersUnavailable: true }));
-  const synopsis = withTimeout(getSynopsis(aliases, year, 'it', anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id), SERVER_WAIT_MS)
+  const synopsis = withTimeout(getSynopsis(aliases, year, locale, anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id), SERVER_WAIT_MS)
     .catch((): SynopsisResult => ({ synopsis: null, language: null, source: null }));
   const [scores, resolved, plot] = await Promise.all([ratings, availability, synopsis]);
   const watch = { ...resolved, ratings: { ...resolved.ratings } };

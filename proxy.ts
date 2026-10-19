@@ -1,25 +1,52 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { isLocale, negotiateLocale } from '@/lib/locales';
+import { localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
 
-// Reject malformed detail URLs before the root loading/Suspense boundary can
-// stream a 200 shell. Reserve digits-slug URLs for future canonical slugs.
+const bots = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview/i;
 export function proxy(request: NextRequest) {
-  let id = '';
-  try {
-    id = decodeURIComponent(request.nextUrl.pathname.split('/')[2] || '');
-  } catch {
-    // Malformed URI escapes are invalid IDs too.
+  const pathname = request.nextUrl.pathname;
+  const bare = stripLocale(pathname);
+  const locale = pathLocale(pathname);
+  // Run before the CDN lookup. Never cache a preference-dependent redirect.
+  const ua = request.headers.get('user-agent')?.trim();
+  if (pathname === '/' && ua && !bots.test(ua)) {
+    // First visit: Accept-Language. Returning visitor: the saved choice, so a
+    // non-Italian preference still lands on its own home (never on deep pages).
+    const saved = request.cookies.get('anime-language')?.value;
+    const selected = saved !== undefined ? (isLocale(saved) ? saved : 'it') : negotiateLocale(request.headers.get('accept-language'), undefined, 'it');
+    if (selected !== 'it') {
+      const destination = request.nextUrl.clone();
+      destination.pathname = localePath('/', selected);
+      const response = NextResponse.redirect(destination, 307);
+      response.cookies.set('anime-language', selected, { httpOnly: true, sameSite: 'lax', secure: destination.protocol === 'https:', path: '/', maxAge: 31536000 });
+      response.headers.set('Cache-Control', 'private, no-store');
+      response.headers.set('Vary', 'Accept-Language, Cookie, User-Agent');
+      return response;
+    }
   }
-  if (!/^\d+(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/i.test(id)) {
-    const destination = request.nextUrl.clone();
-    destination.pathname = '/_anime-not-found';
-    // No route exists here: Next renders app/not-found.tsx with HTTP 404 (on Vercel /404 is a static 200 asset).
-    return NextResponse.rewrite(destination);
+  // Keep malformed-ID rejection ahead of streaming, for every locale.
+  if (/^\/anime\/[^/]+\/?$/.test(bare)) {
+    let id = '';
+    try { id = decodeURIComponent(bare.split('/')[2] || ''); } catch { /* Invalid URI escapes are invalid IDs. */ }
+    if (!/^\d+(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/i.test(id)) {
+      const destination = request.nextUrl.clone();
+      // Two segments ensure this misses even the new /[locale] home route.
+      destination.pathname = '/_anime-not-found/invalid';
+      return NextResponse.rewrite(destination);
+    }
   }
-
-  // Existence checks stay in the page's cached AniList loader. With the root
-  // Suspense boundary, a missing numeric ID can still stream 200 + noindex;
-  // a nested layout cannot undo response headers already sent by its parent.
-  return NextResponse.next();
+  // Italian is public only without a prefix. Preserve query parameters.
+  if (pathname === '/it' || pathname.startsWith('/it/')) {
+    const destination = request.nextUrl.clone(); destination.pathname = bare;
+    return NextResponse.redirect(destination, 308);
+  }
+  const destination = request.nextUrl.clone();
+  destination.pathname = locale === 'it' ? `/it${pathname === '/' ? '' : pathname}` : pathname;
+  const response = locale === 'it' ? NextResponse.rewrite(destination) : NextResponse.next();
+  // The document itself is URL-stable and can remain ISR/CDN cached.
+  if (pathname === '/') response.headers.set('Vary', 'Accept-Language, Cookie, User-Agent');
+  return response;
 }
-
-export const config = { matcher: '/anime/:id' };
+export const config = {
+  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime'],
+};

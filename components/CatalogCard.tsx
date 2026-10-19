@@ -3,7 +3,7 @@ import { DubbingSummary } from '@/components/DubbingSummary';
 import { DubbingStatus } from '@/components/DubbingStatus';
 import { WatchlistButton } from '@/components/Watchlist';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { animeDescription, animeName, type AniListAnime } from '@/lib/anilist';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
 import { getDictionary, type Locale } from '@/lib/i18n';

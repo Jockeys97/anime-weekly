@@ -1,3 +1,5 @@
+import { getDictionary } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import type { AniListAnime } from '@/lib/anilist';
 import type { DetailAvailability } from '@/lib/detail-availability';
 
@@ -20,6 +22,7 @@ export function formatAnimeSeo(
   anime: Pick<AniListAnime, 'format' | 'startDate' | 'seasonYear' | 'averageScore'>,
   italianSynopsis = '',
   availability?: Pick<DetailAvailability, 'providers' | 'providersUnavailable'> | null,
+  locale: Locale = 'it',
 ): { title: string; description: string } {
   name = compact(name);
   const format = formats[anime.format || ''];
@@ -27,6 +30,19 @@ export function formatAnimeSeo(
   const year = validYear(anime.startDate?.year) ? anime.startDate.year : validYear(anime.seasonYear) ? anime.seasonYear : undefined;
   const datedName = `${name}${year ? ` (${year})` : ''}`;
   const label = format ? `${format} anime` : 'Anime';
+  if (locale !== 'it') {
+    const d = getDictionary(locale);
+    const format = d.catalog.formats[anime.format as keyof typeof d.catalog.formats] || 'Anime';
+    const suffix = ` – ${d.seo.watchTitle}`;
+    const title = truncate(datedName, 65 - suffix.length) + suffix;
+    const parts = [year ? d.seo.animeYear.replace('{format}', format).replace('{year}', String(year)) : `${format}.`];
+    const score = anime.averageScore;
+    if (typeof score === 'number' && Number.isFinite(score) && score > 0 && score <= 100) {
+      parts.push(d.seo.animeScore.replace('{score}', new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(score / 10)));
+    }
+    parts.push(compact(italianSynopsis) || d.seo.animeFallback.replace('{name}', name));
+    return { title, description: truncate(parts.join(' '), 155) };
+  }
   const suffixes = [` – ${label}: dove vederlo in streaming`, ` – ${label} in streaming`, ` – ${label}`];
   const title = suffixes.map(suffix => datedName + suffix).find(candidate => candidate.length <= 65)
     ?? `${truncate(name, 65 - (year ? ` (${year})` : '').length - suffixes[2].length)}${year ? ` (${year})` : ''}${suffixes[2]}`;

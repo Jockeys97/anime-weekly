@@ -19,7 +19,7 @@ it('defaults production SEO to weeklyanime.com regardless of the Vercel API host
   expect(robots().sitemap).toContain('https://weeklyanime.com/sitemap.xml');
   for (const path of ['/', '/week/2026-42', '/season', '/season/2026/fall?page=2', '/search?q=Ranma', '/anime/21', '/piattaforma', '/piattaforma/netflix/it', '/my-anime']) {
     const metadata = pageMetadata('Title', 'Description', path);
-    expect(metadata.alternates).toEqual({ canonical: `https://weeklyanime.com${path}` });
+    expect(metadata.alternates).toMatchObject({ canonical: `https://weeklyanime.com${path}` });
     expect(metadata.openGraph).toMatchObject({ url: `https://weeklyanime.com${path}` });
   }
 });
@@ -46,13 +46,13 @@ it('redirects only legacy app hosts permanently while preserving paths and query
 it('sets separate absolute canonicals for the home and ISR week routes', async () => {
   vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
-  const home = await import('../app/page');
-  const week = await import('../app/week/[week]/page');
-  expect(home.metadata.alternates?.canonical).toBe('https://weeklyanime.com/');
+  const home = await import('../app/[locale]/page');
+  const week = await import('../app/[locale]/week/[week]/page');
+  expect((await home.generateMetadata({})).alternates?.canonical).toBe('https://weeklyanime.com/');
   expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-42' }) })).alternates?.canonical).toBe('https://weeklyanime.com/week/2026-42');
-  expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) })).openGraph).toMatchObject({ url: 'https://weeklyanime.com/' });
+  expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) })).openGraph).toMatchObject({ url: 'https://weeklyanime.com/week/2026-43' });
   const current = await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) });
-  expect(current.alternates?.canonical).toBe('https://weeklyanime.com/');
+  expect(current.alternates?.canonical).toBe('https://weeklyanime.com/week/2026-43');
   expect(current.title).toBe('Anime 19–25 ottobre 2026 · settimana 43');
   expect(current.description).toContain('19–25 ottobre 2026');
   expect(home.dynamic).toBe('error'); expect(week.dynamic).toBe('error');

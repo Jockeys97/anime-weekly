@@ -1,10 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { snapshotTopFive } from '@/lib/weekly-snapshot-titles';
+import type { Locale } from '@/lib/locales';
 import { getDictionary } from '@/lib/i18n';
-export async function weeklyOgImage(slug: string) {
+export async function weeklyOgImage(slug: string, locale: Locale = 'it') {
   const top = snapshotTopFive(await getWeeklyRatings(slug), slug);
-  const d = getDictionary('it');
+  const d = getDictionary(locale);
   return new ImageResponse(<div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: '#101824', color: '#ffffff', padding: 64, fontFamily: 'sans-serif' }}>
     <div style={{ display: 'flex', color: '#a7f3d0', fontSize: 28 }}>Weekly Anime · {slug}</div>
     <div style={{ display: 'flex', fontSize: 52, marginTop: 24, marginBottom: 24 }}>{d.features.topFive} · IMDb</div>

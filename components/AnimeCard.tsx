@@ -4,7 +4,7 @@ import { AnimeActions } from '@/components/AnimeActions';
 import { watchlistId } from '@/lib/watchlist';
 import Image from 'next/image';
 import { WeeklyText } from '@/components/WeeklyText';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { animeDetailLink } from '@/lib/anime-detail-link';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { RatingSummary } from '@/components/RatingSummary';

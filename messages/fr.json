@@ -442,5 +442,18 @@
     "note": "Un doublage est signalé pour cette fiche MAL. Sa disponibilité par plateforme et par pays doit être vérifiée séparément.",
     "entry": "Fiche MAL précise",
     "checked": "Consulté le"
+  },
+  "seo": {
+    "weekDescription": "Sorties anime, notes et plateformes : {dates}, semaine {week}.",
+    "platformsTitle": "Anime par plateforme et pays",
+    "platformsIntro": "Choisissez une plateforme et le pays du catalogue.",
+    "platformTitle": "Anime sur {provider} en {country}",
+    "platformDescription": "Séries et films anime japonais par popularité. La disponibilité peut changer. Données TMDB / JustWatch.",
+    "platformEmpty": "Aucun anime disponible pour cette plateforme et ce pays.",
+    "platformUnavailable": "Le catalogue est indisponible. Réessayez plus tard.",
+    "watchTitle": "où le regarder en streaming",
+    "animeYear": "Anime {format} de {year}.",
+    "animeScore": "Note {score}/10.",
+    "animeFallback": "Synopsis, notes et où regarder {name}."
   }
 }

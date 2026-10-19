@@ -442,5 +442,18 @@
     "note": "Für diesen MAL-Eintrag wurde eine Synchronfassung gemeldet. Die Verfügbarkeit je Plattform und Land muss separat geprüft werden.",
     "entry": "Genauer MAL-Eintrag",
     "checked": "Abgerufen am"
+  },
+  "seo": {
+    "weekDescription": "Anime-Veröffentlichungen, Bewertungen und Streamingdienste: {dates}, Woche {week}.",
+    "platformsTitle": "Anime nach Plattform und Land",
+    "platformsIntro": "Wähle eine Plattform und das Land des Katalogs.",
+    "platformTitle": "Anime auf {provider} in {country}",
+    "platformDescription": "Japanische Animeserien und Filme nach Beliebtheit. Die Verfügbarkeit kann sich ändern. Daten TMDB / JustWatch.",
+    "platformEmpty": "Keine Anime für diese Plattform und dieses Land verfügbar.",
+    "platformUnavailable": "Der Katalog ist derzeit nicht verfügbar. Versuche es später erneut.",
+    "watchTitle": "wo du es streamen kannst",
+    "animeYear": "{format}-Anime aus {year}.",
+    "animeScore": "Bewertung {score}/10.",
+    "animeFallback": "Handlung, Bewertungen und Streamingangebote für {name}."
   }
 }

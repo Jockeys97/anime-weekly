@@ -322,11 +322,11 @@ export async function getWeeklyProviders(kind: Kind, id: number, fresh = false) 
 }
 
 // Provider landings only discover titles: no per-title ratings or availability calls.
-const cachedPlatformAnime = unstable_cache(async (providerId: number, region: string): Promise<WeekData> => {
+const cachedPlatformAnime = unstable_cache(async (providerId: number, region: string, locale: Locale): Promise<WeekData> => {
   const ranked: { anime: AnimeTitle; popularity: number }[] = [];
   for (const kind of ['tv', 'movie'] as const) {
     const pages = await Promise.all([1, 2].map(page => tmdb<Page>(`discover/${kind}`, {
-      language: 'it-IT', with_watch_providers: String(providerId), watch_region: region,
+      language: tmdbLanguages[locale], with_watch_providers: String(providerId), watch_region: region,
       with_genres: '16', with_origin_country: 'JP', include_adult: 'false', sort_by: 'popularity.desc', page: String(page),
     }, 86400)));
     const seen = new Set<number>();
@@ -340,8 +340,8 @@ const cachedPlatformAnime = unstable_cache(async (providerId: number, region: st
   }
   return { status: 'ready', titles: ranked.sort((a, b) => b.popularity - a.popularity).map(entry => entry.anime) };
 }, ['platform-anime-v1'], { revalidate: 86400, tags: [CACHE_TAG] });
-export async function getPlatformAnime(providerId: number, region: string): Promise<WeekData> {
+export async function getPlatformAnime(providerId: number, region: string, locale: Locale = 'it'): Promise<WeekData> {
   if (!isTMDBConfigured()) return { status: 'unconfigured', titles: [] };
-  try { return await cachedPlatformAnime(providerId, region); }
+  try { return await cachedPlatformAnime(providerId, region, locale); }
   catch { return { status: 'error', titles: [] }; }
 }

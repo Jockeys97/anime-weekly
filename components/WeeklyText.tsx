@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import { getDictionary, type Locale } from '@/lib/i18n';
 type TextResult = { name: string | null; overview: string | null; overviewLanguage: string | null; machine: boolean; locale: Locale };

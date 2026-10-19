@@ -22,3 +22,14 @@ it('returns a retryable unavailable state when discovery fails', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
   expect(await getPlatformAnime(8, 'IT')).toEqual({ status: 'error', titles: [] });
 });
+it('uses the URL language for platform names and descriptions without changing the catalog country', async () => {
+  vi.stubEnv('TMDB_API_KEY', 'test-key'); vi.stubEnv('TMDB_READ_TOKEN', '');
+  const fetchMock = vi.fn(async () => Response.json({ results: [], total_pages: 1 }));
+  vi.stubGlobal('fetch', fetchMock);
+  await getPlatformAnime(8, 'IT', 'fr');
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  for (const [url] of fetchMock.mock.calls as unknown as [URL][]) {
+    expect(url.searchParams.get('language')).toBe('fr-FR');
+    expect(url.searchParams.get('watch_region')).toBe('IT');
+  }
+});

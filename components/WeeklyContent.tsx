@@ -7,7 +7,7 @@ import { useWatchlist } from '@/components/Watchlist';
 import { watchlistId } from '@/lib/watchlist';
 import { filterTitles, filterOptions } from '@/lib/title-filters';
 import { useStreamingCountry } from '@/components/StreamingCountry';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { AnimeCard } from '@/components/AnimeCard';
 import { WeeklyCalendarContent } from '@/components/WeeklyCalendar';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';

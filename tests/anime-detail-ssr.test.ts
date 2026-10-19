@@ -17,7 +17,7 @@ import { getMyAnimeListScore } from '../lib/myanimelist';
 import { getCachedDetailAvailability } from '../lib/detail-availability';
 import { getSynopsis } from '../lib/synopsis';
 import { getAnimeDetailData } from '../lib/anime-detail-data';
-import AnimePage, { revalidate } from '../app/anime/[id]/page';
+import AnimePage, { revalidate } from '../app/[locale]/anime/[id]/page';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { LocaleProvider } from '../components/LanguageSelector';
 

@@ -1,7 +1,7 @@
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { Suspense } from 'react';
 import { connection } from 'next/server';
-import { getRequestLocale } from '@/lib/request-locale';
+import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
 import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { CatalogCard } from '@/components/CatalogCard';
 import { AnimeSearchFilters } from '@/components/AnimeSearchFilters';
@@ -9,18 +9,19 @@ import { discoverAnime } from '@/lib/anilist';
 import { parseAnimeFilters, searchHref, type AnimeFilters, type SearchParams } from '@/lib/anime-search';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { pageMetadata } from '@/lib/seo';
-export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
+export async function generateMetadata({ searchParams, params }: { params?: LocaleParams; searchParams: Promise<SearchParams> }) {
   const query = await searchParams;
+  const locale = await getRequestLocale(params); const d = getDictionary(locale);
   return {
-    ...pageMetadata('Cerca anime', 'Cerca serie e film anime, voti e piattaforme streaming.', '/search'),
+    ...pageMetadata(d.catalog.searchTitle, d.catalog.searchPrompt, '/search', undefined, locale),
     ...(Object.keys(query).length ? { robots: { index: false, follow: true } } : {}),
   };
 }
 export const revalidate = 86400;
-export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+export default async function SearchPage({ searchParams, params }: { params?: LocaleParams; searchParams: Promise<SearchParams> }) {
   await connection();
   const filters = parseAnimeFilters(await searchParams);
-  const locale = await getRequestLocale();
+  const locale = await getRequestLocale(params);
   const d = getDictionary(locale);
   return <main className="catalog-page explore-page" lang={locale}>
     <header className="explore-heading"><p className="eyebrow">{d.explore.eyebrow}</p><h1>{d.catalog.searchTitle}</h1><p className="catalog-intro">{d.explore.intro}</p></header>

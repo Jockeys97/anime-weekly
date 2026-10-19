@@ -1,3 +1,5 @@
+import { getDictionary } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 // TMDB's standalone subscription providers (not Amazon Channels variants).
 export const PLATFORM_PROVIDERS = {
   netflix: { id: 8, name: 'Netflix' },
@@ -21,7 +23,8 @@ export function platformMapping(provider: string, country: string) {
 export function platformPaths(): string[] {
   return Object.keys(PLATFORM_PROVIDERS).flatMap(provider => Object.keys(PLATFORM_COUNTRIES).map(country => `/piattaforma/${provider}/${country}`));
 }
-export function platformTitle(provider: string, country: string): string | null {
+export function platformTitle(provider: string, country: string, locale: Locale = 'it'): string | null {
   const mapping = platformMapping(provider, country);
-  return mapping ? `Anime su ${mapping.provider.name} ${mapping.country.name}` : null;
+  const d = getDictionary(locale);
+  return mapping ? d.seo.platformTitle.replace('{provider}', mapping.provider.name).replace('{country}', d.regions[mapping.country.region as keyof typeof d.regions]) : null;
 }

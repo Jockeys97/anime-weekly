@@ -1,9 +1,10 @@
-import Link from 'next/link';
+import { localePath } from '@/lib/locale-routing';
+import Link from '@/components/LocaleLink';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { SEARCH_FORMATS, SEARCH_GENRES, SEARCH_SEASONS, SEARCH_SORTS, SEARCH_STATUSES, type AnimeFilters } from '@/lib/anime-search';
 export function AnimeSearchFilters({ filters, locale }: { filters: AnimeFilters; locale: Locale }) {
   const { explore: d, catalog: c } = getDictionary(locale);
-  return <form action="/search" method="GET" className="anime-search-filters" role="search">
+  return <form action={localePath('/search', locale)} method="GET" className="anime-search-filters" role="search">
     <div className="explore-query"><label htmlFor="explore-query">{c.searchLabel}</label><div><input id="explore-query" type="search" name="q" defaultValue={filters.q} placeholder={c.searchPlaceholder} maxLength={200} /><button className="button" type="submit">{d.apply} →</button></div><p>{d.optionalTitle}</p></div>
     <fieldset><legend>{d.filters}</legend><div className="explore-fields">
       <label>{d.genre}<select name="genre" defaultValue={filters.genre || ''}><option value="">{d.allGenres}</option>{SEARCH_GENRES.map(genre => <option key={genre} value={genre}>{d.genres[genre]}</option>)}</select></label>

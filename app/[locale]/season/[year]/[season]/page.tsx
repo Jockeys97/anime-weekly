@@ -1,5 +1,5 @@
 import { getRequestLocale } from '@/lib/request-locale';
-import Link from 'next/link';
+import Link from '@/components/LocaleLink';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { SeasonContent } from '@/components/SeasonContent';
@@ -23,20 +23,21 @@ function parsePage(page: string | string[] | undefined): number {
   return value;
 }
 
-export async function generateMetadata({ params, searchParams }: { params: Promise<{ year: string; season: string }>; searchParams: Promise<{ page?: string | string[] }> }) {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ year: string; season: string; locale?: string }>; searchParams: Promise<{ page?: string | string[] }> }) {
   const { year, season } = await params;
   const value = parseSeason(year, season);
   if (!value) notFound();
   const { page } = await searchParams;
   const pageNumber = parsePage(page);
   const suffix = pageNumber > 1 ? `?page=${pageNumber}` : '';
-  return pageMetadata(`Anime ${season} ${year}`, `Serie e film anime della stagione ${season} ${year}.`, `${seasonPath(value)}${suffix}`);
+  const locale = await getRequestLocale(params); const d = getDictionary(locale).catalog;
+  return pageMetadata(`${d.seasonTitle} · ${d.seasonNames[value.season]} ${year}`, d.seasonDescription, `${seasonPath(value)}${suffix}`, undefined, locale);
 }
 
 export const revalidate = 86400;
 
 export default async function SeasonPage({ params, searchParams }: {
-  params: Promise<{ year: string; season: string }>;
+  params: Promise<{ year: string; season: string; locale?: string }>;
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const { year, season } = await params;
@@ -49,15 +50,15 @@ export default async function SeasonPage({ params, searchParams }: {
   const summaries = snapshotCatalog(snapshot);
   const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.
-  const locale = await getRequestLocale();
+  const locale = await getRequestLocale(params);
   const d = getDictionary(locale).catalog;
   const previous = shiftSeason(value, -1);
   const next = shiftSeason(value, 1);
   const years = Array.from({ length: 9 }, (_, index) => value.year + index - 4).filter(item => item >= 1 && item <= 9999);
   const path = seasonPath(value);
   return <main className="catalog-page season-page" lang={locale}>
-    <JsonLd data={animeItemList(data.media.map(anime => ({ name: animeName(anime), anilistId: anime.id })))} />
-    <JsonLd data={breadcrumbList([homeBreadcrumb, { name: 'Stagioni', path: '/season' }, seasonBreadcrumb(value)])} />
+    <JsonLd data={animeItemList(data.media.map(anime => ({ name: animeName(anime), anilistId: anime.id })), locale)} />
+    <JsonLd data={breadcrumbList([homeBreadcrumb, { name: d.seasons, path: '/season' }, seasonBreadcrumb(value, locale)], locale)} />
     <section className="season-explorer" aria-labelledby="season-title">
       <div className="season-explorer-header">
         <div className="season-heading">

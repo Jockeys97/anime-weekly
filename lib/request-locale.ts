@@ -1,8 +1,11 @@
 import 'server-only';
-import { cache } from 'react';
-import { cookies, headers } from 'next/headers';
-import { negotiateLocale } from '@/lib/locales';
-export const getRequestLocale = cache(async () => {
-  const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
-  return negotiateLocale(requestHeaders.get('accept-language'), cookieStore.get('anime-language')?.value);
-});
+import { notFound } from 'next/navigation';
+import { isLocale } from '@/lib/locales';
+export type LocaleParams = Promise<{ locale?: string }>;
+
+// Static route params, never headers/cookies: one stable document per URL.
+export async function getRequestLocale(params?: LocaleParams) {
+  const locale = (await params)?.locale ?? 'it';
+  if (!isLocale(locale)) notFound();
+  return locale;
+}

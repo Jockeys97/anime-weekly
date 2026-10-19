@@ -7,7 +7,7 @@ vi.mock('next/headers', () => ({ cookies }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('404'); }, redirect: (url: string) => { throw new Error(`redirect:${url}`); }, usePathname: () => '/my-anime' }));
 vi.mock('@/lib/my-anime-data', () => ({ getPersonalWeek: personalWeek }));
 vi.mock('@/components/MyAnimeContent', () => ({ MyAnimeContent: (props: unknown) => createElement('div', { 'data-props': JSON.stringify(props) }) }));
-import MyAnimePage from '../app/my-anime/page';
+import MyAnimePage from '../app/[locale]/my-anime/page';
 import { HeaderNavigation } from '../components/HeaderNavigation';
 import { encryptCookie, tokenCookie } from '../lib/my-anime-auth';
 

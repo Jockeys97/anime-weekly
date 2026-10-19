@@ -20,7 +20,7 @@ import { getAnimeAvailability } from '../lib/tmdb';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { LocaleProvider } from '../components/LanguageSelector';
 import { renderToStaticMarkup } from 'react-dom/server';
-import AnimePage, { generateMetadata, revalidate } from '../app/anime/[id]/page';
+import AnimePage, { generateMetadata, revalidate } from '../app/[locale]/anime/[id]/page';
 import { AnimeDetailView } from '../components/AnimeDetailView';
 
 afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
@@ -147,4 +147,22 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   const structured = page.props.children[0].props.data;
   expect(structured.description).toBe(meta.description);
   expect(structured.description).toBe(localized ? 'Serie TV anime. Una trama italiana.' : 'Serie TV anime.');
+});
+
+it.each(['it', 'en', 'es', 'fr', 'de', 'pt'] as const)('loads %s synopsis and emits localized detail SEO without client effects', async locale => {
+  vi.stubGlobal('React', React);
+  vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, description: 'Original synopsis', format: 'MOVIE', genres: [], season: null, seasonYear: 2026, averageScore: 81 } as unknown as Awaited<ReturnType<typeof getAnime>>);
+  const synopsis = `Localized synopsis (${locale}).`;
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis, language: locale, source: 'tmdb' });
+  const props = { params: Promise.resolve({ id: '21', locale }) };
+  const metadata = await generateMetadata(props);
+  expect(metadata.description).toContain(synopsis);
+  expect(metadata.alternates?.canonical).toMatch(new RegExp(`/${locale === 'it' ? '' : `${locale}/`}anime/21$`));
+  expect(Object.keys(metadata.alternates!.languages!)).toHaveLength(7);
+  const page = await AnimePage(props);
+  const view = page.props.children[2];
+  const html = renderToStaticMarkup(React.createElement(LocaleProvider, { locale } as React.ComponentProps<typeof LocaleProvider>, React.createElement(StreamingCountryProvider, null, React.createElement(AnimeDetailView, { ...view.props, ratings: null, imdb: null, availability: null }))));
+  expect(html).toContain(`lang="${locale}"`);
+  expect(html).toContain(synopsis);
+  expect(getSynopsis).toHaveBeenCalledWith(['Example anime'], 2026, locale, 'movie', 21);
 });

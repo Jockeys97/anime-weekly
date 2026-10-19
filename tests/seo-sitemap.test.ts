@@ -12,7 +12,7 @@ import { serializeJsonLd, siteUrl } from '../lib/seo';
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.resetAllMocks(); });
 describe('SEO sitemap', () => {
   it('includes weeks across year boundaries, three calendar years, platforms and valid unique anime', () => {
-    const urls = buildSitemap([21, 21, -1, NaN, 2147483648, 42], new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example')).map(entry => entry.url);
+    const urls = buildSitemap([21, 21, -1, NaN, 2147483648, 42], new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example')).filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => entry.url);
     expect(urls).toContain('https://anime.example/');
     expect(urls).toContain('https://anime.example/week/2025-52');
     expect(urls).toContain('https://anime.example/week/2026-01');
@@ -29,10 +29,10 @@ describe('SEO sitemap', () => {
       { id: 1, updatedAt: 1720000000 }, { id: 1, updatedAt: 1730000000 },
       { id: 2, updatedAt: NaN }, { id: 3, updatedAt: -1 },
     ]);
-    expect(entries).toHaveLength(80);
-    expect(entries[0].lastModified).toEqual(new Date(1730000000000));
-    expect(entries[1]).not.toHaveProperty('lastModified');
-    expect(entries[2]).not.toHaveProperty('lastModified');
+    expect(entries).toHaveLength(80 * 6);
+    expect(entries.find(entry => entry.url.endsWith('/anime/1'))!.lastModified).toEqual(new Date(1730000000000));
+    expect(entries.find(entry => entry.url.endsWith('/anime/2'))).not.toHaveProperty('lastModified');
+    expect(entries.find(entry => entry.url.endsWith('/anime/3'))).not.toHaveProperty('lastModified');
   });
   it('uses past week end dates and real generation time for other pages', () => {
     const date = new Date('2026-01-01T12:00:00Z');
@@ -71,7 +71,7 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2025.xml',
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(60);
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(60 * 6);
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);
     expect(getSeason).toHaveBeenCalledTimes(12);
@@ -91,7 +91,7 @@ describe('SEO sitemap', () => {
     } as Awaited<ReturnType<typeof getSeason>>));
     const shards = await Promise.all(['2024', '2025', '2026'].map(id => sitemap({ id: Promise.resolve(id) })));
     expect(getSeason).toHaveBeenCalledTimes(12);
-    expect(shards.map(entries => entries.map(entry => new URL(entry.url).pathname))).toEqual([
+    expect(shards.map(entries => entries.filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => new URL(entry.url).pathname))).toEqual([
       ['/anime/2024', '/anime/21'], ['/anime/2025'], ['/anime/2026'],
     ]);
   });
