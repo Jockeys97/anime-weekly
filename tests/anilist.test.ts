@@ -31,6 +31,7 @@ describe('AniList catalog (offline)', () => {
     expect(body.query).toContain('seasonYear: $year');
     expect(body.query).toContain('perPage: 50');
     expect(body.query).toContain('idMal');
+    expect(body.query).toContain('updatedAt');
     expect(body.query).toContain('averageScore');
   });
 

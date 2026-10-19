@@ -12,6 +12,7 @@ export interface AniListAnime {
   relations?: { edges: { relationType: string; node: { id: number; type: string; format: string | null; title: AniListAnime['title']; startDate: { year: number | null } | null } }[] };
   trailer?: AnimeTrailer | null;
   id: number;
+  updatedAt?: number | null;
   idMal: number | null;
   title: { romaji: string | null; english: string | null; native: string | null };
   coverImage: { large: string | null; extraLarge: string | null; color: string | null } | null;
@@ -33,7 +34,7 @@ export interface AniListPage {
   pageInfo: { currentPage: number; hasNextPage: boolean };
 }
 
-const fields = `id idMal title { romaji english native }
+const fields = `id idMal updatedAt title { romaji english native }
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } episodes format status genres averageScore
   stats { scoreDistribution { amount } }

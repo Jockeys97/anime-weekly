@@ -5,7 +5,7 @@ vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 import config from '../next.config';
 import { siteUrl, pageMetadata } from '../lib/seo';
-import sitemap from '../app/sitemap';
+import sitemap from '../app/sitemaps/sitemap';
 import robots from '../app/robots';
 import { getSeason } from '../lib/anilist';
 afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks(); vi.useRealTimers(); });
@@ -15,8 +15,8 @@ it('defaults production SEO to weeklyanime.com regardless of the Vercel API host
   vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'anime-weekly.vercel.app');
   expect(siteUrl().href).toBe('https://weeklyanime.com/');
   vi.mocked(getSeason).mockResolvedValue({ media: [], pageInfo: { currentPage: 1, hasNextPage: false } });
-  expect((await sitemap()).every(entry => entry.url.startsWith('https://weeklyanime.com/'))).toBe(true);
-  expect(robots().sitemap).toBe('https://weeklyanime.com/sitemap.xml');
+  expect((await sitemap({ id: Promise.resolve('pages') })).every(entry => entry.url.startsWith('https://weeklyanime.com/'))).toBe(true);
+  expect(robots().sitemap).toContain('https://weeklyanime.com/sitemap.xml');
   for (const path of ['/', '/week/2026-42', '/season', '/season/2026/fall?page=2', '/search?q=Ranma', '/anime/21', '/piattaforma', '/piattaforma/netflix/it', '/my-anime']) {
     const metadata = pageMetadata('Title', 'Description', path);
     expect(metadata.alternates).toEqual({ canonical: `https://weeklyanime.com${path}` });
