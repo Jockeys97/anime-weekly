@@ -9,7 +9,10 @@ vi.mock('../lib/anime-ratings', () => ({ getAnimeRatingsById: vi.fn() }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime } from '../lib/anilist';
 import { getSynopsis } from '../lib/synopsis';
-beforeEach(() => { vi.mocked(getSynopsis).mockResolvedValue({ synopsis: null, language: null, source: null }); });
+beforeEach(() => {
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: null, language: null, source: null });
+  vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
+});
 import { getAnimeRatingsById } from '../lib/anime-ratings';
 import { getAnimeAvailability } from '../lib/tmdb';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
@@ -58,16 +61,16 @@ describe('progressive anime details', () => {
   });
 });
 
-it('generates detail SEO from cached anime data without enrichment', async () => {
+it('generates detail SEO with the existing cached availability loader', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
-  expect(metadata.title).toBe('Example anime');
+  expect(metadata.title).toBe('Example anime – Anime: dove vederlo in streaming');
   expect(metadata.description).toBe('Trama, valutazioni e dove guardare Example anime in streaming.');
   expect(metadata.alternates?.canonical).toMatch(/\/anime\/21$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
   expect(getAnimeRatingsById).not.toHaveBeenCalled();
-  expect(getAnimeAvailability).not.toHaveBeenCalled();
+  expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
   expect(revalidate).toBe(86400);
 });
 
@@ -86,8 +89,34 @@ it('limits metadata to a clean 155-character synopsis', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: `<b>${'Trama italiana '.repeat(30)}</b>`, coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: `<b>${'Trama italiana '.repeat(30)}</b>`, language: 'it', source: 'tmdb' });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
-  expect(meta.description).toHaveLength(155);
+  expect(meta.description!.length).toBeLessThanOrEqual(155);
+  expect(meta.description).toMatch(/…$/);
   expect(meta.description).not.toContain('<');
+});
+
+it('shares factual Italian metadata with Open Graph and Twitter without changing the canonical', async () => {
+  vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, format: 'MOVIE', startDate: { year: 2026 }, averageScore: 81 } as Awaited<ReturnType<typeof getAnime>>);
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: '<b>Una storia italiana.</b>', language: 'it', source: 'tmdb' });
+  vi.mocked(getAnimeAvailability).mockResolvedValue({
+    match: { id: 42, kind: 'movie' }, ratings: {}, providersUnavailable: false,
+    providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
+  });
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  expect(meta.title).toBe('Example anime (2026) – Film anime: dove vederlo in streaming');
+  expect(meta.description).toBe('Film anime del 2026. Voto 8,1/10. In streaming su Netflix in Italia. Una storia italiana.');
+  expect(meta.openGraph).toMatchObject({ title: meta.title, description: meta.description });
+  expect(meta.twitter).toMatchObject({ title: meta.title, description: meta.description });
+  expect(meta.alternates?.canonical).toMatch(/\/anime\/21$/);
+  expect(getAnimeRatingsById).not.toHaveBeenCalled();
+  expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
+});
+
+it('keeps metadata available on a provider failure and excludes the English synopsis', async () => {
+  vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, format: 'ONA', averageScore: 75 } as Awaited<ReturnType<typeof getAnime>>);
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'English story.', language: 'en', source: 'tmdb' });
+  vi.mocked(getAnimeAvailability).mockRejectedValue(new Error('Provider unavailable'));
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  expect(meta.description).toBe('ONA anime. Voto 7,5/10.');
 });
 
 
@@ -109,10 +138,10 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, description: 'English synopsis', genres: [], format: 'TV' } as unknown as Awaited<ReturnType<typeof getAnime>>);
   if (localized) vi.mocked(getSynopsis).mockResolvedValue({ synopsis: '<b>Una trama italiana.</b>', language: 'it', source: 'tmdb' });
   vi.mocked(getAnimeRatingsById).mockReturnValue(new Promise(() => {}));
-  vi.mocked(getAnimeAvailability).mockReturnValue(new Promise(() => {}));
+  vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
   const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
   const structured = JSON.parse(page.props.children[0].props.dangerouslySetInnerHTML.__html);
   expect(structured.description).toBe(meta.description);
-  expect(structured.description).toBe(localized ? 'Una trama italiana.' : 'Trama, valutazioni e dove guardare Example anime in streaming.');
+  expect(structured.description).toBe(localized ? 'Serie TV anime. Una trama italiana.' : 'Serie TV anime.');
 });

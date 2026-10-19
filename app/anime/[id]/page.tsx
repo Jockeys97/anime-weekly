@@ -17,6 +17,7 @@ import type { Ratings } from '@/lib/ratings';
 import { pageMetadata, serializeJsonLd, siteUrl } from '@/lib/seo';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { formatAnimeSeo } from '@/lib/anime-seo';
 
 export const revalidate = 86400;
 // A process-local throttle cannot guarantee a shared quota across build workers.
@@ -33,18 +34,22 @@ const loadSynopsis = cache(async (id: string) => {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   return getSynopsis(aliases, anime.startDate?.year ?? anime.seasonYear ?? undefined, 'it', anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id);
 });
-function seoDescription(name: string, synopsis: SynopsisResult): string {
+const loadAvailability = cache(async (id: string) => getCachedDetailAvailability(await loadAnime(id)));
+function italianSynopsis(synopsis: SynopsisResult): string {
   // AniList's original is English; keep crawlable descriptions in Italian even
   // when no localized synopsis is available. Client language behavior is separate.
-  const localized = synopsis.language === 'it' ? animeDescription(synopsis.synopsis) : '';
-  return (localized.replace(/\s+/g, ' ').trim() || `Trama, valutazioni e dove guardare ${name} in streaming.`).slice(0, 155);
+  return synopsis.language === 'it' ? animeDescription(synopsis.synopsis) : '';
 }
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const anime = await loadAnime((await params).id);
   const name = animeName(anime);
-  const synopsis = await loadSynopsis(String(anime.id));
-  return pageMetadata(name, seoDescription(name, synopsis), `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large);
+  const [synopsis, availability] = await Promise.all([
+    loadSynopsis(String(anime.id)),
+    loadAvailability(String(anime.id)).catch(() => null),
+  ]);
+  const seo = formatAnimeSeo(name, anime, italianSynopsis(synopsis), availability);
+  return pageMetadata(seo.title, seo.description, `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large);
 }
 export default async function AnimePage({ params }: Props) {
   const anime = await loadAnime((await params).id);
@@ -53,13 +58,13 @@ export default async function AnimePage({ params }: Props) {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const animeRatings = getAnimeRatingsById(anime.idMal, anime.averageScore, revalidate);
-  const availability = getCachedDetailAvailability(anime);
+  const availability = loadAvailability(String(anime.id));
   const synopsis = loadSynopsis(String(anime.id));
   const ratingCount = anime.stats?.scoreDistribution?.reduce((sum, bucket) => sum + bucket.amount, 0);
   const structured = {
     '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries',
     name, url: new URL(`/anime/${anime.id}`, siteUrl()).href,
-    description: seoDescription(name, await synopsis), image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
+    description: formatAnimeSeo(name, anime, italianSynopsis(await synopsis)).description, image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
     genre: anime.genres,
     ...(typeof anime.averageScore === 'number' && Number.isFinite(anime.averageScore) && anime.averageScore > 0 && anime.averageScore <= 100 ? {
       aggregateRating: { '@type': 'AggregateRating', ratingValue: anime.averageScore, bestRating: 100, worstRating: 0,
