@@ -21,6 +21,10 @@ it('renders direct links only for existing exact TMDB mappings and search links 
   expect(html).toContain('href="/anime/21"');
   expect(html).toContain('href="/search?q=Other+title"');
   expect(html).not.toContain('/anime/99');
+  const breadcrumb = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);
+  expect(breadcrumb['@type']).toBe('BreadcrumbList');
+  expect(breadcrumb.itemListElement.map((item: { name: string }) => item.name)).toEqual(['Home', 'Piattaforme', 'Anime su Netflix Italia']);
+  expect(breadcrumb.itemListElement[2].item).toMatch(/\/piattaforma\/netflix\/it$/);
   expect(getPlatformAnime).toHaveBeenCalledExactlyOnceWith(8, 'IT');
   expect(readWeeklyRatingsSnapshot).toHaveBeenCalledTimes(1);
 });

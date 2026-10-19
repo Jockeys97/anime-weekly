@@ -7,6 +7,8 @@ import { animeDetailLink } from '@/lib/anime-detail-link';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { pageMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
+import { breadcrumbList, homeBreadcrumb } from '@/lib/structured-data';
 
 type Props = { params: Promise<{ provider: string; country: string }> };
 export const revalidate = 86400;
@@ -24,6 +26,7 @@ export default async function PlatformPage({ params }: Props) {
   if (!mapping) notFound();
   const [data, snapshot] = await Promise.all([getPlatformAnime(mapping.provider.id, mapping.country.region), readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date())))]);
   return <main className="catalog-page" lang="it"><Link prefetch={false} href="/piattaforma">← Piattaforme e paesi</Link><h1>{platformTitle(provider, country)}</h1>
+    <JsonLd data={breadcrumbList([homeBreadcrumb, { name: 'Piattaforme', path: '/piattaforma' }, { name: platformTitle(provider, country)!, path: `/piattaforma/${provider}/${country}` }])} />
     <p className="catalog-intro">Serie e film anime giapponesi ordinati per popolarità. La disponibilità del catalogo può cambiare. Dati TMDB / JustWatch.</p>
     {data.status === 'ready' && data.titles.length ? <div className="anime-grid">{data.titles.map(anime => {
       // Cache-only exact TMDB ID mapping. Never perform title/rating searches here.

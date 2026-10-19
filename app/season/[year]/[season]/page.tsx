@@ -4,7 +4,9 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { SeasonContent } from '@/components/SeasonContent';
 import { CatalogCard } from '@/components/CatalogCard';
-import { getSeason } from '@/lib/anilist';
+import { animeName, getSeason } from '@/lib/anilist';
+import { JsonLd } from '@/components/JsonLd';
+import { animeItemList, breadcrumbList, homeBreadcrumb, seasonBreadcrumb } from '@/lib/structured-data';
 import { getDictionary } from '@/lib/i18n';
 import { currentSeason, parseSeason, SEASONS, seasonPath, shiftSeason, type Season } from '@/lib/season';
 
@@ -54,6 +56,8 @@ export default async function SeasonPage({ params, searchParams }: {
   const years = Array.from({ length: 9 }, (_, index) => value.year + index - 4).filter(item => item >= 1 && item <= 9999);
   const path = seasonPath(value);
   return <main className="catalog-page season-page" lang={locale}>
+    <JsonLd data={animeItemList(data.media.map(anime => ({ name: animeName(anime), anilistId: anime.id })))} />
+    <JsonLd data={breadcrumbList([homeBreadcrumb, { name: 'Stagioni', path: '/season' }, seasonBreadcrumb(value)])} />
     <section className="season-explorer" aria-labelledby="season-title">
       <div className="season-explorer-header">
         <div className="season-heading">

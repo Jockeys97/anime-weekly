@@ -29,7 +29,11 @@ it('serializes one compact catalog with cron matches without invoking live enric
   const shell = WeeklyGuide({ week: { year: 2026, week: 42 } });
   const section = shell.props.children.find((child: unknown) => React.isValidElement(child) && child.type === 'section')!;
   const catalog = section.props.children[0].props.children;
-  const content = await catalog.type(catalog.props);
+  const result = await catalog.type(catalog.props);
+  const content = result.props.children[1];
+  expect(result.props.children[0].props.data).toMatchObject({ '@type': 'ItemList', itemListElement: [
+    { position: 1, name: 'Ranma ½', url: expect.stringMatching(/\/anime\/123$/) },
+  ] });
   expect(content.props.initial.titles).toHaveLength(1);
   expect(content.props.initial.titles[0].ratings).toEqual({ anilistId: 123, malScore: 8, imdbRating: '8.1' });
   expect(getCachedWeekData).not.toHaveBeenCalled();

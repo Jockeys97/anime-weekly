@@ -39,8 +39,8 @@ describe('server-rendered anime details', () => {
     vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
     const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
     expect(textInTree(page, 'Example anime')).toBe(true);
-    expect(page.props.children[1].props.anime.description).toBe('Example synopsis');
-    const view = page.props.children[1];
+    expect(page.props.children[2].props.anime.description).toBe('Example synopsis');
+    const view = page.props.children[2];
     const presentation = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, React.createElement(AnimeDetailView, { ...view.props, synopsis: null, imdb: null, ratings: view.props.ratings, availability: null })));
     expect(presentation).toContain('Example anime');
     expect(presentation).toContain('Episodi');
@@ -51,7 +51,7 @@ describe('server-rendered anime details', () => {
     const french = renderToStaticMarkup(React.createElement(LocaleProvider, { locale: 'fr' } as React.ComponentProps<typeof LocaleProvider>, React.createElement(StreamingCountryProvider, null, React.createElement(AnimeDetailView, { ...view.props, synopsis: null, imdb: null, ratings: null, availability: null }))));
     expect(french).toContain('lang="fr"');
     expect(french).toContain('Épisodes');
-    const structured = JSON.parse(page.props.children[0].props.dangerouslySetInnerHTML.__html);
+    const structured = page.props.children[0].props.data;
     expect(structured).toMatchObject({ '@type': 'TVSeries', aggregateRating: { ratingValue: 81, bestRating: 100, ratingCount: 30 } });
     expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
     expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
@@ -83,7 +83,7 @@ it.each([null, NaN, -1, 101])('omits unavailable or invalid aggregate ratings (%
   vi.mocked(getMyAnimeListScore).mockResolvedValue({});
   vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
   const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
-  const structured = JSON.parse(page.props.children[0].props.dangerouslySetInnerHTML.__html);
+  const structured = page.props.children[0].props.data;
   expect(structured['@type']).toBe('Movie');
   expect(structured).not.toHaveProperty('aggregateRating');
 });
@@ -144,7 +144,7 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
   const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
-  const structured = JSON.parse(page.props.children[0].props.dangerouslySetInnerHTML.__html);
+  const structured = page.props.children[0].props.data;
   expect(structured.description).toBe(meta.description);
   expect(structured.description).toBe(localized ? 'Serie TV anime. Una trama italiana.' : 'Serie TV anime.');
 });

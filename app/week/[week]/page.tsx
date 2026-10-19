@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { WeeklyGuide } from '@/components/WeeklyGuide';
 import { formatWeek, isoWeek, parseWeek, weekDateRange } from '@/lib/week';
 import { pageMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
+import { breadcrumbList, homeBreadcrumb } from '@/lib/structured-data';
 export async function generateMetadata({ params }: { params: Promise<{ week: string }> }) {
   const { week } = await params;
   const value = parseWeek(week);
@@ -17,5 +19,5 @@ export function generateStaticParams() { return []; }
 export default async function WeekPage({ params }: { params: Promise<{ week: string }> }) {
   const { week: slug } = await params; const week = parseWeek(slug);
   if (!week) notFound();
-  return <WeeklyGuide week={week} archive />;
+  return <><JsonLd data={breadcrumbList([homeBreadcrumb, { name: `Settimana ${week.week}`, path: `/week/${slug}` }])} /><WeeklyGuide week={week} archive /></>;
 }

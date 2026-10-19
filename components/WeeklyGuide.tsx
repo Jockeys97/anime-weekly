@@ -6,6 +6,8 @@ import { getDictionary } from '@/lib/i18n';
 import { getQuickWeekData } from '@/lib/tmdb';
 import { getWeeklyRatings, trackWeeklyPage } from '@/lib/weekly-ratings';
 import { formatWeek, type ISOWeek } from '@/lib/week';
+import { JsonLd } from '@/components/JsonLd';
+import { animeItemList } from '@/lib/structured-data';
 export function WeeklyGuide({ week, newsletter = false, archive = false }: { week: ISOWeek; newsletter?: boolean; archive?: boolean }) {
   return <main id="main">
     <WeeklyHeading week={week} archive={archive} />
@@ -23,5 +25,6 @@ async function WeeklyCatalog({ week }: { week: ISOWeek }) {
   // a cold snapshot never starts enrichment or delays the HTML with rating APIs.
   const [data, snapshot] = await Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(formatWeek(week)), trackWeeklyPage()]);
   const initial = { ...data, titles: data.titles.map(title => ({ ...title, ratings: snapshot.titles[`${title.kind}:${title.id}`] || {} })) };
-  return <WeeklyContent key={`${week.year}-${week.week}`} initial={initial} initialAvailability={snapshot.availability} week={week} initialEvents={snapshot.events} initialEpisodes={snapshot.episodes ?? { entries: [], status: 'pending' }} />;
+  return <>{initial.titles.length > 0 && <JsonLd data={animeItemList(initial.titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })))} />}
+    <WeeklyContent key={`${week.year}-${week.week}`} initial={initial} initialAvailability={snapshot.availability} week={week} initialEvents={snapshot.events} initialEpisodes={snapshot.episodes ?? { entries: [], status: 'pending' }} /></>;
 }

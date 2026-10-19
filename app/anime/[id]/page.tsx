@@ -12,7 +12,9 @@ import { getAnimeDetailData } from '@/lib/anime-detail-data';
 import type { Locale } from '@/lib/i18n';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
-import { pageMetadata, serializeJsonLd, siteUrl } from '@/lib/seo';
+import { pageMetadata, siteUrl } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
+import { animeBreadcrumbs } from '@/lib/structured-data';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { formatAnimeSeo } from '@/lib/anime-seo';
@@ -58,7 +60,7 @@ export default async function AnimePage({ params }: Props) {
         ...(Number.isSafeInteger(ratingCount) && ratingCount! > 0 ? { ratingCount } : {}) },
     } : {}),
   };
-  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structured) }} />
+  return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name)} />
     <AnimeDetailView anime={anime}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
