@@ -6,7 +6,7 @@ import { config, proxy } from '../proxy';
 
 it.each(['cyberpunk-edgerunners-2', '-1', '1.5', '21-', '%E0%A4%A', '%63yberpunk'])('rewrites invalid detail ID %s to the unmatched 404 route', id => {
   const response = proxy(new NextRequest(`https://weeklyanime.com/anime/${id}?source=test`));
-  expect(response.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/404?source=test');
+  expect(response.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/_anime-not-found?source=test');
 });
 
 it.each(['21', '999999999', '21-one-piece', '21-cyberpunk-2', '%32%31'])('passes numeric and future slug ID %s through to the route', id => {

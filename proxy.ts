@@ -11,8 +11,8 @@ export function proxy(request: NextRequest) {
   }
   if (!/^\d+(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/i.test(id)) {
     const destination = request.nextUrl.clone();
-    destination.pathname = '/404';
-    // No route exists at /404: Next renders app/not-found.tsx with HTTP 404.
+    destination.pathname = '/_anime-not-found';
+    // No route exists here: Next renders app/not-found.tsx with HTTP 404 (on Vercel /404 is a static 200 asset).
     return NextResponse.rewrite(destination);
   }
 
