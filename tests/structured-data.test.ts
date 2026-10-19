@@ -26,7 +26,7 @@ it('renders safely escaped, parseable JSON-LD with ordered real names and only v
   expect(markup).not.toContain(name);
   expect(scripts(markup)).toEqual([data]);
   expect(data.itemListElement).toEqual([
-    { '@type': 'ListItem', position: 1, name, url: 'https://weeklyanime.com/anime/42' },
+    { '@type': 'ListItem', position: 1, name, url: 'https://weeklyanime.com/anime/42-script-script-alert-x-script-titolo' },
     { '@type': 'ListItem', position: 2, name: 'Senza ID' },
     { '@type': 'ListItem', position: 3, name: 'ID non valido' },
   ]);
@@ -38,7 +38,7 @@ it('uses only known season data in Italian anime breadcrumbs', () => {
   expect(animeBreadcrumbs(anime, 'Titolo').itemListElement).toEqual([
     { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://weeklyanime.com/' },
     { '@type': 'ListItem', position: 2, name: 'Stagione Autunno 2026', item: 'https://weeklyanime.com/season/2026/fall' },
-    { '@type': 'ListItem', position: 3, name: 'Titolo', item: 'https://weeklyanime.com/anime/42' },
+    { '@type': 'ListItem', position: 3, name: 'Titolo', item: 'https://weeklyanime.com/anime/42-titolo' },
   ]);
   for (const missing of [{ season: null }, { seasonYear: null }, { season: 'UNKNOWN' }]) {
     expect(animeBreadcrumbs({ ...anime, ...missing }, 'Titolo').itemListElement.map(item => item.name)).toEqual(['Home', 'Titolo']);
@@ -65,7 +65,7 @@ it('lists only the current season page with localized breadcrumbs for an English
   expect(getSeason).toHaveBeenCalledExactlyOnceWith(2026, 'fall', 2);
   const data = scripts(html);
   expect(data).toHaveLength(2);
-  expect(data[0].itemListElement).toEqual([{ '@type': 'ListItem', position: 1, name: 'Titolo', url: 'https://weeklyanime.com/en/anime/42' }]);
+  expect(data[0].itemListElement).toEqual([{ '@type': 'ListItem', position: 1, name: 'Titolo', url: 'https://weeklyanime.com/en/anime/42-titolo' }]);
   expect(data[1].itemListElement.map((item: { name: string }) => item.name)).toEqual(['Home', 'Seasons', 'Season Fall 2026']);
   expect(html).toContain('lang="en"');
 });

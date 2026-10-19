@@ -1,3 +1,4 @@
+import { animePath } from '@/lib/anime-url';
 import { locales } from '@/lib/locales';
 import { languageAlternates } from '@/lib/locale-routing';
 import type { MetadataRoute } from 'next';
@@ -6,7 +7,7 @@ import { currentSeason, SEASONS, seasonPath } from '@/lib/season';
 import { formatWeek, isoWeek, shiftWeek, weekRange } from '@/lib/week';
 import { siteUrl } from '@/lib/seo';
 
-export interface SitemapAnime { id: number; updatedAt?: number | null }
+export interface SitemapAnime { id: number; name?: string; updatedAt?: number | null }
 
 export function sitemapSeasons(date = new Date()) {
   const { year } = currentSeason(date);
@@ -46,7 +47,7 @@ export function buildAnimeSitemap(anime: readonly SitemapAnime[], base = siteUrl
   const entries: MetadataRoute.Sitemap = [...unique.values()].map(item => {
     const modified = typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) && item.updatedAt > 0
       ? new Date(item.updatedAt * 1000) : null;
-    return { url: new URL(`/anime/${item.id}`, base).href, alternates: { languages: languageAlternates(`/anime/${item.id}`, base) }, changeFrequency: 'daily',
+    return { url: new URL(animePath(item.id, item.name), base).href, alternates: { languages: languageAlternates(animePath(item.id, item.name), base) }, changeFrequency: 'daily',
       ...(modified && !Number.isNaN(modified.getTime()) ? { lastModified: modified } : {}) };
   });
   return localizedEntries(entries);

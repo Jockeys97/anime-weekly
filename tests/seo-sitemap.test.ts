@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
+vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), animeName: (item: { title: { english: string } }) => item.title.english }));
 import { getSeason } from '../lib/anilist';
 import sitemap, { generateSitemaps } from '../app/sitemaps/sitemap';
 import { GET } from '../app/sitemap.xml/route';
@@ -49,7 +49,7 @@ describe('SEO sitemap', () => {
       active--;
       if (year === 2024 && season === 'winter' && page === 2) throw new Error('offline');
       if (year === 2025 && season === 'spring') return { media: [], pageInfo: { currentPage: page, hasNextPage: false } };
-      const media = [{ id: 21 }, ...(page === 2 ? [{ id: 42, updatedAt: 1730000000 }] : [])];
+      const media = [{ id: 21, title: { english: 'Death Note' } }, ...(page === 2 ? [{ id: 42, title: { english: 'Example' }, updatedAt: 1730000000 }] : [])];
       return { media, pageInfo: { currentPage: page, hasNextPage: page === 1 } } as Awaited<ReturnType<typeof getSeason>>;
     });
     const catalog = await getSitemapCatalog(2026);
@@ -86,13 +86,13 @@ describe('SEO sitemap', () => {
   it('shares concurrent cold crawls and assigns each anime to only one year shard', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
     vi.mocked(getSeason).mockImplementation(async year => ({
-      media: [{ id: year }, { id: 21 }],
+      media: [{ id: year, title: { english: "Year" } }, { id: 21, title: { english: "Death Note" } }],
       pageInfo: { currentPage: 1, hasNextPage: false },
     } as Awaited<ReturnType<typeof getSeason>>));
     const shards = await Promise.all(['2024', '2025', '2026'].map(id => sitemap({ id: Promise.resolve(id) })));
     expect(getSeason).toHaveBeenCalledTimes(12);
     expect(shards.map(entries => entries.filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => new URL(entry.url).pathname))).toEqual([
-      ['/anime/2024', '/anime/21'], ['/anime/2025'], ['/anime/2026'],
+      ['/anime/2024-year', '/anime/21-death-note'], ['/anime/2025-year'], ['/anime/2026-year'],
     ]);
   });
   it('uses the same base URL for robots and metadata', () => {

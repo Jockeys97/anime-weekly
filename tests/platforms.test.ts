@@ -16,7 +16,7 @@ describe('platform and country mapping', () => {
     expect(new Set(platformPaths()).size).toBe(42);
   });
   it('links only an existing valid mapping to a detail page', () => {
-    expect(animeDetailLink({ name: 'Anime & film', ratings: { anilistId: 21 } })).toBe('/anime/21');
+    expect(animeDetailLink({ name: 'Anime & film', ratings: { anilistId: 21 } })).toBe('/anime/21-anime-film');
     expect(animeDetailLink({ name: 'Anime & film', ratings: {} })).toBe('/search?q=Anime+%26+film');
   });
 });

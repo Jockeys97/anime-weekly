@@ -1,6 +1,6 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { getSeason } from '@/lib/anilist';
+import { animeName, getSeason } from '@/lib/anilist';
 import { CACHE_TAG } from '@/lib/config';
 import { sitemapSeasons, type SitemapAnime } from '@/lib/seo-sitemap';
 
@@ -14,7 +14,7 @@ const getCachedSitemapCatalog = unstable_cache(async (year: number) => {
         const data = await getSeason(value.year, value.season, page);
         for (const item of data.media) {
           const previous = anime.get(item.id);
-          anime.set(item.id, { id: item.id, updatedAt: item.updatedAt ?? previous?.updatedAt,
+          anime.set(item.id, { id: item.id, name: animeName(item), updatedAt: item.updatedAt ?? previous?.updatedAt,
             year: previous?.year ?? value.year });
         }
         // The loader returns an empty terminal page on upstream errors. Preserve
@@ -24,7 +24,7 @@ const getCachedSitemapCatalog = unstable_cache(async (year: number) => {
     } catch { /* A failed season must never discard the rest of the sitemap. */ }
   }
   return [...anime.values()];
-}, ['sitemap-season-catalog-v1'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['sitemap-season-catalog-v2'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 // Next may render the year shards concurrently on a cold build. Coalesce those
 // misses as well so they do not each start a separate twelve-season crawl.

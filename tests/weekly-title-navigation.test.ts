@@ -13,8 +13,8 @@ import { AnimeCard } from '../components/AnimeCard';
 describe('weekly title navigation', () => {
   describe.each([null, '/cover.jpg'])('with poster %s', poster => {
   it.each([
-    { kind: 'tv' as const, anilistId: 161645, href: '/anime/161645' },
-    { kind: 'movie' as const, anilistId: 21519, href: '/anime/21519' },
+    { kind: 'tv' as const, anilistId: 161645, href: '/anime/161645-example-series' },
+    { kind: 'movie' as const, anilistId: 21519, href: '/anime/21519-example-series' },
     { kind: 'tv' as const, anilistId: undefined, href: '/search?q=Example+series' },
     { kind: 'tv' as const, anilistId: -1, href: '/search?q=Example+series' },
   ])('keeps title and details together for $kind with AniList ID $anilistId', ({ kind, anilistId, href }) => {

@@ -1,4 +1,5 @@
 'use client';
+import { animePath } from '@/lib/anime-url';
 import Link from '@/components/LocaleLink';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -59,7 +60,7 @@ export function MyAnimeContent({ providers, connected, data, start, end, authErr
             <div className="my-anime-release-poster">{group.poster ? <Image src={group.poster} alt="" fill sizes="(max-width: 600px) 76px, 106px" /> : <span role="img" aria-label={d.noCover}>✦</span>}</div>
             <div className="my-anime-release-info"><div className="my-anime-release-top"><span className="my-anime-source">{group.sources.map(source => names[source]).join(' · ')}</span>
               {commonTime && <time dateTime={new Date(group.episodes[0].airingAt).toISOString()}>{time(group.episodes[0].airingAt)}</time>}</div>
-              <h4>{group.anilistId ? <Link prefetch={false} href={`/anime/${group.anilistId}`} title={d.details}>{group.title}</Link> : group.title}</h4>
+              <h4>{group.anilistId ? <Link prefetch={false} href={animePath(group.anilistId, group.title)} title={d.details}>{group.title}</Link> : group.title}</h4>
               {group.episodes.length > 1 && <p className="my-anime-batch">{d.episodeBatch.replace('{count}', String(group.episodes.length))}</p>}
               <ul className="my-anime-episode-chips">{group.episodes.map(episode => <li key={episode.key}>
                 {!commonTime && <time dateTime={new Date(episode.airingAt).toISOString()}>{time(episode.airingAt)}</time>}

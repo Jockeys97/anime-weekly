@@ -37,7 +37,7 @@ describe('server-rendered anime details', () => {
     vi.mocked(getAnime).mockResolvedValue({ id: 21, idMal: 123, title: { english: 'Example anime', romaji: null, native: null }, coverImage: null, bannerImage: null, description: 'Example synopsis', startDate: null, episodes: 12, format: 'TV', status: 'FINISHED', genres: [], averageScore: 81, stats: { scoreDistribution: [{ amount: 10 }, { amount: 20 }] }, studios: null, season: null, seasonYear: null });
     vi.mocked(getMyAnimeListScore).mockResolvedValue({ malId: 123, malScore: 8.12, malStatus: 'ready' });
     vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
-    const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
+    const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
     expect(textInTree(page, 'Example anime')).toBe(true);
     expect(page.props.children[2].props.anime.description).toBe('Example synopsis');
     const view = page.props.children[2];
@@ -66,10 +66,10 @@ describe('server-rendered anime details', () => {
 
 it('generates detail SEO with the existing cached availability loader', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
-  const metadata = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
   expect(metadata.title).toBe('Example anime – Anime: dove vederlo in streaming');
   expect(metadata.description).toBe('Trama, valutazioni e dove guardare Example anime in streaming.');
-  expect(metadata.alternates?.canonical).toMatch(/\/anime\/21$/);
+  expect(metadata.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
   expect(getMyAnimeListScore).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ it.each([null, NaN, -1, 101])('omits unavailable or invalid aggregate ratings (%
   vi.mocked(getAnime).mockResolvedValue({ id: 21, idMal: null, title: { english: 'Example anime', romaji: null, native: null }, description: null, coverImage: null, startDate: null, averageScore: score, format: 'MOVIE', genres: [], bannerImage: null, episodes: null, status: 'FINISHED', studios: null, season: null, seasonYear: null } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getMyAnimeListScore).mockResolvedValue({});
   vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
-  const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
+  const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
   const structured = page.props.children[0].props.data;
   expect(structured['@type']).toBe('Movie');
   expect(structured).not.toHaveProperty('aggregateRating');
@@ -91,7 +91,7 @@ it.each([null, NaN, -1, 101])('omits unavailable or invalid aggregate ratings (%
 it('limits metadata to a clean 155-character synopsis', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: `<b>${'Trama italiana '.repeat(30)}</b>`, coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: `<b>${'Trama italiana '.repeat(30)}</b>`, language: 'it', source: 'tmdb' });
-  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
   expect(meta.description!.length).toBeLessThanOrEqual(155);
   expect(meta.description).toMatch(/…$/);
   expect(meta.description).not.toContain('<');
@@ -104,12 +104,12 @@ it('shares factual Italian metadata with Open Graph and Twitter without changing
     match: { id: 42, kind: 'movie' }, ratings: {}, providersUnavailable: false,
     providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
   });
-  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
   expect(meta.title).toBe('Example anime (2026) – Film anime: dove vederlo in streaming');
   expect(meta.description).toBe('Film anime del 2026. Voto 8,1/10. In streaming su Netflix in Italia. Una storia italiana.');
   expect(meta.openGraph).toMatchObject({ title: meta.title, description: meta.description });
   expect(meta.twitter).toMatchObject({ title: meta.title, description: meta.description });
-  expect(meta.alternates?.canonical).toMatch(/\/anime\/21$/);
+  expect(meta.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(getMyAnimeListScore).not.toHaveBeenCalled();
   expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
 });
@@ -118,7 +118,7 @@ it('keeps metadata available on a provider failure and excludes the English syno
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, format: 'ONA', averageScore: 75 } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'English story.', language: 'en', source: 'tmdb' });
   vi.mocked(getAnimeAvailability).mockRejectedValue(new Error('Provider unavailable'));
-  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
   expect(meta.description).toBe('ONA anime. Voto 7,5/10.');
 });
 
@@ -142,8 +142,8 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   if (localized) vi.mocked(getSynopsis).mockResolvedValue({ synopsis: '<b>Una trama italiana.</b>', language: 'it', source: 'tmdb' });
   vi.mocked(getMyAnimeListScore).mockResolvedValue({ malId: 123, malScore: 8.12, malStatus: 'ready' });
   vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
-  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
-  const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
+  const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
   const structured = page.props.children[0].props.data;
   expect(structured.description).toBe(meta.description);
   expect(structured.description).toBe(localized ? 'Serie TV anime. Una trama italiana.' : 'Serie TV anime.');
@@ -154,12 +154,18 @@ it.each(['it', 'en', 'es', 'fr', 'de', 'pt'] as const)('loads %s synopsis and em
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, description: 'Original synopsis', format: 'MOVIE', genres: [], season: null, seasonYear: 2026, averageScore: 81 } as unknown as Awaited<ReturnType<typeof getAnime>>);
   const synopsis = `Localized synopsis (${locale}).`;
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis, language: locale, source: 'tmdb' });
-  const props = { params: Promise.resolve({ id: '21', locale }) };
+  const props = { params: Promise.resolve({ id: '21-example-anime', locale }) };
   const metadata = await generateMetadata(props);
   expect(metadata.description).toContain(synopsis);
-  expect(metadata.alternates?.canonical).toMatch(new RegExp(`/${locale === 'it' ? '' : `${locale}/`}anime/21$`));
+  expect(metadata.alternates?.canonical).toMatch(new RegExp(`/${locale === 'it' ? '' : `${locale}/`}anime/21-example-anime$`));
   expect(Object.keys(metadata.alternates!.languages!)).toHaveLength(7);
+  expect(metadata.alternates!.languages).toMatchObject({
+    it: expect.stringMatching(/\/anime\/21-example-anime$/),
+    en: expect.stringMatching(/\/en\/anime\/21-example-anime$/),
+    'x-default': expect.stringMatching(/\/anime\/21-example-anime$/),
+  });
   const page = await AnimePage(props);
+  expect(page.props.children[0].props.data.url).toBe(metadata.alternates!.canonical);
   const view = page.props.children[2];
   const html = renderToStaticMarkup(React.createElement(LocaleProvider, { locale } as React.ComponentProps<typeof LocaleProvider>, React.createElement(StreamingCountryProvider, null, React.createElement(AnimeDetailView, { ...view.props, ratings: null, imdb: null, availability: null }))));
   expect(html).toContain(`lang="${locale}"`);

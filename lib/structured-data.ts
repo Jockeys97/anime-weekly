@@ -1,3 +1,4 @@
+import { animePath } from '@/lib/anime-url';
 import { localePath } from '@/lib/locale-routing';
 import type { Locale } from '@/lib/locales';
 import { getDictionary } from '@/lib/i18n';
@@ -23,7 +24,7 @@ export function seasonBreadcrumb(value: AnimeSeason, locale: Locale = 'it'): Bre
 
 export function animeBreadcrumbs(anime: { id: number; season: string | null; seasonYear: number | null }, name: string, locale: Locale = 'it') {
   const season = parseSeason(String(anime.seasonYear ?? '').padStart(4, '0'), anime.season?.toLowerCase() ?? '');
-  return breadcrumbList([homeBreadcrumb, ...(season ? [seasonBreadcrumb(season, locale)] : []), { name, path: `/anime/${anime.id}` }], locale);
+  return breadcrumbList([homeBreadcrumb, ...(season ? [seasonBreadcrumb(season, locale)] : []), { name, path: animePath(anime.id, name) }], locale);
 }
 
 export function animeItemList(items: readonly { name: string; anilistId?: number | null }[], locale: Locale = 'it') {
@@ -32,7 +33,7 @@ export function animeItemList(items: readonly { name: string; anilistId?: number
     itemListElement: items.map((item, index) => ({
       '@type': 'ListItem', position: index + 1, name: item.name,
       ...(Number.isSafeInteger(item.anilistId) && item.anilistId! > 0 && item.anilistId! <= 2147483647
-        ? { url: new URL(localePath(`/anime/${item.anilistId}`, locale), siteUrl()).href } : {}),
+        ? { url: new URL(localePath(animePath(item.anilistId!, item.name), locale), siteUrl()).href } : {}),
     })),
   };
 }

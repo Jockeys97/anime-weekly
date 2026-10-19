@@ -18,7 +18,7 @@ it('renders direct links only for existing exact TMDB mappings and search links 
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'tv:1': { anilistId: 21 }, 'tv:2': { anilistId: 99 } }, events: [] });
   const html = renderToStaticMarkup(await PlatformPage({ params: Promise.resolve({ provider: 'netflix', country: 'it' }) }));
   expect(html).toContain('Anime su Netflix Italia');
-  expect(html).toContain('href="/anime/21"');
+  expect(html).toContain('href="/anime/21-mapped"');
   expect(html).toContain('href="/search?q=Other+title"');
   expect(html).not.toContain('/anime/99');
   const breadcrumb = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);

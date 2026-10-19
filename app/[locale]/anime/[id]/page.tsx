@@ -3,6 +3,7 @@ import { localePath } from '@/lib/locale-routing';
 import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
+import { animePath, parseAnimeId } from '@/lib/anime-url';
 import { DubbingSummary } from '@/components/DubbingSummary';
 import { AnimeDetailView } from '@/components/AnimeDetailView';
 import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
@@ -28,34 +29,41 @@ export function generateStaticParams() { return []; }
 // Fifty details may also traverse prequels and fetch ratings. Skip build warming;
 // an empty list enables on-demand ISR without spending the AniList build quota.
 const loadAnime = cache(async (id: string) => {
-  if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id))) notFound();
-  const anime = await getAnime(Number(id));
+  const numericId = parseAnimeId(id);
+  if (numericId === null) notFound();
+  const anime = await getAnime(numericId);
   if (!anime) notFound();
   return anime;
 });
 function localizedSynopsis(synopsis: SynopsisResult, locale: Locale): string {
   return synopsis.language === locale ? animeDescription(synopsis.synopsis) : '';
 }
-type Props = { params: Promise<{ id: string; locale?: string }> };
+type Props = {
+  params: Promise<{ id: string; locale?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
   const name = animeName(anime);
   const { synopsis, availability } = await getAnimeDetailData(anime, locale);
   const seo = formatAnimeSeo(name, anime, localizedSynopsis(synopsis, locale), availability, locale);
-  return pageMetadata(seo.title, seo.description, `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large, locale);
+  return pageMetadata(seo.title, seo.description, animePath(anime.id, name), anime.coverImage?.extraLarge || anime.coverImage?.large, locale);
 }
 export default async function AnimePage({ params }: Props) {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
   const name = animeName(anime);
+  const path = animePath(anime.id, name);
+  // Other slugs and bare IDs render the same page with a canonical to `path`.
+  // A redirect here would need searchParams (dynamic) inside an ISR, streamed route.
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const { ratings: animeRatings, availability, synopsis } = await getAnimeDetailData(anime, locale);
   const ratingCount = anime.stats?.scoreDistribution?.reduce((sum, bucket) => sum + bucket.amount, 0);
   const structured = {
     '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries',
-    name, url: new URL(localePath(`/anime/${anime.id}`, locale), siteUrl()).href,
+    name, url: new URL(localePath(path, locale), siteUrl()).href,
     description: formatAnimeSeo(name, anime, localizedSynopsis(synopsis, locale), undefined, locale).description, image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
     genre: anime.genres,
     ...(typeof anime.averageScore === 'number' && Number.isFinite(anime.averageScore) && anime.averageScore > 0 && anime.averageScore <= 100 ? {

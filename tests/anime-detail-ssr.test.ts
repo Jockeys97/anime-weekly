@@ -24,7 +24,7 @@ import { LocaleProvider } from '../components/LanguageSelector';
 const anime = { id: 42, idMal: 123, title: { english: 'Example', romaji: null, native: null }, format: 'MOVIE', startDate: { year: 2026, month: null, day: null }, seasonYear: 2026, description: 'English original', averageScore: 81, genres: [] } as unknown as AniListAnime;
 const empty = { match: null, ratings: {}, providers: {}, providersUnavailable: true };
 const stored = (values: object) => ({ values, fetchedAt: Date.now(), lastSeenAt: Date.now() });
-const render = async () => renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, await AnimePage({ params: Promise.resolve({ id: '42' }) })));
+const render = async () => renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, await AnimePage({ params: Promise.resolve({ id: '42-example' }) })));
 beforeEach(() => {
   vi.mocked(getAnime).mockResolvedValue(anime);
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
@@ -85,7 +85,7 @@ it('bounds stalled sources and renders settled fallbacks with a labelled origina
 });
 
 it('keeps client language selection while reusing the Italian server translation on return', async () => {
-  const page = await AnimePage({ params: Promise.resolve({ id: '42' }) });
+  const page = await AnimePage({ params: Promise.resolve({ id: '42-example' }) });
   const localized = (locale: 'it' | 'en' | 'es') => renderToStaticMarkup(React.createElement(LocaleProvider, { locale } as React.ComponentProps<typeof LocaleProvider>, React.createElement(StreamingCountryProvider, null, page))).split('<main')[1];
   expect(localized('it')).toContain('Una trama italiana.');
   expect(localized('en')).toContain('English original');
