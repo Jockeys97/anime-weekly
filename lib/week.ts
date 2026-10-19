@@ -26,6 +26,11 @@ export function parseWeek(value: string): ISOWeek | null {
   const parsed = { year, week };
   return formatWeek(isoWeek(weekRange(parsed).monday)) === value ? parsed : null;
 }
+// Calendar dates stay in UTC, independent of the visitor's timezone.
+export function weekDateRange(value: ISOWeek, locale = 'it'): string {
+  const { monday, sunday } = weekRange(value);
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).formatRange(monday, sunday);
+}
 export function shiftWeek(value: ISOWeek, offset: number): ISOWeek {
   return isoWeek(new Date(weekRange(value).monday.getTime() + offset * 7 * DAY));
 }

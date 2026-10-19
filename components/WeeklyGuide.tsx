@@ -6,9 +6,9 @@ import { getDictionary } from '@/lib/i18n';
 import { getQuickWeekData } from '@/lib/tmdb';
 import { getWeeklyRatings, trackWeeklyPage } from '@/lib/weekly-ratings';
 import { formatWeek, type ISOWeek } from '@/lib/week';
-export function WeeklyGuide({ week, newsletter = false }: { week: ISOWeek; newsletter?: boolean }) {
+export function WeeklyGuide({ week, newsletter = false, archive = false }: { week: ISOWeek; newsletter?: boolean; archive?: boolean }) {
   return <main id="main">
-    <WeeklyHeading week={week} />
+    <WeeklyHeading week={week} archive={archive} />
     {newsletter && <NewsletterSignup />}
     <section className="guide" aria-labelledby="releases-heading">
       <Suspense fallback={<p className="calendar-note" role="status">{getDictionary('it').loading}</p>}>

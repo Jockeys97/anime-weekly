@@ -33,12 +33,18 @@ const loadSynopsis = cache(async (id: string) => {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   return getSynopsis(aliases, anime.startDate?.year ?? anime.seasonYear ?? undefined, 'it', anime.format === 'MOVIE' ? 'movie' : 'tv', anime.id);
 });
+function seoDescription(name: string, synopsis: SynopsisResult): string {
+  // AniList's original is English; keep crawlable descriptions in Italian even
+  // when no localized synopsis is available. Client language behavior is separate.
+  const localized = synopsis.language === 'it' ? animeDescription(synopsis.synopsis) : '';
+  return (localized.replace(/\s+/g, ' ').trim() || `Trama, valutazioni e dove guardare ${name} in streaming.`).slice(0, 155);
+}
 type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const anime = await loadAnime((await params).id);
   const name = animeName(anime);
   const synopsis = await loadSynopsis(String(anime.id));
-  return pageMetadata(name, animeDescription(synopsis.synopsis || anime.description).replace(/\s+/g, ' ').slice(0, 155) || `Trama, valutazioni e dove guardare ${name} in streaming.`.slice(0, 155), `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large);
+  return pageMetadata(name, seoDescription(name, synopsis), `/anime/${anime.id}`, anime.coverImage?.extraLarge || anime.coverImage?.large);
 }
 export default async function AnimePage({ params }: Props) {
   const anime = await loadAnime((await params).id);
@@ -53,7 +59,7 @@ export default async function AnimePage({ params }: Props) {
   const structured = {
     '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries',
     name, url: new URL(`/anime/${anime.id}`, siteUrl()).href,
-    description: animeDescription(anime.description), image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
+    description: seoDescription(name, await synopsis), image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
     genre: anime.genres,
     ...(typeof anime.averageScore === 'number' && Number.isFinite(anime.averageScore) && anime.averageScore > 0 && anime.averageScore <= 100 ? {
       aggregateRating: { '@type': 'AggregateRating', ratingValue: anime.averageScore, bestRating: 100, worstRating: 0,

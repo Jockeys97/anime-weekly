@@ -14,12 +14,20 @@ import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 import { snapshotCatalog } from '@/lib/snapshot-catalog';
 
+function parsePage(page: string | string[] | undefined): number {
+  if (page != null && (typeof page !== 'string' || !/^[1-9]\d*$/.test(page))) notFound();
+  const value = page == null ? 1 : Number(page);
+  if (!Number.isSafeInteger(value) || value > 2147483647) notFound();
+  return value;
+}
+
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ year: string; season: string }>; searchParams: Promise<{ page?: string | string[] }> }) {
   const { year, season } = await params;
   const value = parseSeason(year, season);
   if (!value) notFound();
   const { page } = await searchParams;
-  const suffix = typeof page === 'string' && /^[1-9]\d*$/.test(page) && page !== '1' ? `?page=${page}` : '';
+  const pageNumber = parsePage(page);
+  const suffix = pageNumber > 1 ? `?page=${pageNumber}` : '';
   return pageMetadata(`Anime ${season} ${year}`, `Serie e film anime della stagione ${season} ${year}.`, `${seasonPath(value)}${suffix}`);
 }
 
@@ -29,14 +37,12 @@ export default async function SeasonPage({ params, searchParams }: {
   params: Promise<{ year: string; season: string }>;
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  await connection();
   const { year, season } = await params;
   const value = parseSeason(year, season);
   if (!value) notFound();
   const { page: pageQuery } = await searchParams;
-  if (pageQuery != null && (typeof pageQuery !== 'string' || !/^[1-9]\d*$/.test(pageQuery))) notFound();
-  const page = pageQuery == null ? 1 : Number(pageQuery);
-  if (!Number.isSafeInteger(page) || page > 2147483647) notFound();
+  const page = parsePage(pageQuery);
+  await connection();
   const [data, snapshot] = await Promise.all([getSeason(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
   const summaries = snapshotCatalog(snapshot);
   const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };

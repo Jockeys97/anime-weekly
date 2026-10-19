@@ -19,11 +19,11 @@ import type { AnimeTitle, WeekData } from '@/lib/tmdb';
 import { mergeWeeklyCalendar, type WeeklyCalendarSchedule, type WeeklyTitleDetails } from '@/lib/weekly-details';
 import { expandAvailability, type ProviderSnapshot } from '@/lib/provider-snapshot';
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
-import { formatWeek, isoWeek, shiftWeek, weekRange, type ISOWeek } from '@/lib/week';
+import { formatWeek, isoWeek, shiftWeek, weekDateRange, weekRange, type ISOWeek } from '@/lib/week';
 const titleKey = (anime: Pick<AnimeTitle, 'kind' | 'id'>) => `${anime.kind}:${anime.id}`;
-export function WeeklyHeading({ week }: { week: ISOWeek }) {
-  const d = getDictionary(useLocale()); const range = weekRange(week);
-  return <section className="hero"><div className="hero-copy"><p className="eyebrow"><span className="green-dot" />{d.hero.eyebrow}</p><h1>{d.hero.title}<br /><span>{d.hero.accent}</span></h1><p className="hero-description">{d.hero.description}</p></div><div className="calendar-art" aria-hidden="true"><div className="calendar-top">{d.week.label} {String(week.week).padStart(2, '0')} <span>✦</span></div><div className="calendar-number">{String(week.week).padStart(2, '0')}</div><div className="calendar-bottom"><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> — <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} /><span>↗</span></div></div></section>;
+export function WeeklyHeading({ week, archive = false }: { week: ISOWeek; archive?: boolean }) {
+  const locale = useLocale(); const d = getDictionary(locale); const range = weekRange(week);
+  return <section className="hero"><div className="hero-copy"><p className="eyebrow"><span className="green-dot" />{d.hero.eyebrow}</p><h1>{archive ? <>Anime {weekDateRange(week, locale)} · {d.week.label.toLocaleLowerCase(locale)} {week.week}</> : <>{d.hero.title}<br /><span>{d.hero.accent}</span></>}</h1><p className="hero-description">{d.hero.description}</p></div><div className="calendar-art" aria-hidden="true"><div className="calendar-top">{d.week.label} {String(week.week).padStart(2, '0')} <span>✦</span></div><div className="calendar-number">{String(week.week).padStart(2, '0')}</div><div className="calendar-bottom"><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> — <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} /><span>↗</span></div></div></section>;
 }
 export function WeeklyScope() {
   const d = getDictionary(useLocale());

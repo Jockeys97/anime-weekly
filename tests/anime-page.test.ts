@@ -1,6 +1,6 @@
-vi.mock('../lib/synopsis', () => ({ getSynopsis: async () => ({ synopsis: null, language: null, source: null }) }));
+vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); } }));
@@ -8,6 +8,8 @@ vi.mock('../lib/anilist', () => ({ getAnime: vi.fn(), getSeasonFamily: vi.fn().m
 vi.mock('../lib/anime-ratings', () => ({ getAnimeRatingsById: vi.fn() }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime } from '../lib/anilist';
+import { getSynopsis } from '../lib/synopsis';
+beforeEach(() => { vi.mocked(getSynopsis).mockResolvedValue({ synopsis: null, language: null, source: null }); });
 import { getAnimeRatingsById } from '../lib/anime-ratings';
 import { getAnimeAvailability } from '../lib/tmdb';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
@@ -60,7 +62,7 @@ it('generates detail SEO from cached anime data without enrichment', async () =>
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
   expect(metadata.title).toBe('Example anime');
-  expect(metadata.description).toBe('Example synopsis');
+  expect(metadata.description).toBe('Trama, valutazioni e dove guardare Example anime in streaming.');
   expect(metadata.alternates?.canonical).toMatch(/\/anime\/21$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
@@ -82,7 +84,35 @@ it.each([null, NaN, -1, 101])('omits unavailable or invalid aggregate ratings (%
 
 it('limits metadata to a clean 155-character synopsis', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: `<b>${'Trama italiana '.repeat(30)}</b>`, coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: `<b>${'Trama italiana '.repeat(30)}</b>`, language: 'it', source: 'tmdb' });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
   expect(meta.description).toHaveLength(155);
   expect(meta.description).not.toContain('<');
+});
+
+
+it.each(['cyberpunk-edgerunners-2', '0', '-1', '1.5', '9007199254740992'])('rejects invalid anime ID %s in metadata before streaming', async id => {
+  await expect(generateMetadata({ params: Promise.resolve({ id }) })).rejects.toThrow('not-found');
+  expect(getAnime).not.toHaveBeenCalled();
+});
+
+it('returns not-found for a missing numeric anime in both metadata and page', async () => {
+  vi.mocked(getAnime).mockResolvedValue(null);
+  const props = { params: Promise.resolve({ id: '999999' }) };
+  await expect(generateMetadata(props)).rejects.toThrow('not-found');
+  await expect(AnimePage(props)).rejects.toThrow('not-found');
+  expect(getSynopsis).not.toHaveBeenCalled();
+});
+
+it.each([true, false])('shares the Italian description between metadata and JSON-LD (localized: %s)', async localized => {
+  vi.stubGlobal('React', React);
+  vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, description: 'English synopsis', genres: [], format: 'TV' } as unknown as Awaited<ReturnType<typeof getAnime>>);
+  if (localized) vi.mocked(getSynopsis).mockResolvedValue({ synopsis: '<b>Una trama italiana.</b>', language: 'it', source: 'tmdb' });
+  vi.mocked(getAnimeRatingsById).mockReturnValue(new Promise(() => {}));
+  vi.mocked(getAnimeAvailability).mockReturnValue(new Promise(() => {}));
+  const meta = await generateMetadata({ params: Promise.resolve({ id: '21' }) });
+  const page = await AnimePage({ params: Promise.resolve({ id: '21' }) });
+  const structured = JSON.parse(page.props.children[0].props.dangerouslySetInnerHTML.__html);
+  expect(structured.description).toBe(meta.description);
+  expect(structured.description).toBe(localized ? 'Una trama italiana.' : 'Trama, valutazioni e dove guardare Example anime in streaming.');
 });

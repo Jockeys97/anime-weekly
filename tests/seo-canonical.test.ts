@@ -8,7 +8,7 @@ import { siteUrl, pageMetadata } from '../lib/seo';
 import sitemap from '../app/sitemap';
 import robots from '../app/robots';
 import { getSeason } from '../lib/anilist';
-afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks(); });
+afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks(); vi.useRealTimers(); });
 
 it('defaults production SEO to weeklyanime.com regardless of the Vercel API host', async () => {
   vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
@@ -45,10 +45,15 @@ it('redirects only legacy app hosts permanently while preserving paths and query
 
 it('sets separate absolute canonicals for the home and ISR week routes', async () => {
   vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('NEXT_PUBLIC_SITE_URL', '');
+  vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-19T12:00:00Z'));
   const home = await import('../app/page');
   const week = await import('../app/week/[week]/page');
   expect(home.metadata.alternates?.canonical).toBe('https://weeklyanime.com/');
   expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-42' }) })).alternates?.canonical).toBe('https://weeklyanime.com/week/2026-42');
-  expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) })).openGraph).toMatchObject({ url: 'https://weeklyanime.com/week/2026-43' });
+  expect((await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) })).openGraph).toMatchObject({ url: 'https://weeklyanime.com/' });
+  const current = await week.generateMetadata({ params: Promise.resolve({ week: '2026-43' }) });
+  expect(current.alternates?.canonical).toBe('https://weeklyanime.com/');
+  expect(current.title).toBe('Anime 19–25 ottobre 2026 · settimana 43');
+  expect(current.description).toContain('19–25 ottobre 2026');
   expect(home.dynamic).toBe('error'); expect(week.dynamic).toBe('error');
 });
