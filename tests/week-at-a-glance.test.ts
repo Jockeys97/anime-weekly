@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { glanceDayNumber, glanceProviders, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
+import { glanceDayNumber, glanceProviders, visibleDayRange, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
 import type { CalendarRelease } from '@/lib/weekly-calendar';
 const r = (id: number, episode: number) => ({ anime: { id, kind: 'tv', name: `A${id}` }, date: '2026-10-20', episode }) as unknown as CalendarRelease;
 describe('groupReleases', () => {
@@ -54,5 +54,17 @@ describe('glanceProviders', () => {
   it('shows nothing when the country has no offers', () => {
     expect(glanceProviders(anime, 'FR')).toEqual([]);
     expect(glanceProviders({ providers: {} }, 'IT')).toEqual([]);
+  });
+});
+describe('visibleDayRange', () => {
+  const columns = Array.from({ length: 7 }, (_, index) => ({ left: 2 + index * 120, width: 112 }));
+  it('reports the fully visible columns of the sideways scroller', () => {
+    expect(visibleDayRange(columns, 0, 343)).toEqual({ first: 0, last: 1 });
+    expect(visibleDayRange(columns, 0, 360)).toEqual({ first: 0, last: 2 });
+    expect(visibleDayRange(columns, 240, 360)).toEqual({ first: 2, last: 4 });
+  });
+  it('stops at the last day and handles an empty week', () => {
+    expect(visibleDayRange(columns, 480, 400)).toEqual({ first: 4, last: 6 });
+    expect(visibleDayRange([], 0, 400)).toEqual({ first: 0, last: 0 });
   });
 });

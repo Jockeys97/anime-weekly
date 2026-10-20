@@ -322,7 +322,20 @@
 /* Week at a glance */
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 .calendar-release, .calendar-day { scroll-margin-top: 96px; }
-.week-glance { margin-bottom: 28px; }
+.week-glance { position: relative; margin-bottom: 28px; }
+.week-glance-scroller { position: relative; }
+/* Mobile sideways navigation: a bar pinned to the top while the section is in view,
+   and a next-day pill held at mid-screen on the right edge. */
+.week-glance-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 6px 0; background: var(--paper); border-bottom: 1px solid var(--line); }
+.week-glance-bar.is-static { display: none; }
+.week-glance-range { font-size: 13px; font-weight: 700; text-transform: capitalize; color: var(--ink); }
+.week-glance-arrow { width: 44px; height: 36px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--dark); font-size: 22px; line-height: 1; cursor: pointer; }
+.week-glance-arrow:disabled { opacity: .35; cursor: default; }
+.week-glance-arrow:focus-visible, .week-glance-next:focus-visible { outline: 3px solid #769641; outline-offset: 2px; }
+.week-glance-rail { position: absolute; top: 96px; bottom: 16px; right: 0; width: 0; z-index: 4; pointer-events: none; }
+.week-glance-next { position: sticky; top: 50vh; display: inline-flex; align-items: center; gap: 4px; transform: translateX(-100%); padding: 8px 10px 8px 12px; border: 0; border-radius: 999px 0 0 999px; background: var(--dark); color: var(--green); font-size: 12px; font-weight: 700; text-transform: capitalize; white-space: nowrap; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); pointer-events: auto; cursor: pointer; }
+.week-glance-next span { font-size: 18px; line-height: 1; }
+@media (min-width: 900px) { .week-glance-bar, .week-glance-rail { display: none; } }
 .week-glance-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
 .week-glance-scroller { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 2px 2px 10px; margin: 0 -2px; }
 .week-glance-days { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 8px; align-items: start; }
