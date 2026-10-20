@@ -1,5 +1,6 @@
 import { localePath } from '@/lib/locale-routing';
 import Link from '@/components/LocaleLink';
+import { SearchPlatformSelect } from '@/components/PlatformOptions';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { SEARCH_FORMATS, SEARCH_GENRES, SEARCH_SEASONS, SEARCH_SORTS, SEARCH_STATUSES, type AnimeFilters } from '@/lib/anime-search';
 export function AnimeSearchFilters({ filters, locale }: { filters: AnimeFilters; locale: Locale }) {
@@ -14,6 +15,7 @@ export function AnimeSearchFilters({ filters, locale }: { filters: AnimeFilters;
       <label>{c.status}<select name="status" defaultValue={filters.status || ''}><option value="">{d.allStatuses}</option>{SEARCH_STATUSES.map(status => <option key={status} value={status}>{c.statuses[status as keyof typeof c.statuses] || status}</option>)}</select></label>
       <label>{d.minScore}<select name="minScore" defaultValue={filters.minScore || ''}><option value="">{d.anyScore}</option>{[6, 7, 8, 9].map(score => <option key={score} value={score}>≥ {score} / 10</option>)}</select></label>
       <label>{d.sort}<select name="sort" defaultValue={filters.sort}>{SEARCH_SORTS.map(sort => <option key={sort} value={sort}>{d.sorts[sort]}</option>)}</select></label>
+      <SearchPlatformSelect />
     </div></fieldset>
     <div className="explore-actions"><span>{d.scoreHint}</span><Link href="/search" prefetch={false}>{d.reset} ↗</Link></div>
   </form>;

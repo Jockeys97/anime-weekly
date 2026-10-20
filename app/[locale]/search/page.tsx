@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
 import { SeasonContent } from '@/components/SeasonContent';
+import { PlatformOptionsProvider } from '@/components/PlatformOptions';
 import { CatalogCard } from '@/components/CatalogCard';
 import { AnimeSearchFilters } from '@/components/AnimeSearchFilters';
 import { discoverAnime } from '@/lib/anilist';
@@ -28,8 +29,10 @@ export default async function SearchPage({ searchParams, params }: { params?: Lo
   const d = getDictionary(locale);
   return <main className="catalog-page explore-page" lang={locale}>
     <header className="explore-heading"><p className="eyebrow">{d.explore.eyebrow}</p><h1>{d.catalog.searchTitle}</h1><p className="catalog-intro">{d.explore.intro}</p></header>
+    <PlatformOptionsProvider>
     <AnimeSearchFilters key={searchHref(filters)} filters={filters} locale={locale} />
     <Suspense key={`${locale}:${searchHref(filters)}`} fallback={<p className="detail-loading" role="status">{d.explore.loading}</p>}><SearchResults filters={filters} locale={locale} /></Suspense>
+    </PlatformOptionsProvider>
   </main>;
 }
 async function SearchResults({ filters, locale }: { filters: AnimeFilters; locale: Locale }) {
