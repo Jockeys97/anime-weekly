@@ -54,3 +54,4 @@ it('walks finished sequels in batched hops, ignoring films, and keeps "finished"
   expect(body.items.find((item: { id: string }) => item.id === 'anilist:5')).toMatchObject({ status: 'FINISHED' });
   expect(body.items.find((item: { id: string }) => item.id === 'anilist:5')).not.toHaveProperty('current');
 });
+

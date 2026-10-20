@@ -1,5 +1,7 @@
 import type { FavoriteAnime } from '@/lib/anilist';
-import { favoriteName, resolveFavoriteAnime } from '@/lib/favorites-server';
+import { favoriteName, favoriteProviders, resolveFavoriteAnime } from '@/lib/favorites-server';
+import { STREAMING_REGIONS, type StreamingRegion } from '@/lib/config';
+import { withTimeout } from '@/lib/async-timeout';
 import { animePath } from '@/lib/anime-url';
 import { favoriteIds, type FavoriteItem } from '@/lib/favorites';
 import { getTmdbTitleCard } from '@/lib/tmdb';
@@ -7,7 +9,10 @@ import { getTmdbTitleCard } from '@/lib/tmdb';
 // The list itself lives in the visitor's browser; this only resolves its ids to
 // cards. Short edge cache: the next-episode times change through the season.
 export async function GET(request: Request) {
-  const ids = favoriteIds(new URL(request.url).searchParams.get('ids'));
+  const params = new URL(request.url).searchParams;
+  const ids = favoriteIds(params.get('ids'));
+  const regionParam = params.get('region') as StreamingRegion | null;
+  const region = regionParam && STREAMING_REGIONS.includes(regionParam) ? regionParam : null;
   if (!ids.length) return Response.json({ items: [], unavailable: false });
   const anilist = ids.filter(id => id.startsWith('anilist:')).map(id => Number(id.slice(8)));
   const tmdb = ids.filter(id => !id.startsWith('anilist:')).slice(0, 30);
@@ -32,6 +37,20 @@ export async function GET(request: Request) {
     }),
     ...cards.filter((card): card is NonNullable<typeof card> => card !== null),
   ];
+  // Platforms for the visitor's country: the row shows these first, so cap the work.
+  if (region) {
+    const targets = anime.entries.slice(0, 30).map(({ media, sequel }) => ({ id: `anilist:${media.id}`, anilistId: (sequel ?? media).id }));
+    let cursor = 0;
+    const found = new Map<string, FavoriteItem['providers']>();
+    await Promise.all(Array.from({ length: Math.min(4, targets.length) }, async () => {
+      while (cursor < targets.length) {
+        const target = targets[cursor++];
+        const providers = await withTimeout(favoriteProviders(target.anilistId, region), 8000).catch(() => []);
+        if (providers.length) found.set(target.id, providers);
+      }
+    }));
+    for (const item of items) { const providers = found.get(item.id); if (providers) item.providers = providers; }
+  }
   const unavailable = anime.unavailable || cards.some(card => card === null);
   return Response.json({ items, unavailable }, { headers: { 'Cache-Control': anime.unavailable ? 'no-store' : 'public, max-age=300, s-maxage=600' } });
 }

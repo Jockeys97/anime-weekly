@@ -409,7 +409,8 @@
     "newSeason": "Nueva temporada en camino",
     "subscribe": "Suscribirse al calendario",
     "download": "Descargar .ics",
-    "calendarNote": "Se actualiza solo con los nuevos episodios. Si cambias tus favoritos, suscríbete de nuevo."
+    "calendarNote": "Se actualiza solo con los nuevos episodios. Si cambias tus favoritos, suscríbete de nuevo.",
+    "watchOn": "ver"
   },
   "features": {
     "topFive": "Top 5 episodios de la semana",

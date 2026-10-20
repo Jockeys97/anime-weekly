@@ -5,6 +5,7 @@ import Link from '@/components/LocaleLink';
 import { useWatchlist, WatchlistButton } from '@/components/Watchlist';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { sortFavorites, type FavoriteItem } from '@/lib/favorites';
+import { useStreamingCountry } from '@/components/StreamingCountry';
 
 type Result = { key: string; items: FavoriteItem[]; unavailable: boolean } | { key: string; failed: true };
 
@@ -12,7 +13,9 @@ type Result = { key: string; items: FavoriteItem[]; unavailable: boolean } | { k
 export function MyFavorites({ locale }: { locale: Locale }) {
   const d = getDictionary(locale).myFavorites;
   const ids = useWatchlist();
-  const key = ids.join(',');
+  const { region } = useStreamingCountry();
+  const idsParam = ids.join(',');
+  const key = `${region}|${idsParam}`;
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
   // One sideways row by default (fixed height, soonest episodes first); "show all" opens the grid.
@@ -26,9 +29,9 @@ export function MyFavorites({ locale }: { locale: Locale }) {
     setEdges(previous => previous.overflow === next.overflow && previous.prev === next.prev && previous.next === next.next ? previous : next);
   }, []);
   useEffect(() => {
-    if (!key) return;
+    if (!idsParam) return;
     const controller = new AbortController();
-    fetch(`/api/favorites?${new URLSearchParams({ ids: key })}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) })
+    fetch(`/api/favorites?${new URLSearchParams({ ids: idsParam, region })}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]) })
       .then(async response => {
         if (!response.ok) throw new Error('Favorites unavailable');
         const data = await response.json() as { items: FavoriteItem[]; unavailable: boolean };
@@ -36,7 +39,7 @@ export function MyFavorites({ locale }: { locale: Locale }) {
       })
       .catch(() => { if (!controller.signal.aborted) setResult({ key, failed: true }); });
     return () => controller.abort();
-  }, [key, attempt]);
+  }, [key, idsParam, region, attempt]);
   // Removing a heart updates the list at once, without waiting for a new request.
   const current = result && 'items' in result ? sortFavorites(result.items.filter(item => ids.includes(item.id)), locale) : [];
   const count = current.length;
@@ -61,7 +64,7 @@ export function MyFavorites({ locale }: { locale: Locale }) {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     element.scrollBy({ left: direction * Math.max(160, element.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' });
   };
-  const loading = Boolean(key) && (!result || (result.key !== key && !current.length));
+  const loading = ids.length > 0 && (!result || (result.key !== key && !current.length));
   const failed = result && 'failed' in result && result.key === key;
   const next = (item: FavoriteItem) => item.next && d.nextEpisode.replace('{episode}', String(item.next.episode))
     .replace('{date}', new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(item.next.airingAt * 1000));
@@ -92,6 +95,8 @@ export function MyFavorites({ locale }: { locale: Locale }) {
           <div className="my-favorites-body">
             <Link href={item.href} prefetch={false} className="my-favorites-name">{item.name}</Link>
             {item.current && <p className="my-favorites-season">{item.current}</p>}
+            {item.providers?.length ? <span className="my-favorites-providers">{item.providers.map(provider => <a key={provider.id} href={provider.href} target="_blank" rel="noopener noreferrer"
+              aria-label={`${item.current ?? item.name} · ${provider.name} · ${d.watchOn}`} title={provider.name}><Image src={provider.logo} alt="" width={22} height={22} unoptimized /></a>)}</span> : null}
             {next(item) ? <p className="my-favorites-next">{next(item)}</p> : status(item) ? <p className="my-favorites-status">{item.current && item.status === 'NOT_YET_RELEASED' ? d.newSeason : status(item)}</p> : null}
           </div>
           <div className="my-favorites-heart"><WatchlistButton id={item.id} /></div>

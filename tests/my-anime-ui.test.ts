@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { MyAnimeContent } from '../components/MyAnimeContent';
+import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { MyAnimeStatsView } from '../components/MyAnimeStats';
 import type { PersonalWeekData } from '../lib/my-anime-data';
 import { getDictionary } from '../lib/i18n';
@@ -11,7 +12,8 @@ const data: PersonalWeekData = { releases: [
   { key: '2', title: 'Example Anime', airingAt: Date.parse('2026-10-20T12:00:00Z'), season: 1, episode: 1, anilistId: 21, sources: ['trakt'] },
 ], followed: 1, unmatched: 0, unavailable: [] };
 it('renders one poster card for an episode batch, with an explicit special label and anime detail link', () => {
-  const html = renderToStaticMarkup(createElement(MyAnimeContent, { providers: { trakt: true, mal: false }, connected: { trakt: true, mal: false }, data, start: '2026-10-19', end: '2026-10-25', authError: false }));
+  // The site layout always provides the streaming country (used by the favourites' platforms).
+  const html = renderToStaticMarkup(createElement(StreamingCountryProvider, null, createElement(MyAnimeContent, { providers: { trakt: true, mal: false }, connected: { trakt: true, mal: false }, data, start: '2026-10-19', end: '2026-10-25', authError: false })));
   expect(html.match(/class="my-anime-release-card"/g)).toHaveLength(1);
   expect(html).toContain('Speciale 52'); expect(html).not.toContain('Stagione 0');
   expect(html).toContain('/anime/21'); expect(html).toContain('cover.jpg');
