@@ -15,8 +15,10 @@ export function foldCalendarLine(line: string): string {
   }
   return result + current;
 }
-export function generateIcs(episodes: readonly CalendarEpisode[], stamp = new Date()): string {
+export function generateIcs(episodes: readonly CalendarEpisode[], stamp = new Date(), name?: string): string {
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Weekly Anime//Calendario episodi//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  // Subscribed calendars show this name and poll at the suggested interval.
+  if (name) lines.push(`X-WR-CALNAME:${escapeText(name)}`, 'REFRESH-INTERVAL;VALUE=DURATION:PT6H', 'X-PUBLISHED-TTL:PT6H');
   const seen = new Set<string>();
   for (const event of [...episodes].sort((a, b) => a.airingAt - b.airingAt || a.uid.localeCompare(b.uid))) {
     if (!Number.isSafeInteger(event.airingAt) || !Number.isSafeInteger(event.episode) || event.episode <= 0 || !event.uid || seen.has(event.uid) || !Number.isFinite(new Date(event.airingAt * 1000).getTime())) continue;
@@ -26,6 +28,6 @@ export function generateIcs(episodes: readonly CalendarEpisode[], stamp = new Da
   lines.push('END:VCALENDAR');
   return lines.map(foldCalendarLine).join('\r\n') + '\r\n';
 }
-export function calendarResponse(episodes: readonly CalendarEpisode[], filename: string): Response {
-  return new Response(generateIcs(episodes), { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'public, max-age=3600' } });
+export function calendarResponse(episodes: readonly CalendarEpisode[], filename: string, name?: string): Response {
+  return new Response(generateIcs(episodes, new Date(), name), { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'public, max-age=3600' } });
 }

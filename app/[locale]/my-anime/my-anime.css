@@ -442,3 +442,9 @@
 .my-favorites-arrow.is-next { right: -14px; }
 @media (hover: none), (pointer: coarse) { .my-anime .my-favorites-arrow { display: none; } }
 @media (max-width: 600px) { .my-favorites-grid.is-row { grid-template-columns: none; grid-auto-columns: 42%; } }
+
+.my-favorites-calendar { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.my-anime .my-favorites-subscribe { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 999px; background: var(--dark); color: var(--green); font-size: 13px; font-weight: 700; text-decoration: none; }
+.my-anime .my-favorites-subscribe:hover { background: #35553e; }
+.my-anime .my-favorites-download { font-size: 13px; color: var(--dark); text-decoration: underline; text-underline-offset: 3px; }
+.my-favorites-calendar .my-anime-note { flex-basis: 100%; margin: 0; font-size: 12px; }

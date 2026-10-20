@@ -403,7 +403,10 @@
     "showLess": "Weniger anzeigen",
     "previous": "Vorherige Favoriten",
     "next": "Nächste Favoriten",
-    "newSeason": "Neue Staffel kommt"
+    "newSeason": "Neue Staffel kommt",
+    "subscribe": "Kalender abonnieren",
+    "download": ".ics herunterladen",
+    "calendarNote": "Aktualisiert sich mit neuen Folgen. Wenn du deine Favoriten änderst, abonniere erneut."
   },
   "features": {
     "topFive": "Top 5 Episoden der Woche",
