@@ -70,6 +70,7 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const d = getDictionary(locale);
   const { region } = useStreamingCountry();
   const trailer = useTrailerHover();
+  const how = d.calendar.glanceHow;
   const pendingClick = useRef<{ timer: number; key: string } | null>(null);
   useEffect(() => () => { if (pendingClick.current) clearTimeout(pendingClick.current.timer); }, []);
   // One click/tap jumps to the release below; a second within the delay opens
@@ -126,8 +127,12 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const releaseLabel = (release: CalendarRelease) => release.episode != null ? `${d.calendar.episode} ${release.episode}` : d.calendar.movieRelease;
   return <section className="week-glance" aria-labelledby="week-glance-title">
     <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
-    {/* Both hints are rendered; CSS shows the one matching the input device (SSR-safe). */}
-    <p className="week-glance-hint"><span className="week-glance-hint-pointer">{d.calendar.glanceHintPointer}</span><span className="week-glance-hint-touch">{d.calendar.glanceHintTouch}</span></p>
+    {/* Pointer and touch labels are both rendered; CSS shows the ones matching the input device (SSR-safe). */}
+    <ul className="week-glance-how" aria-label={how.label}>
+      <li className="only-pointer"><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg></span><strong>{how.hover}</strong><span>{how.hoverResult}</span></li>
+      <li><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor" /><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg></span><strong><span className="only-pointer">{how.click}</span><span className="only-touch">{how.tap}</span></strong><span>{how.clickResult}</span></li>
+      <li><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor" /><circle cx="12" cy="12" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.5" /><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" opacity=".6" /></svg></span><strong><span className="only-pointer">{how.double}</span><span className="only-touch">{how.doubleTap}</span></strong><span>{how.doubleResult}</span></li>
+    </ul>
     {/* Mobile only: the columns scroll sideways, so keep the visible days and the
         way forward in view while reading down a long column. */}
     {days.length > 0 && <div className={`week-glance-bar${scrollable ? '' : ' is-static'}`}>

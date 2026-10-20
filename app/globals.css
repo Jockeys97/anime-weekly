@@ -337,9 +337,17 @@
 .week-glance-next span { font-size: 18px; line-height: 1; }
 @media (min-width: 900px) { .week-glance-bar, .week-glance-rail { display: none; } }
 .week-glance-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
-.week-glance-hint { margin: -4px 0 10px; font-size: 12px; color: var(--muted); }
-.week-glance-hint-touch { display: none; }
-@media (hover: none), (pointer: coarse) { .week-glance-hint-pointer { display: none; } .week-glance-hint-touch { display: inline; } }
+.week-glance-how { list-style: none; margin: 2px 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.week-glance-how li { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; background: #fff; border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 1px 2px rgba(33, 62, 48, .06); font-size: 13px; line-height: 1.2; color: var(--muted); }
+.week-glance-how strong { color: var(--ink); font-weight: 700; }
+.week-glance-how-icon { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; background: var(--dark); color: var(--green); }
+.week-glance-how-icon svg { width: 16px; height: 16px; }
+.week-glance-how .only-touch { display: none; }
+@media (hover: none), (pointer: coarse) {
+  .week-glance-how .only-pointer { display: none; }
+  .week-glance-how .only-touch { display: inline; }
+}
+@media (max-width: 600px) { .week-glance-how { gap: 6px; } .week-glance-how li { font-size: 12px; padding-right: 12px; } .week-glance-how-icon { width: 24px; height: 24px; } .week-glance-how-icon svg { width: 14px; height: 14px; } }
 /* No double-tap zoom on posters: the second tap opens the anime page. */
 .week-glance-poster { touch-action: manipulation; }
 .week-glance-scroller { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 2px 2px 10px; margin: 0 -2px; }
