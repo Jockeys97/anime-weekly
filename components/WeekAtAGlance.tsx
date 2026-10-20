@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
@@ -45,15 +46,66 @@ export function glanceSeriesLabel(count: number, locale: Locale) {
   return template.replace('{count}', String(count));
 }
 
+/** Fully visible columns of the horizontal scroller (mobile). */
+export function visibleDayRange(columns: { left: number; width: number }[], scrollLeft: number, clientWidth: number) {
+  if (!columns.length) return { first: 0, last: 0 };
+  const firstIndex = columns.findIndex(column => column.left >= scrollLeft - 1);
+  const first = firstIndex < 0 ? columns.length - 1 : firstIndex;
+  let last = first;
+  while (last + 1 < columns.length && columns[last + 1].left + columns[last + 1].width <= scrollLeft + clientWidth + 1) last++;
+  return { first, last };
+}
+
 export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; locale?: Locale }) {
   const d = getDictionary(locale);
   const { region } = useStreamingCountry();
+  const scroller = useRef<HTMLDivElement>(null);
+  // Before measuring, assume the narrowest layout: three columns from Monday.
+  const [range, setRange] = useState({ first: 0, last: Math.min(2, days.length - 1) });
+  const columns = useCallback(() => [...(scroller.current?.querySelectorAll<HTMLElement>(':scope > ol > li') ?? [])], []);
+  const measure = useCallback(() => {
+    const element = scroller.current;
+    if (!element) return;
+    const next = visibleDayRange(columns().map(item => ({ left: item.offsetLeft, width: item.offsetWidth })), element.scrollLeft, element.clientWidth);
+    setRange(previous => previous.first === next.first && previous.last === next.last ? previous : next);
+  }, [columns]);
+  useEffect(() => {
+    const element = scroller.current;
+    if (!element) return;
+    let frame = 0;
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
+    schedule();
+    element.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => { cancelAnimationFrame(frame); element.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); };
+  }, [measure, days.length]);
+  const scrollToDay = (index: number) => {
+    const target = columns()[Math.max(0, Math.min(index, days.length - 1))];
+    if (!target || !scroller.current) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    scroller.current.scrollTo({ left: target.offsetLeft, behavior: reduce ? 'auto' : 'smooth' });
+  };
+  const shortDay = (date: string) => `${glanceWeekday(date, locale)} ${glanceDayNumber(date)}`;
+  const nextDay = days[range.last + 1];
+  const scrollable = range.first > 0 || range.last < days.length - 1;
   const fill = (template: string, values: Record<string, string>) => template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? '');
   const longDay = (date: string) => new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(utcDate(date));
   const releaseLabel = (release: CalendarRelease) => release.episode != null ? `${d.calendar.episode} ${release.episode}` : d.calendar.movieRelease;
   return <section className="week-glance" aria-labelledby="week-glance-title">
     <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
-    <div className="week-glance-scroller">
+    {/* Mobile only: the columns scroll sideways, so keep the visible days and the
+        way forward in view while reading down a long column. */}
+    {days.length > 0 && <div className={`week-glance-bar${scrollable ? '' : ' is-static'}`}>
+      <button type="button" className="week-glance-arrow" onClick={() => scrollToDay(range.first - 1)} disabled={range.first === 0} aria-label={d.calendar.glancePrevDays} aria-controls="week-glance-scroller">‹</button>
+      <span className="week-glance-range" aria-live="polite">{shortDay(days[range.first].date)}{range.last > range.first ? ` – ${shortDay(days[range.last].date)}` : ''}</span>
+      <button type="button" className="week-glance-arrow" onClick={() => scrollToDay(range.first + 1)} disabled={!nextDay} aria-label={d.calendar.glanceNextDays} aria-controls="week-glance-scroller">›</button>
+    </div>}
+    {nextDay && <div className="week-glance-rail" aria-hidden="true">
+      <button type="button" className="week-glance-next" tabIndex={-1} onClick={() => scrollToDay(range.first + 1)} aria-label={fill(d.calendar.glanceScrollTo, { day: longDay(nextDay.date) })}>
+        {shortDay(nextDay.date)} <span aria-hidden="true">›</span>
+      </button>
+    </div>}
+    <div className="week-glance-scroller" id="week-glance-scroller" ref={scroller}>
       <ol className="week-glance-days">{days.map(day => {
         const groups = groupReleases(day.releases);
         const seriesLabel = glanceSeriesLabel(groups.length, locale);
