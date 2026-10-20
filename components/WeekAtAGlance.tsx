@@ -4,6 +4,7 @@ import { useStreamingCountry } from '@/components/StreamingCountry';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { providerBase } from '@/lib/landing-providers';
+import { providerWatchLink } from '@/lib/provider-watch-link';
 import type { AnimeTitle, Provider } from '@/lib/tmdb';
 import type { CalendarDay, CalendarRelease } from '@/lib/weekly-calendar';
 
@@ -67,14 +68,18 @@ export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; lo
             const episodes = group.map(releaseLabel);
             const caption = group.length > 1 ? `${first.anime.name} · ${episodes.join(', ')}` : `${first.anime.name} · ${episodes[0]}`;
             const providers = glanceProviders(first.anime, region);
-            const label = providers.length ? `${caption} · ${providers.map(provider => provider.provider_name).join(', ')}` : caption;
             return <li key={releaseAnchorId(first)}>
-              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} aria-label={fill(d.calendar.glanceJumpToRelease, { title: label })}>
+              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} aria-label={fill(d.calendar.glanceJumpToRelease, { title: caption })}>
                 {first.anime.poster ? <Image src={`https://image.tmdb.org/t/p/w185${first.anime.poster}`} alt={first.anime.name} fill loading="lazy" sizes="(max-width: 899px) 96px, 14vw" /> : <span className="week-glance-nopic" aria-hidden="true">{first.anime.name}</span>}
-                {providers.length > 0 && <span className="week-glance-providers" aria-hidden="true">{providers.map(provider => <Image key={provider.provider_id} src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" title={provider.provider_name} width={22} height={22} loading="lazy" />)}</span>}
                 {group.length > 1 && <span className="week-glance-count" aria-hidden="true">×{group.length}</span>}
                 <span className="week-glance-caption" aria-hidden="true">{caption}</span>
               </a>
+              {/* Siblings of the poster link (links cannot nest); same destination as the detail page's platform links. */}
+              {providers.length > 0 && <span className="week-glance-providers">{providers.map(provider => <a key={provider.provider_id} className="week-glance-provider"
+                href={provider.watch_url || providerWatchLink(first.anime.kind, first.anime.id, region, provider.provider_id)} target="_blank" rel="noopener noreferrer"
+                aria-label={`${first.anime.name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`} title={provider.provider_name}>
+                <Image src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" width={22} height={22} loading="lazy" />
+              </a>)}</span>}
             </li>;
           })}</ul> : <p className="week-glance-empty">{d.calendar.glanceEmpty}</p>}
         </li>;
