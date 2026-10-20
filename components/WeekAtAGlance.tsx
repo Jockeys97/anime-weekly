@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStreamingCountry } from '@/components/StreamingCountry';
+import { useTrailerHover } from '@/components/GlanceTrailer';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { providerBase } from '@/lib/landing-providers';
@@ -56,9 +57,10 @@ export function visibleDayRange(columns: { left: number; width: number }[], scro
   return { first, last };
 }
 
-export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; locale?: Locale }) {
+export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: CalendarDay[]; locale?: Locale; anilistIds?: Record<string, number> }) {
   const d = getDictionary(locale);
   const { region } = useStreamingCountry();
+  const trailer = useTrailerHover();
   const scroller = useRef<HTMLDivElement>(null);
   // Before measuring, assume the narrowest layout: three columns from Monday.
   const [range, setRange] = useState({ first: 0, last: Math.min(2, days.length - 1) });
@@ -123,7 +125,8 @@ export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; lo
             const episodes = group.map(releaseLabel);
             const caption = group.length > 1 ? `${first.anime.name} · ${episodes.join(', ')}` : `${first.anime.name} · ${episodes[0]}`;
             const providers = glanceProviders(first.anime, region);
-            return <li key={releaseAnchorId(first)}>
+            const anilistId = anilistIds[`${first.anime.kind}:${first.anime.id}`] ?? first.anime.ratings?.anilistId;
+            return <li key={releaseAnchorId(first)} {...trailer.bind(releaseAnchorId(first), anilistId, `${d.trailer.heading} · ${first.anime.name}`)}>
               <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} aria-label={fill(d.calendar.glanceJumpToRelease, { title: caption })}>
                 {first.anime.poster ? <Image src={`https://image.tmdb.org/t/p/w185${first.anime.poster}`} alt={first.anime.name} fill loading="lazy" sizes="(max-width: 899px) 96px, 14vw" /> : <span className="week-glance-nopic" aria-hidden="true">{first.anime.name}</span>}
                 {group.length > 1 && <span className="week-glance-count" aria-hidden="true">×{group.length}</span>}
@@ -140,5 +143,6 @@ export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; lo
         </li>;
       })}</ol>
     </div>
+    {trailer.layer}
   </section>;
 }
