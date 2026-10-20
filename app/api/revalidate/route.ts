@@ -13,6 +13,7 @@ import { getDictionary } from '@/lib/i18n';
 import { PROVIDER_MAX_AGE, validProviderSnapshot } from '@/lib/provider-snapshot';
 import { readImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { validImdbId } from '@/lib/episode-chart';
+import { assessDailyHealth } from '@/lib/daily-health';
 export const maxDuration = 300;
 // Runtime Cache is regional: collector and shared read endpoints use one region.
 export const preferredRegion = 'iad1';
@@ -125,6 +126,12 @@ export async function GET(request: Request) {
     return Response.json({ ...episodes, entries: topWeeklyEpisodes(episodes.entries, episodeWeek) }, {
       headers: { 'cache-control': episodes.status === 'ready' ? 'public, max-age=60, s-maxage=300' : 'no-store' },
     });
+  }
+  // Public, read-only summary of today's cron output for the daily GitHub check.
+  if (new URL(request.url).searchParams.has('health')) {
+    const slug = formatWeek(isoWeek(new Date()));
+    const health = assessDailyHealth(slug, await readWeeklyRatingsSnapshot(slug));
+    return Response.json(health, { headers: { 'cache-control': 'no-store' } });
   }
   const read = new URL(request.url).searchParams.get('ratings');
   if (read !== null) {
