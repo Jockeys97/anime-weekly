@@ -182,10 +182,10 @@
       "hoverResult": "mira el tráiler",
       "click": "Clic",
       "tap": "Toca",
-      "clickResult": "ir al estreno",
+      "clickResult": "ver horario y plataformas",
       "double": "Doble clic",
       "doubleTap": "Doble toque",
-      "doubleResult": "abrir la ficha del anime"
+      "doubleResult": "abrir la página del anime"
     },
     "glanceJumpToDay": "Ir a {day}",
     "glanceJumpToRelease": "Mostrar {title} en la lista",

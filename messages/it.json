@@ -164,10 +164,10 @@
       "hoverResult": "guarda il trailer",
       "click": "Clic",
       "tap": "Tocca",
-      "clickResult": "vai all’uscita",
+      "clickResult": "vedi orario e piattaforme",
       "double": "Doppio clic",
       "doubleTap": "Doppio tocco",
-      "doubleResult": "apri la scheda dell’anime"
+      "doubleResult": "apri la pagina dell’anime"
     },
     "glanceJumpToDay": "Vai a {day}",
     "glanceJumpToRelease": "Mostra {title} nell'elenco",

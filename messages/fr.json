@@ -182,10 +182,10 @@
       "hoverResult": "voir la bande-annonce",
       "click": "Clic",
       "tap": "Touchez",
-      "clickResult": "aller à la sortie",
+      "clickResult": "voir l’horaire et les plateformes",
       "double": "Double-clic",
       "doubleTap": "Double toucher",
-      "doubleResult": "ouvrir la fiche de l’anime"
+      "doubleResult": "ouvrir la page de l’anime"
     },
     "glanceJumpToDay": "Aller à {day}",
     "glanceJumpToRelease": "Afficher {title} dans la liste",
