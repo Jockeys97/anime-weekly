@@ -222,6 +222,8 @@
       "label": "How to use the calendar",
       "hover": "Hover",
       "hoverResult": "watch the trailer",
+      "hoverOff": "trailers off",
+      "hoverToggle": "Trailers on hover",
       "click": "Click",
       "tap": "Tap",
       "clickResult": "see time and platforms",

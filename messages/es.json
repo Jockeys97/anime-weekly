@@ -180,6 +180,8 @@
       "label": "Cómo usar el calendario",
       "hover": "Pasa el cursor",
       "hoverResult": "mira el tráiler",
+      "hoverOff": "tráileres desactivados",
+      "hoverToggle": "Tráileres al pasar el cursor",
       "click": "Clic",
       "tap": "Toca",
       "clickResult": "ver horario y plataformas",

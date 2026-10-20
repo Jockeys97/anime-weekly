@@ -34,7 +34,7 @@ export function previewBox(poster: { left: number; top: number; width: number; h
 }
 
 /** Desktop hover preview: one at a time, after a short pause, muted. */
-export function useTrailerHover() {
+export function useTrailerHover(enabled = true) {
   const [active, setActive] = useState<{ key: string; title: string; preview: string; box: ReturnType<typeof previewBox> } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const hovered = useRef<string | null>(null);
@@ -48,7 +48,7 @@ export function useTrailerHover() {
   // Global timer API: this cleanup can also run outside a browser.
   useEffect(() => () => clearTimeout(timer.current), []);
   const bind = (key: string, anilistId: number | undefined, title: string) => {
-    if (!anilistId) return {};
+    if (!anilistId || !enabled) return {};
     return {
       onMouseEnter: (event: MouseEvent<HTMLElement>) => {
         if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -69,10 +69,12 @@ export function useTrailerHover() {
       onMouseLeave: () => { if (hovered.current === key) close(); },
     };
   };
-  const layer = active && typeof document !== 'undefined' ? createPortal(
+  // Turning previews off also hides one that is playing.
+  const shown = enabled ? active : null;
+  const layer = shown && typeof document !== 'undefined' ? createPortal(
     // pointer-events: none keeps the poster under the cursor hovered and clickable.
-    <div className="week-glance-trailer" style={{ left: active.box.left, top: active.box.top, width: active.box.width, height: active.box.height }} aria-hidden="true">
-      <iframe src={active.preview} title={active.title} tabIndex={-1} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />
+    <div className="week-glance-trailer" style={{ left: shown.box.left, top: shown.box.top, width: shown.box.width, height: shown.box.height }} aria-hidden="true">
+      <iframe src={shown.preview} title={shown.title} tabIndex={-1} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />
     </div>, document.body) : null;
-  return { bind, layer, activeKey: active?.key ?? null };
+  return { bind, layer, activeKey: shown?.key ?? null };
 }
