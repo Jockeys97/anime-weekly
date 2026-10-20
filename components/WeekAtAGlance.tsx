@@ -1,12 +1,14 @@
 'use client';
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 import { useTrailerHover } from '@/components/GlanceTrailer';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { providerBase } from '@/lib/landing-providers';
 import { providerWatchLink } from '@/lib/provider-watch-link';
+import { animeDetailLink } from '@/lib/anime-detail-link';
+import { localePath } from '@/lib/locale-routing';
 import type { AnimeTitle, Provider } from '@/lib/tmdb';
 import type { CalendarDay, CalendarRelease } from '@/lib/weekly-calendar';
 
@@ -47,6 +49,13 @@ export function glanceSeriesLabel(count: number, locale: Locale) {
   return template.replace('{count}', String(count));
 }
 
+export const DOUBLE_CLICK_DELAY = 280;
+/** 'native': keyboard or modified click keeps the plain link; 'details': second click on the same poster; 'wait': first click. */
+export function posterClickAction(click: { detail: number; button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }, pendingKey: string | null, key: string) {
+  if (click.detail === 0 || click.button !== 0 || click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return 'native';
+  return pendingKey === key ? 'details' : 'wait';
+}
+
 /** Fully visible columns of the horizontal scroller (mobile). */
 export function visibleDayRange(columns: { left: number; width: number }[], scrollLeft: number, clientWidth: number) {
   if (!columns.length) return { first: 0, last: 0 };
@@ -61,6 +70,25 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const d = getDictionary(locale);
   const { region } = useStreamingCountry();
   const trailer = useTrailerHover();
+  const pendingClick = useRef<{ timer: number; key: string } | null>(null);
+  useEffect(() => () => { if (pendingClick.current) clearTimeout(pendingClick.current.timer); }, []);
+  // One click/tap jumps to the release below; a second within the delay opens
+  // the anime page. Keyboard activation and modified clicks keep the plain link.
+  const posterClick = (event: MouseEvent<HTMLAnchorElement>, key: string, detailHref: string) => {
+    const pending = pendingClick.current;
+    const action = posterClickAction(event, pending?.key ?? null, key);
+    if (action === 'native') return;
+    event.preventDefault();
+    if (pending) clearTimeout(pending.timer);
+    if (action === 'details') { pendingClick.current = null; window.location.assign(detailHref); return; }
+    const anchor = event.currentTarget.hash;
+    pendingClick.current = { key, timer: window.setTimeout(() => {
+      pendingClick.current = null;
+      // Re-selecting the current hash would not scroll again: do it explicitly.
+      if (window.location.hash === anchor) document.getElementById(anchor.slice(1))?.scrollIntoView();
+      else window.location.hash = anchor;
+    }, DOUBLE_CLICK_DELAY) };
+  };
   const scroller = useRef<HTMLDivElement>(null);
   // Before measuring, assume the narrowest layout: three columns from Monday.
   const [range, setRange] = useState({ first: 0, last: Math.min(2, days.length - 1) });
@@ -98,6 +126,8 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const releaseLabel = (release: CalendarRelease) => release.episode != null ? `${d.calendar.episode} ${release.episode}` : d.calendar.movieRelease;
   return <section className="week-glance" aria-labelledby="week-glance-title">
     <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
+    {/* Both hints are rendered; CSS shows the one matching the input device (SSR-safe). */}
+    <p className="week-glance-hint"><span className="week-glance-hint-pointer">{d.calendar.glanceHintPointer}</span><span className="week-glance-hint-touch">{d.calendar.glanceHintTouch}</span></p>
     {/* Mobile only: the columns scroll sideways, so keep the visible days and the
         way forward in view while reading down a long column. */}
     {days.length > 0 && <div className={`week-glance-bar${scrollable ? '' : ' is-static'}`}>
@@ -126,8 +156,9 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
             const caption = group.length > 1 ? `${first.anime.name} · ${episodes.join(', ')}` : `${first.anime.name} · ${episodes[0]}`;
             const providers = glanceProviders(first.anime, region);
             const anilistId = anilistIds[`${first.anime.kind}:${first.anime.id}`] ?? first.anime.ratings?.anilistId;
+            const detailHref = localePath(animeDetailLink({ name: first.anime.name, ratings: { ...first.anime.ratings, anilistId } }), locale);
             return <li key={releaseAnchorId(first)} {...trailer.bind(releaseAnchorId(first), anilistId, `${d.trailer.heading} · ${first.anime.name}`)}>
-              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} aria-label={fill(d.calendar.glanceJumpToRelease, { title: caption })}>
+              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} onClick={event => posterClick(event, releaseAnchorId(first), detailHref)} aria-label={fill(d.calendar.glanceJumpToRelease, { title: caption })}>
                 {first.anime.poster ? <Image src={`https://image.tmdb.org/t/p/w185${first.anime.poster}`} alt={first.anime.name} fill loading="lazy" sizes="(max-width: 899px) 96px, 14vw" /> : <span className="week-glance-nopic" aria-hidden="true">{first.anime.name}</span>}
                 {group.length > 1 && <span className="week-glance-count" aria-hidden="true">×{group.length}</span>}
                 <span className="week-glance-caption" aria-hidden="true">{caption}</span>

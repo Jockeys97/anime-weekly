@@ -5,17 +5,18 @@ import { createPortal } from 'react-dom';
 
 export const TRAILER_HOVER_DELAY = 600;
 export const TRAILER_PREVIEW_WIDTH = 384;
-type Trailer = { preview: string; watch: string } | null;
+type Trailer = { preview: string; sound: string; watch: string } | null;
 const trailers = new Map<number, Promise<Trailer>>();
 
 function loadTrailer(anilistId: number): Promise<Trailer> {
   let pending = trailers.get(anilistId);
   if (!pending) {
-    pending = fetch(`/api/anime-trailer/${anilistId}`)
+    // v=2: responses with the sound variant (edge entries are keyed by URL).
+    pending = fetch(`/api/anime-trailer/${anilistId}?v=2`)
       .then(async response => {
         if (!response.ok) throw new Error('Trailer unavailable');
-        const data = await response.json() as { preview?: string; watch?: string };
-        return data.preview && data.watch ? { preview: data.preview, watch: data.watch } : null;
+        const data = await response.json() as { preview?: string; sound?: string; watch?: string };
+        return data.preview && data.watch ? { preview: data.preview, sound: data.sound || data.preview, watch: data.watch } : null;
       })
       // A failed request is retried on a later hover; "no trailer" is remembered.
       .catch(() => { trailers.delete(anilistId); return null; });
@@ -58,7 +59,10 @@ export function useTrailerHover() {
           void loadTrailer(anilistId).then(trailer => {
             if (!trailer || hovered.current !== key || !target.isConnected) return;
             const rect = target.getBoundingClientRect();
-            setActive({ key, title, preview: trailer.preview, box: previewBox(rect, { width: window.innerWidth, height: window.innerHeight }) });
+            // Autoplay with sound is allowed only after an interaction with the page
+            // (sticky activation); without it the browser would block the video entirely.
+            const sound = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive;
+            setActive({ key, title, preview: sound ? trailer.sound : trailer.preview, box: previewBox(rect, { width: window.innerWidth, height: window.innerHeight }) });
           });
         }, TRAILER_HOVER_DELAY);
       },

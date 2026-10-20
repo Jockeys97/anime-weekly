@@ -176,6 +176,8 @@
     "timezoneNote": "Sendezeiten werden in deiner lokalen Zeitzone angezeigt (standardmäßig Europe/Rome). TMDB-Episodendaten werden unverändert angezeigt. Streaming-Starts können je nach Dienst und Land variieren.",
     "navigation": "Veröffentlichungstage durchsehen",
     "glanceTitle": "Die Woche auf einen Blick",
+    "glanceHintPointer": "Cover überfahren für den Trailer · Klick: zur Veröffentlichung · Doppelklick: Anime-Seite",
+    "glanceHintTouch": "Tippen: zur Veröffentlichung · Doppeltippen: Anime-Seite",
     "glanceJumpToDay": "Zu {day} springen",
     "glanceJumpToRelease": "{title} in der Liste anzeigen",
     "glanceEmpty": "Keine Veröffentlichungen",

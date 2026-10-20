@@ -218,6 +218,8 @@
     "timezoneNote": "Broadcast times are shown in your local timezone (Europe/Rome by default). TMDB episode dates have no time or timezone and are shown as supplied. Streaming dates can vary by service and country. Movies use the TMDB primary release date.",
     "navigation": "Browse release days",
     "glanceTitle": "Week at a glance",
+    "glanceHintPointer": "Hover a cover for the trailer · click: jump to the release · double-click: anime page",
+    "glanceHintTouch": "Tap: jump to the release · double-tap: anime page",
     "glanceJumpToDay": "Jump to {day}",
     "glanceJumpToRelease": "Show {title} in the list",
     "glanceEmpty": "No releases",

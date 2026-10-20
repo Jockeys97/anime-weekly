@@ -9,11 +9,13 @@ export function trailerLinks(trailer: AnimeTrailer | null | undefined): { watch:
   return null;
 }
 
-/** Muted, chrome-less autoplay embed for hover previews (browsers block autoplay with sound). */
-export function trailerPreview(trailer: AnimeTrailer | null | undefined): string | null {
+/** Chrome-less autoplay embed for hover previews. Browsers allow sound only after
+ *  the visitor has interacted with the page, so callers pick the muted variant otherwise. */
+export function trailerPreview(trailer: AnimeTrailer | null | undefined, muted = true): string | null {
   const links = trailerLinks(trailer);
   if (!links) return null;
+  const mute = muted ? '&mute=1' : '&mute=0';
   return trailer!.site === 'youtube'
-    ? `${links.embed}&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`
-    : `${links.embed}&mute=1&controls=0&queue-enable=false&ui-start-screen-info=false`;
+    ? `${links.embed}${mute}&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`
+    : `${links.embed}${mute}&controls=0&queue-enable=false&ui-start-screen-info=false`;
 }
