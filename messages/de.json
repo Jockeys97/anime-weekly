@@ -410,7 +410,16 @@
     "subscribe": "Kalender abonnieren",
     "download": ".ics herunterladen",
     "calendarNote": "Aktualisiert sich mit neuen Folgen. Wenn du deine Favoriten änderst, abonniere erneut.",
-    "watchOn": "ansehen"
+    "watchOn": "ansehen",
+    "transfer": "Auf ein anderes Gerät übertragen",
+    "transferNote": "Öffne diesen Link auf dem anderen Handy oder Computer: Er fragt, ob die Favoriten hinzugefügt werden sollen.",
+    "copyLink": "Link kopieren",
+    "copied": "Link kopiert",
+    "shareLink": "Teilen",
+    "importAsk": "{count} Favoriten von einem anderen Gerät hinzufügen?",
+    "importConfirm": "Hinzufügen",
+    "importDismiss": "Ignorieren",
+    "importNothing": "Du hast bereits alle Favoriten aus diesem Link."
   },
   "features": {
     "topFive": "Top 5 Episoden der Woche",

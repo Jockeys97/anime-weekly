@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { getDictionary } from '@/lib/i18n';
 import { useLocale } from '@/components/LanguageSelector';
-import { parseWatchlist, WATCHLIST_KEY, toggleWatchlist } from '@/lib/watchlist';
+import { mergeWatchlist, parseWatchlist, WATCHLIST_KEY, toggleWatchlist } from '@/lib/watchlist';
 const changed = 'aw:watchlist-change';
 function subscribe(callback: () => void) {
   const listener = () => callback();
@@ -10,6 +10,13 @@ function subscribe(callback: () => void) {
   return () => { window.removeEventListener('storage', listener); window.removeEventListener(changed, listener); };
 }
 function snapshot() { try { return localStorage.getItem(WATCHLIST_KEY) ?? '[]'; } catch { return '[]'; } }
+/** Merge favourites from another device; notifies every list on the page. */
+export function importWatchlist(ids: readonly string[]): number {
+  let added = -1;
+  try { added = mergeWatchlist(localStorage, ids); } catch { /* Storage may be blocked. */ }
+  if (added > 0) window.dispatchEvent(new Event(changed));
+  return added;
+}
 export function useWatchlist() { return parseWatchlist(useSyncExternalStore(subscribe, snapshot, () => '[]')); }
 export function WatchlistButton({ id }: { id: string }) {
   const ids = useWatchlist(); const d = getDictionary(useLocale()).features;
