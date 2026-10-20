@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { glanceDayNumber, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
+import { glanceDayNumber, glanceProviders, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
 import type { CalendarRelease } from '@/lib/weekly-calendar';
 const r = (id: number, episode: number) => ({ anime: { id, kind: 'tv', name: `A${id}` }, date: '2026-10-20', episode }) as unknown as CalendarRelease;
 describe('groupReleases', () => {
@@ -34,5 +34,25 @@ describe('glanceWeekday', () => {
   it('renders the day number from the same UTC date', () => {
     expect(glanceDayNumber('2026-10-05')).toBe('5');
     expect(glanceDayNumber('2026-10-20')).toBe('20');
+  });
+});
+
+describe('glanceProviders', () => {
+  const offer = (provider_id: number, provider_name: string, logo_path: string | null = `/${provider_id}.png`) => ({ provider_id, provider_name, logo_path });
+  const anime = { providers: {
+    IT: { link: '', providers: [offer(1, 'Crunchyroll Amazon Channel'), offer(2, 'Crunchyroll'), offer(3, 'Netflix'), offer(4, 'Prime Video')] },
+    US: { link: '', providers: [offer(5, 'Hulu'), offer(6, 'No Logo', null)] },
+  } };
+  it('follows the selected country', () => {
+    expect(glanceProviders(anime, 'IT').map(p => p.provider_name)).toEqual(['Crunchyroll', 'Netflix']);
+    expect(glanceProviders(anime, 'US').map(p => p.provider_name)).toEqual(['Hulu']);
+  });
+  it('collapses reseller variants, skips logo-less offers and caps the count', () => {
+    expect(glanceProviders(anime, 'IT', 5).map(p => p.provider_id)).toEqual([2, 3, 4]);
+    expect(glanceProviders(anime, 'US', 5).map(p => p.provider_id)).toEqual([5]);
+  });
+  it('shows nothing when the country has no offers', () => {
+    expect(glanceProviders(anime, 'FR')).toEqual([]);
+    expect(glanceProviders({ providers: {} }, 'IT')).toEqual([]);
   });
 });
