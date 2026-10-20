@@ -305,6 +305,7 @@
   .rating-tile { min-height: 94px; }
   .ratings .rating-value { min-height: 29px; }
   .ratings .rating-detail { min-height: 31px; }
+}
 
 /* Week at a glance */
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
