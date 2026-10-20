@@ -408,7 +408,8 @@
     "showAll": "Show all ({count})",
     "showLess": "Show less",
     "previous": "Previous favourites",
-    "next": "Next favourites"
+    "next": "Next favourites",
+    "newSeason": "New season coming"
   },
   "features": {
     "topFive": "Top 5 episodes this week",

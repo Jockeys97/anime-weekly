@@ -80,7 +80,8 @@ export function MyFavorites({ locale }: { locale: Locale }) {
           </Link>
           <div className="my-favorites-body">
             <Link href={item.href} prefetch={false} className="my-favorites-name">{item.name}</Link>
-            {next(item) ? <p className="my-favorites-next">{next(item)}</p> : status(item) ? <p className="my-favorites-status">{status(item)}</p> : null}
+            {item.current && <p className="my-favorites-season">{item.current}</p>}
+            {next(item) ? <p className="my-favorites-next">{next(item)}</p> : status(item) ? <p className="my-favorites-status">{item.current && item.status === 'NOT_YET_RELEASED' ? d.newSeason : status(item)}</p> : null}
           </div>
           <div className="my-favorites-heart"><WatchlistButton id={item.id} /></div>
         </li>)}</ul>

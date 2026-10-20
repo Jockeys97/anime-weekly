@@ -422,6 +422,7 @@
 .my-favorites-poster > span { display: grid; place-items: center; height: 100%; color: #9aab88; font-size: 28px; }
 .my-favorites-body { min-width: 0; }
 .my-favorites-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+.my-favorites-season { margin: 3px 0 0; font-size: 11px; font-weight: 700; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .my-favorites-next, .my-favorites-status { margin: 4px 0 0; font-size: 12px; line-height: 1.4; }
 .my-favorites-next { color: #547235; font-weight: 700; }
 .my-favorites-status { color: var(--muted); }

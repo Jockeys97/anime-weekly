@@ -34,3 +34,23 @@ it('reports partial results and does not cache an AniList outage', async () => {
   expect((await response.json()).unavailable).toBe(true);
   expect(response.headers.get('cache-control')).toBe('no-store');
 });
+
+const node = (id: number, status: string, format = 'TV', next?: { episode: number; airingAt: number }) => ({ id, status, format, title: { english: `Show ${id}`, romaji: null, native: null }, nextAiringEpisode: next ?? null });
+const finished = (id: number, sequels: ReturnType<typeof node>[]) => ({ ...node(id, 'FINISHED'), coverImage: { large: `https://s4.anilist.co/${id}.jpg` }, episodes: 12, relations: { edges: sequels.map(sequel => ({ relationType: 'SEQUEL', node: sequel })) } });
+
+it('follows a finished favourite to its airing season: status, next episode and link of the sequel', async () => {
+  vi.mocked(getFavoriteAnime).mockResolvedValueOnce({ unavailable: false, media: [{ ...finished(97940, [node(195604, 'RELEASING', 'TV', { episode: 4, airingAt: 1792850400 })]), title: { english: 'Black Clover', romaji: null, native: null } }] } as never);
+  const body = await (await GET(new Request('https://example.com/api/favorites?ids=anilist:97940'))).json();
+  expect(body.items[0]).toMatchObject({ id: 'anilist:97940', name: 'Black Clover', poster: 'https://s4.anilist.co/97940.jpg', current: 'Show 195604', status: 'RELEASING', next: { episode: 4, airingAt: 1792850400 }, href: expect.stringMatching(/^\/anime\/195604-/) });
+  expect(getFavoriteAnime).toHaveBeenCalledTimes(1);
+});
+it('walks finished sequels in batched hops, ignoring films, and keeps "finished" when nothing airs', async () => {
+  vi.mocked(getFavoriteAnime)
+    .mockResolvedValueOnce({ unavailable: false, media: [finished(1, [node(2, 'FINISHED'), node(9, 'RELEASING', 'MOVIE')]), finished(5, [])] } as never)
+    .mockResolvedValueOnce({ unavailable: false, media: [finished(2, [node(3, 'NOT_YET_RELEASED')])] } as never);
+  const body = await (await GET(new Request('https://example.com/api/favorites?ids=anilist:1,anilist:5'))).json();
+  expect(vi.mocked(getFavoriteAnime).mock.calls[1][0]).toEqual([2]);
+  expect(body.items.find((item: { id: string }) => item.id === 'anilist:1')).toMatchObject({ current: 'Show 3', status: 'NOT_YET_RELEASED', href: expect.stringMatching(/^\/anime\/3-/) });
+  expect(body.items.find((item: { id: string }) => item.id === 'anilist:5')).toMatchObject({ status: 'FINISHED' });
+  expect(body.items.find((item: { id: string }) => item.id === 'anilist:5')).not.toHaveProperty('current');
+});
