@@ -63,7 +63,8 @@ async function graphql<T>(query: string, variables: Record<string, string | numb
   } catch { return null; }
 }
 
-export async function getSeason(year: number, season: Season, page = 1): Promise<AniListPage> {
+// `unavailable` separates an upstream failure from a genuinely empty page.
+export async function getSeason(year: number, season: Season, page = 1): Promise<AniListPage & { unavailable?: boolean }> {
   if (!Number.isSafeInteger(year) || year < 1 || year > 9999 || !isSeason(season) || !Number.isSafeInteger(page) || page < 1) return emptyPage(page);
   const data = await graphql<{ Page?: AniListPage }>(`query ($year: Int!, $season: MediaSeason!, $page: Int!) {
     Page(page: $page, perPage: 50) {
@@ -72,7 +73,7 @@ export async function getSeason(year: number, season: Season, page = 1): Promise
         format_in: [TV, TV_SHORT, MOVIE, ONA, OVA]) { ${fields} }
     }
   }`, { year, season: season.toUpperCase(), page });
-  if (!Array.isArray(data?.Page?.media)) return emptyPage(page);
+  if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(page), unavailable: true };
   rememberCatalog(data.Page.media);
   return { media: data.Page.media, pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }
