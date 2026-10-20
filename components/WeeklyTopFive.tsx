@@ -1,6 +1,6 @@
 'use client';
 import { localePath } from '@/lib/locale-routing';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from '@/components/LocaleLink';
 import Image from 'next/image';
 import { useLocale } from '@/components/LanguageSelector';
@@ -23,7 +23,7 @@ export function WeeklyTopFive({ slug, initialEpisodes, frozen = false }: { slug:
     return () => controller.abort();
   }, [slug, initialEpisodes, frozen]);
   const data = snapshot?.slug === slug ? snapshot.data : null;
-  const top = topWeeklyEpisodes(data?.entries ?? [], slug);
+  const top = useMemo(() => topWeeklyEpisodes(data?.entries ?? [], slug), [data?.entries, slug]);
   const pending = !data;
   const showCount = data?.status === 'ready' || data?.status === 'partial';
   const failureMessage = data?.source === 'imdb-datasets' && data.reason === 'source' ? d.episodesDatasetUnavailable : data?.reason === 'quota' ? d.episodesQuotaUnavailable
@@ -47,7 +47,7 @@ export function WeeklyTopFive({ slug, initialEpisodes, frozen = false }: { slug:
       return <li className={index === 0 ? 'top-five-winner' : undefined} key={title.imdbId}>
         <Link className="top-five-card" prefetch={false} href={`https://www.imdb.com/title/${title.imdbId}/`} target="_blank" rel="noopener noreferrer" title={`${title.seriesName} · ${title.title}`}>
           <span className="top-five-rank" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><span className="sr-only">{index + 1}. </span>
-          <span className="top-five-cover">{title.poster ? <Image src={`https://image.tmdb.org/t/p/w342${title.poster}`} alt="" fill sizes={index === 0 ? '(max-width: 640px) 50px, 116px' : '54px'} /> : <span aria-hidden="true">✦</span>}</span>
+          <span className="top-five-cover">{title.poster ? <Image src={`https://image.tmdb.org/t/p/w342${title.poster}`} alt="" fill loading="lazy" sizes={index === 0 ? '(max-width: 640px) 50px, 116px' : '54px'} /> : <span aria-hidden="true">✦</span>}</span>
           <span className="top-five-copy"><span className="top-five-title">{title.seriesName}</span><span className="top-five-episode">{d.episodeLabel.replace('{season}', String(title.season)).replace('{episode}', String(title.episode))}</span>{title.title && <span className="top-five-episode-name">{title.title}</span>}<span className="top-five-source"><Image src="/logos/imdb.svg" alt="" width={24} height={13} />IMDb · {title.votes.toLocaleString()} {dictionary.title.votes}</span></span>
           <span className="top-five-score"><strong>{title.score.toFixed(1)}</strong><span> / 10</span></span>
         </Link>

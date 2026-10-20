@@ -1,5 +1,10 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
+  // Public files are not fingerprinted: cache with a bounded TTL, not immutable.
+  // Next already serves fingerprinted /_next/static assets as immutable.
+  async headers() { return ['/logos/:path*', '/icon.svg'].map(source => ({
+    source, headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
+  })); },
   experimental: { globalNotFound: true },
   async redirects() { return [
   ...['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({

@@ -33,7 +33,7 @@ export default async function BestThisSeason({ params }: { params?: LocaleParams
   const ranked = rankSeason(media, cached); const heading = landingHeading('best', locale, now);
   const format = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return <main id="main" className="catalog-page" lang={locale}>
-    <JsonLd data={animeItemList(ranked.map(({ anime }) => ({ name: animeName(anime), anilistId: anime.id })), locale)} />
+    <JsonLd data={animeItemList(ranked.map(({ anime }) => ({ name: animeName(anime), anilistId: anime.id })), locale, { name: heading, path: "/best-this-season" })} />
     <JsonLd data={breadcrumbList([{ name: d.landings.home, path: '/' }, { name: heading, path: '/best-this-season' }], locale)} />
     <h1>{heading}</h1><p className="catalog-intro">{d.landings.bestDescription}</p><p className="notice">{d.landings.rankingRule}</p>
     <nav className="catalog-filters"><Link href={seasonPath(season)}>{d.catalog.seasonTitle}</Link><Link href="/">{d.landings.home}</Link><Link href="/this-week">{d.landings.weekNav}</Link></nav>

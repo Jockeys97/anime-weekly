@@ -33,7 +33,7 @@ export default async function ThisWeek({ params }: { params?: LocaleParams }) {
     return <li key={key} className="landing-card"><div><h3><Link href={animeDetailLink(title)}>{title.name}</Link></h3><p>{title.kind === 'movie' ? d.week.movie : d.week.tv}</p>{offers.length > 0 && <p>{d.landings.platforms}: {offers.join(' · ')}</p>}<p>{ratingSources(title.ratings).map(source => `${source.name} ${numberFormat.format(source.score)}/10`).join(' · ')}</p></div></li>;
   }
   return <main id="main" className="catalog-page" lang={locale}>
-    <JsonLd data={animeItemList(titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale)} />
+    <JsonLd data={animeItemList(titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale, { name: heading, path: "/this-week" })} />
     <JsonLd data={breadcrumbList([{ name: d.landings.home, path: '/' }, { name: heading, path: '/this-week' }], locale)} />
     <h1>{heading}</h1><p className="catalog-intro">{d.landings.weekDescription}</p>
     <nav className="catalog-filters"><Link href={`/week/${slug}`}>{d.landings.fullGuide}</Link><Link href="/">{d.landings.home}</Link><Link href="/best-this-season">{d.landings.bestNav}</Link></nav>

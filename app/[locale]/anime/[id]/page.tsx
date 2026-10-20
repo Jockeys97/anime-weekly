@@ -1,5 +1,4 @@
 import { getRequestLocale } from '@/lib/request-locale';
-import { localePath } from '@/lib/locale-routing';
 import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
@@ -15,12 +14,12 @@ import { getAnimeDetailData } from '@/lib/anime-detail-data';
 import type { Locale } from '@/lib/i18n';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
-import { pageMetadata, siteUrl } from '@/lib/seo';
+import { pageMetadata } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
-import { animeBreadcrumbs } from '@/lib/structured-data';
+import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
-import { formatAnimeSeo } from '@/lib/anime-seo';
+import { animeIntro, formatAnimeSeo } from '@/lib/anime-seo';
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -54,25 +53,14 @@ export default async function AnimePage({ params }: Props) {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
   const name = animeName(anime);
-  const path = animePath(anime.id, name);
-  // Other slugs and bare IDs render the same page with a canonical to `path`.
+  // Other slugs and bare IDs render the same page with a canonical anime URL.
   // A redirect here would need searchParams (dynamic) inside an ISR, streamed route.
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const { ratings: animeRatings, availability, synopsis } = await getAnimeDetailData(anime, locale);
-  const ratingCount = anime.stats?.scoreDistribution?.reduce((sum, bucket) => sum + bucket.amount, 0);
-  const structured = {
-    '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries',
-    name, url: new URL(localePath(path, locale), siteUrl()).href,
-    description: formatAnimeSeo(name, anime, localizedSynopsis(synopsis, locale), undefined, locale).description, image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined,
-    genre: anime.genres,
-    ...(typeof anime.averageScore === 'number' && Number.isFinite(anime.averageScore) && anime.averageScore > 0 && anime.averageScore <= 100 ? {
-      aggregateRating: { '@type': 'AggregateRating', ratingValue: anime.averageScore, bestRating: 100, worstRating: 0,
-        ...(Number.isSafeInteger(ratingCount) && ratingCount! > 0 ? { ratingCount } : {}) },
-    } : {}),
-  };
+  const structured = animeStructuredData(anime, name, formatAnimeSeo(name, anime, localizedSynopsis(synopsis, locale), undefined, locale).description, locale);
   return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name, locale)} />
-    <AnimeDetailView anime={anime}
+    <AnimeDetailView anime={anime} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}

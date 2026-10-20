@@ -98,3 +98,33 @@ it.each(['bad', '0', '-1'])('retains invalid ID rejection (%s)', async id => {
   await expect(AnimePage({ params: Promise.resolve({ id }) })).rejects.toThrow('not-found');
   expect(getAnime).not.toHaveBeenCalled();
 });
+
+import { AnimeDetailView } from '../components/AnimeDetailView';
+import { animeIntro } from '../lib/anime-seo';
+it('renders exactly one episode H1 followed by the factual localized intro', () => {
+  const next = { ...anime, format: 'TV', season: 'FALL', nextAiringEpisode: { episode: 3, airingAt: Date.parse('2026-10-25T23:30:00Z') / 1000 } };
+  const intro = animeIntro(next, { imdbRating: '8.4', malScore: 8.12 }, 'it');
+  const view = React.createElement(AnimeDetailView, { anime: next, intro, synopsis: null, imdb: null, ratings: null, availability: null });
+  const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
+  expect(html.match(/<h1[ >]/g)).toHaveLength(1);
+  expect(html).toContain('<h1>Example episodio 3: data di uscita e voti</h1><p class="catalog-intro">');
+  expect(html).toContain('26 ottobre 2026');
+  expect(html).toContain('Europe/Rome');
+  for (const source of ['IMDb', 'MyAnimeList', 'AniList']) expect(intro).toContain(source);
+});
+
+
+it('prioritizes the displayed CDN cover without lazy loading or extra transformations', () => {
+  const coverImage = { large: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/example.jpg', extraLarge: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/example.jpg', color: null };
+  const view = React.createElement(AnimeDetailView, { anime: { ...anime, coverImage }, synopsis: null, imdb: null, ratings: null, availability: null });
+  const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
+  const cover = html.match(/<img[^>]+alt="Example"[^>]*>/)?.[0];
+  expect(cover).toBeDefined();
+  expect(cover).toContain(`src="${coverImage.large}"`);
+  expect(cover).toContain('loading="eager"');
+  expect(cover).toMatch(/fetchPriority="high"/i);
+  expect(html).toContain(`srcSet="${coverImage.large} 230w, ${coverImage.extraLarge} 460w"`);
+  expect(html).toContain('sizes="(max-width: 600px) 160px, 220px"');
+  expect(cover).not.toContain('/_next/image');
+  expect(cover).not.toContain('loading="lazy"');
+});

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { WeeklyHeading, WeeklyContent, WeeklyScope } from '@/components/WeeklyContent';
-import { SponsorSlot } from '@/components/SponsorSlot';
+import { WeeklyContent } from '@/components/WeeklyContent';
+import { WeeklyHeadingContent, WeeklyScopeContent } from '@/components/WeeklyIntro';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 import type { Locale } from '@/lib/locales';
 import { getDictionary } from '@/lib/i18n';
@@ -12,14 +12,14 @@ import { animeItemList } from '@/lib/structured-data';
 import { readWeekArchive } from '@/lib/week-archive';
 export function WeeklyGuide({ week, newsletter = false, archive = false, locale = 'it' }: { week: ISOWeek; locale?: Locale; newsletter?: boolean; archive?: boolean }) {
   return <main id="main">
-    <WeeklyHeading week={week} archive={archive} />
+    <WeeklyHeadingContent week={week} archive={archive} locale={locale} />
     {newsletter && <NewsletterSignup />}
     <section className="guide" aria-labelledby="releases-heading">
       <Suspense fallback={<p className="calendar-note" role="status">{getDictionary(locale).loading}</p>}>
         <WeeklyCatalog week={week} locale={locale} />
       </Suspense>
-      <WeeklyScope />
-    </section><SponsorSlot />
+      <WeeklyScopeContent locale={locale} />
+    </section><aside className="sponsor"><span className="eyebrow">{getDictionary(locale).sponsor.label}</span><p>{getDictionary(locale).sponsor.body}</p><span aria-hidden="true">✦</span></aside>
   </main>;
 }
 async function WeeklyCatalog({ week, locale }: { week: ISOWeek; locale: Locale }) {
@@ -28,6 +28,6 @@ async function WeeklyCatalog({ week, locale }: { week: ISOWeek; locale: Locale }
   const archived = await readWeekArchive(week);
   const [data, snapshot] = archived ? [archived.data, archived.ratings] : await Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(formatWeek(week)), trackWeeklyPage()]);
   const initial = { ...data, titles: data.titles.map(title => ({ ...title, ratings: snapshot.titles[`${title.kind}:${title.id}`] || {} })) };
-  return <>{initial.titles.length > 0 && <JsonLd data={animeItemList(initial.titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale)} />}
+  return <><JsonLd data={animeItemList(initial.titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale, { name: getDictionary(locale).week.label, path: `/week/${formatWeek(week)}` })} />
     <WeeklyContent key={`${week.year}-${week.week}`} initial={initial} initialAvailability={snapshot.availability} week={week} initialEvents={snapshot.events} initialEpisodes={snapshot.episodes ?? { entries: [], status: 'pending' }} initialCalendar={archived?.calendar} frozen={Boolean(archived)} /></>;
 }

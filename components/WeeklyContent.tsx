@@ -1,6 +1,7 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WeeklyEpisodes } from '@/lib/weekly-episodes';
+import { WeeklyHeadingContent, WeeklyScopeContent } from '@/components/WeeklyIntro';
 import { WeeklyTopFive } from '@/components/WeeklyTopFive';
 import { TitleFilters } from '@/components/TitleFilters';
 import { useWatchlist } from '@/components/Watchlist';
@@ -19,18 +20,15 @@ import type { AnimeTitle, WeekData } from '@/lib/tmdb';
 import { mergeWeeklyCalendar, type WeeklyCalendarSchedule, type WeeklyTitleDetails } from '@/lib/weekly-details';
 import { expandAvailability, type ProviderSnapshot } from '@/lib/provider-snapshot';
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
-import { formatWeek, isoWeek, shiftWeek, weekDateRange, weekRange, type ISOWeek } from '@/lib/week';
+import { formatWeek, isoWeek, shiftWeek, weekRange, type ISOWeek } from '@/lib/week';
+const emptyEvents: AiringEvent[] = [];
 const titleKey = (anime: Pick<AnimeTitle, 'kind' | 'id'>) => `${anime.kind}:${anime.id}`;
-export function WeeklyHeading({ week, archive = false }: { week: ISOWeek; archive?: boolean }) {
-  const locale = useLocale(); const d = getDictionary(locale); const range = weekRange(week);
-  return <section className="hero"><div className="hero-copy"><p className="eyebrow"><span className="green-dot" />{d.hero.eyebrow}</p><h1>{archive ? <>Anime {weekDateRange(week, locale)} · {d.week.label.toLocaleLowerCase(locale)} {week.week}</> : <>{d.hero.title}<br /><span>{d.hero.accent}</span></>}</h1><p className="hero-description">{d.hero.description}</p></div><div className="calendar-art" aria-hidden="true"><div className="calendar-top">{d.week.label} {String(week.week).padStart(2, '0')} <span>✦</span></div><div className="calendar-number">{String(week.week).padStart(2, '0')}</div><div className="calendar-bottom"><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> — <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} /><span>↗</span></div></div></section>;
+export function WeeklyHeading(props: { week: ISOWeek; archive?: boolean }) {
+  return <WeeklyHeadingContent {...props} locale={useLocale()} />;
 }
-export function WeeklyScope() {
-  const d = getDictionary(useLocale());
-  return <div className="guide-note"><p>{d.week.scope}</p><span>{d.week.cap}</span></div>;
-}
+export function WeeklyScope() { return <WeeklyScopeContent locale={useLocale()} />; }
 interface CardState { status: 'loading' | 'ready' | 'error'; details?: WeeklyTitleDetails }
-export function WeeklyContent({ initial, week, initialEvents = [], initialEpisodes, initialAvailability, initialCalendar, frozen = false }: { initial: WeekData; week: ISOWeek; initialEvents?: AiringEvent[]; initialEpisodes?: WeeklyEpisodes; initialAvailability?: ProviderSnapshot; initialCalendar?: WeeklyCalendarSchedule; frozen?: boolean }) {
+export function WeeklyContent({ initial, week, initialEvents = emptyEvents, initialEpisodes, initialAvailability, initialCalendar, frozen = false }: { initial: WeekData; week: ISOWeek; initialEvents?: AiringEvent[]; initialEpisodes?: WeeklyEpisodes; initialAvailability?: ProviderSnapshot; initialCalendar?: WeeklyCalendarSchedule; frozen?: boolean }) {
   const locale = useLocale(); const d = getDictionary(locale); const range = weekRange(week);
   const container = useRef<HTMLDivElement>(null);
   const started = useRef(new Set<string>());
@@ -61,7 +59,7 @@ export function WeeklyContent({ initial, week, initialEvents = [], initialEpisod
     void loadWeeklyLookup<WeeklyTitleDetails>(url.details, controller.signal).then(details => {
       if (controller.signal.aborted) return;
       const incomplete = details.providersUnavailable;
-      setCards(previous => ({ ...previous, [key]: { status: incomplete ? 'error' : 'ready', details } }));
+      startTransition(() => setCards(previous => ({ ...previous, [key]: { status: incomplete ? 'error' : 'ready', details } })));
     }).catch(() => {
       if (!controller.signal.aborted) setCards(previous => ({ ...previous, [key]: { ...previous[key], status: 'error' } }));
     }).finally(() => { controllers.current.delete(controller); });
@@ -105,23 +103,25 @@ export function WeeklyContent({ initial, week, initialEvents = [], initialEpisod
     }, { rootMargin: '200px' });
     nodes.forEach(node => observer.observe(node));
     return () => observer.disconnect();
-  }, [initial.titles, load, cards, frozen]);
+  }, [initial.titles, load, genre, onlyWatchlist, platform, region, watchlist, calendar, frozen]);
   useEffect(() => {
     if (genre || onlyWatchlist) initial.titles.forEach(anime => load(anime));
   }, [genre, onlyWatchlist, initial.titles, load]);
   // Expand the compact shared table during SSR and in the browser; only IDs
   // and one provider dictionary cross the RSC boundary for all countries.
-  const titles = initial.titles.map(anime => ({ ...anime, providers: initialAvailability ? expandAvailability(initialAvailability, titleKey(anime)) : anime.providers, providersUnavailable: false, recommendation: cards[titleKey(anime)]?.details?.recommendation ?? anime.recommendation }));
-  const filterable = titles.map(title => ({ ...title, key: watchlistId(title) }));
-  const options = filterOptions(filterable, region, platform);
-  const visible = filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist });
+  const availableTitles = useMemo(() => initial.titles.map(anime => ({ ...anime, providers: initialAvailability ? expandAvailability(initialAvailability, titleKey(anime)) : anime.providers, providersUnavailable: false })), [initial.titles, initialAvailability]);
+  const titles = useMemo(() => availableTitles.map(anime => ({ ...anime, recommendation: cards[titleKey(anime)]?.details?.recommendation ?? anime.recommendation })), [availableTitles, cards]);
+  const filterable = useMemo(() => titles.map(title => ({ ...title, key: watchlistId(title) })), [titles]);
+  const options = useMemo(() => filterOptions(filterable, region, platform), [filterable, region, platform]);
+  const visible = useMemo(() => filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist }), [filterable, genre, platform, region, onlyWatchlist, watchlist]);
+  const events = useMemo(() => [...initialEvents, ...calendar?.events ?? []], [initialEvents, calendar?.events]);
   const renderCard = (anime: AnimeTitle, dubbingAnilistId?: number) => <AnimeCard anime={anime} locale={locale} frozen={frozen} dubbingAnilistId={dubbingAnilistId} enrichmentFailed={cards[titleKey(anime)]?.status === 'error'} onRetry={() => load(anime, true)} />;
   return <div ref={container}>
     <WeeklyTopFive slug={slug} initialEpisodes={initialEpisodes} frozen={frozen} />
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
     {initial.status === 'unconfigured' ? <div className="empty-state"><span className="state-icon" aria-hidden="true">⌁</span><p className="eyebrow">{d.week.browse}</p><h3>{d.state.unconfigured}</h3><p>{d.state.setup}</p><a className="button" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">{d.state.setupLink}<span aria-hidden="true">↗</span></a></div> : initial.status === 'error' ? <div className="empty-state" role="status"><h3>{d.state.error}</h3><p>{d.state.errorBody}</p></div> : <>
       {initial.partial && <p className="notice" role="status">{d.state.partial}</p>}
-      {titles.length ? <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={setPlatform} onWatchlist={setOnlyWatchlist} />{!visible.length && <p role="status">{d.features.noMatches}</p>}{calendarPending && <p className="calendar-note" role="status">{d.calendar.loading}</p>}<WeeklyCalendarContent titles={visible} week={week} events={[...initialEvents, ...calendar?.events ?? []]} episodeDates={calendar?.episodeDates} anilistIds={calendar?.anilistIds} unavailable={calendar?.unavailable} locale={locale} renderCard={renderCard} />{!frozen && calendar?.unavailable && <button type="button" className="button" disabled={calendarPending} onClick={() => { setCalendarPending(true); retryCalendar(value => value + 1); }}>{d.error.retry}</button>}</> : <div className="empty-state"><span className="state-icon" aria-hidden="true">☾</span><h3>{d.state.empty}</h3><p>{d.state.emptyBody}</p></div>}
+      {titles.length ? <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={setPlatform} onWatchlist={setOnlyWatchlist} />{!visible.length && <p role="status">{d.features.noMatches}</p>}<p className="calendar-note calendar-progress" role="status" aria-busy={calendarPending}>{calendarPending ? d.calendar.loading : '\u00a0'}</p><WeeklyCalendarContent titles={visible} week={week} events={events} episodeDates={calendar?.episodeDates} anilistIds={calendar?.anilistIds} unavailable={calendar?.unavailable} locale={locale} renderCard={renderCard} />{!frozen && calendar?.unavailable && <button type="button" className="button" disabled={calendarPending} onClick={() => { setCalendarPending(true); retryCalendar(value => value + 1); }}>{d.error.retry}</button>}</> : <div className="empty-state"><span className="state-icon" aria-hidden="true">☾</span><h3>{d.state.empty}</h3><p>{d.state.emptyBody}</p></div>}
     </>}
   </div>;
 }

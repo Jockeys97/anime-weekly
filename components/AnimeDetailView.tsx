@@ -11,19 +11,24 @@ import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import type { AniListAnime } from '@/lib/anilist';
+import { animeHeading } from '@/lib/anime-seo';
 import { displayTitle } from '@/lib/title-text';
 import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode;
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro }: {
+  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string;
 }) {
   const locale = useLocale();
   const d = getDictionary(locale);
   const c = d.catalog;
   const name = displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-  const cover = anime.coverImage?.extraLarge || anime.coverImage?.large;
+  const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
+  // AniList large is ~230px wide; extraLarge is ~460px. Let DPR choose the
+  // larger original only when needed, without creating Vercel transformations.
+  const coverSources = anime.coverImage?.large && anime.coverImage?.extraLarge
+    ? `${anime.coverImage.large} 230w, ${anime.coverImage.extraLarge} 460w` : undefined;
   const format = c.formats[anime.format as keyof typeof c.formats] || anime.format || c.unknown;
   const status = c.statuses[anime.status as keyof typeof c.statuses] || c.unknown;
   const season = anime.season?.toLowerCase();
@@ -34,10 +39,11 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
     {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill unoptimized sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
     <article className="anime-card anime-detail">
-      <div className="poster">{cover ? <Image src={cover} alt={name} fill unoptimized preload sizes="(max-width: 600px) 160px, 220px" /> : <span>{d.state.noPoster}</span>}</div>
+      <div className="poster">{cover ? <picture style={{ position: 'absolute', inset: 0 }}>{coverSources && <source srcSet={coverSources} sizes="(max-width: 600px) 160px, 220px" />}<Image src={cover} alt={name} fill unoptimized loading="eager" fetchPriority="high" sizes="(max-width: 600px) 160px, 220px" /></picture> : <span>{d.state.noPoster}</span>}</div>
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
-        <h1>{name}</h1>
+        <h1>{animeHeading(name, anime, locale)}</h1>
+        {intro && <p className="catalog-intro">{intro}</p>}
         <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
         {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
         {synopsis}

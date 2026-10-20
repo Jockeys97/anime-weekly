@@ -18,7 +18,7 @@ export function CatalogCard({ anime, locale = 'en', initialSummary }: { anime: A
   const format = d.catalog.formats[anime.format as keyof typeof d.catalog.formats] || anime.format || d.catalog.unknown;
   return <article className="anime-card catalog-card">
     <Link href={animePath(anime.id, name)} prefetch={false} className="poster" aria-label={name}>
-      {cover ? <Image src={cover} alt={name} fill sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}
+      {cover ? <Image src={cover} alt={name} fill loading="lazy" sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}
     </Link>
     <div className="card-body">
       <WatchlistButton id={`anilist:${anime.id}`} />

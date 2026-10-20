@@ -57,7 +57,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const years = Array.from({ length: 9 }, (_, index) => value.year + index - 4).filter(item => item >= 1 && item <= 9999);
   const path = seasonPath(value);
   return <main className="catalog-page season-page" lang={locale}>
-    <JsonLd data={animeItemList(data.media.map(anime => ({ name: animeName(anime), anilistId: anime.id })), locale)} />
+    <JsonLd data={animeItemList(data.media.map(anime => ({ name: animeName(anime), anilistId: anime.id })), locale, seasonBreadcrumb(value, locale))} />
     <JsonLd data={breadcrumbList([homeBreadcrumb, { name: d.seasons, path: '/season' }, seasonBreadcrumb(value, locale)], locale)} />
     <section className="season-explorer" aria-labelledby="season-title">
       <div className="season-explorer-header">

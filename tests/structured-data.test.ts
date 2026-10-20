@@ -47,7 +47,8 @@ it('uses only known season data in Italian anime breadcrumbs', () => {
 
 it('renders WebSite SearchAction once on home and only breadcrumbs on a week archive', async () => {
   const home = scripts(renderToStaticMarkup(await Home()));
-  expect(home).toHaveLength(1);
+  expect(home).toHaveLength(2);
+  expect(home[1]).toMatchObject({ '@type': 'Organization', name: 'Weekly Anime', logo: 'https://weeklyanime.com/icon.svg' });
   expect(home[0]).toMatchObject({ '@type': 'WebSite', url: 'https://weeklyanime.com/', potentialAction: {
     '@type': 'SearchAction', target: 'https://weeklyanime.com/search?q={search_term_string}', 'query-input': 'required name=search_term_string',
   } });

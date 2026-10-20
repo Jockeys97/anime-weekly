@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isLocale, negotiateLocale } from '@/lib/locales';
-import { localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
+import { landingRoute, localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
 
 const bots = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview/i;
 export function proxy(request: NextRequest) {
@@ -35,6 +35,17 @@ export function proxy(request: NextRequest) {
       return NextResponse.rewrite(destination);
     }
   }
+  const landing = landingRoute(pathname);
+  if (landing) {
+    const canonical = localePath(pathname, locale);
+    const destination = request.nextUrl.clone();
+    if (pathname !== canonical) {
+      destination.pathname = canonical;
+      return NextResponse.redirect(destination, 308);
+    }
+    destination.pathname = `/${locale}/${landing}`;
+    return NextResponse.rewrite(destination);
+  }
   // Italian is public only without a prefix. Preserve query parameters.
   if (pathname === '/it' || pathname.startsWith('/it/')) {
     const destination = request.nextUrl.clone(); destination.pathname = bare;
@@ -48,5 +59,5 @@ export function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/this-week', '/best-this-season'],
+  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/this-week', '/best-this-season', '/questa-settimana', '/migliori-della-stagione', '/esta-semana', '/mejores-de-la-temporada', '/cette-semaine', '/meilleurs-de-la-saison', '/diese-woche', '/beste-der-saison', '/melhores-da-temporada'],
 };

@@ -17,7 +17,7 @@ describe('discovery landing SEO', () => {
         const metadata = landingMetadata(kind, locale, now);
         titles.add(metadata.title);
         expect(metadata.alternates?.canonical).toBe(`https://weeklyanime.com${localePath(path, locale)}`);
-        expect(metadata.alternates?.languages).toEqual(Object.fromEntries([...locales.map(language => [language, `https://weeklyanime.com${localePath(path, language)}`]), ['x-default', `https://weeklyanime.com${path}`]]));
+        expect(metadata.alternates?.languages).toEqual(Object.fromEntries([...locales.map(language => [language, `https://weeklyanime.com${localePath(path, language)}`]), ['x-default', `https://weeklyanime.com${localePath(path, 'it')}`]]));
         expect(metadata.title).toContain('2026');
         expect(metadata.description).toBeTruthy();
       }
@@ -28,7 +28,7 @@ describe('discovery landing SEO', () => {
   it('adds both pages in every locale to the pages sitemap', () => {
     const entries = buildPagesSitemap(now, new URL('https://weeklyanime.com'));
     for (const path of ['/this-week', '/best-this-season']) for (const locale of locales) {
-      expect(entries.find(entry => entry.url === `https://weeklyanime.com${localePath(path, locale)}`)?.alternates?.languages?.['x-default']).toBe(`https://weeklyanime.com${path}`);
+      expect(entries.find(entry => entry.url === `https://weeklyanime.com${localePath(path, locale)}`)?.alternates?.languages?.['x-default']).toBe(`https://weeklyanime.com${localePath(path, 'it')}`);
     }
   });
 });

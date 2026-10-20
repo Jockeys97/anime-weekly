@@ -14,7 +14,7 @@ export function AnimeCard({ anime, locale = 'en', loadingDetails = false, pendin
   const d = getDictionary(locale);
   const detailHref = animeDetailLink(anime);
   return <article className="anime-card" data-weekly-title={`${anime.kind}:${anime.id}`}>
-    <Link href={detailHref} prefetch={false} className="poster" aria-label={anime.name}>{anime.poster ? <Image src={`https://image.tmdb.org/t/p/w500${anime.poster}`} alt={anime.name} fill sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}</Link>
+    <Link href={detailHref} prefetch={false} className="poster" aria-label={anime.name}>{anime.poster ? <Image src={`https://image.tmdb.org/t/p/w500${anime.poster}`} alt={anime.name} fill loading="lazy" sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}</Link>
     <div className="card-body"><AnimeActions watchlistId={watchlistId(anime)} animeId={anime.ratings.anilistId} locale={locale} /><span className="type-label">{d.week[anime.kind]}</span><WeeklyText key={`${locale}:${anime.kind}:${anime.id}`} id={anime.id} kind={anime.kind} name={anime.name} overview={anime.overview} locale={locale} detailHref={detailHref} frozen={frozen} />
       <RatingSummary ratings={anime.ratings} title={anime.name} locale={locale} pendingAnime={pendingAnime} allowRetry={false} frozen={frozen} />
       <DubbingStatus locale={locale} anilistId={frozen ? undefined : dubbingAnilistId} malId={!frozen && anime.kind === 'movie' ? anime.ratings.malId : undefined} />

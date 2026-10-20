@@ -51,3 +51,30 @@ describe('Italian anime SEO formatter', () => {
     expect(result.description).toBe('Film anime del 2026. Voto 8,1/10. In streaming su Netflix in Italia.');
   });
 });
+
+import { animeHeading, animeIntro, nextAnimeEpisode } from '../lib/anime-seo';
+import { locales } from '../lib/locales';
+const airing = { ...anime, season: 'FALL', seasonYear: 2026, nextAiringEpisode: { episode: 3, airingAt: Date.parse('2026-10-25T23:30:00Z') / 1000 } };
+it('uses real next episode data for localized titles, metadata and dated intros in the specified zones', () => {
+  const expected = {
+    it: 'Titolo episodio 3: data di uscita e voti', en: 'Titolo episode 3: release date & ratings',
+    es: 'Titolo episodio 3: fecha de estreno y valoraciones', fr: 'Titolo épisode 3: date de sortie et notes',
+    de: 'Titolo Folge 3: Erscheinungsdatum und Bewertungen', pt: 'Titolo episódio 3: data de lançamento e avaliações',
+  };
+  for (const locale of locales) {
+    expect(formatAnimeSeo('Titolo', airing, '', undefined, locale).title).toBe(expected[locale]);
+    expect(animeHeading('Titolo', airing, locale)).toBe(expected[locale]);
+    const intro = animeIntro(airing, { imdbRating: '8.4', malScore: 8.2 }, locale);
+    expect(intro).toContain(locale === 'it' ? '26 ottobre 2026' : '25');
+    expect(intro).toContain(locale === 'it' ? '(Europe/Rome)' : '(UTC)');
+    for (const source of ['IMDb', 'MyAnimeList', 'AniList']) expect(intro).toContain(source);
+  }
+});
+it('omits absent or invalid episode, season and scores without invented fallback facts', () => {
+  expect(animeIntro({ averageScore: null, seasonYear: null }, {}, 'en')).toBe('');
+  for (const nextAiringEpisode of [null, { episode: 0, airingAt: 100 }, { episode: 3, airingAt: NaN }, { episode: 2, airingAt: 0 }]) {
+    expect(nextAnimeEpisode({ nextAiringEpisode })).toBeNull();
+    expect(animeHeading('Titolo', { nextAiringEpisode }, 'it')).toBe('Titolo');
+  }
+  expect(animeIntro({ averageScore: 101, seasonYear: null }, { imdbRating: 'N/A', malScore: Infinity }, 'it')).toBe('');
+});

@@ -8,7 +8,10 @@ import type { EpisodeDate } from '@/lib/episode-dates';
 import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
 import type { ISOWeek } from '@/lib/week';
 
-export function WeeklyCalendarContent({ titles, week, events, episodeDates = [], anilistIds = {}, unavailable = false, locale = 'it', renderCard }: {
+const emptyEpisodeDates: EpisodeDate[] = [];
+const emptyAnilistIds: Record<string, number> = {};
+
+export function WeeklyCalendarContent({ titles, week, events, episodeDates = emptyEpisodeDates, anilistIds = emptyAnilistIds, unavailable = false, locale = 'it', renderCard }: {
   titles: AnimeTitle[]; week: ISOWeek; events: Parameters<typeof buildWeeklyCalendar>[1]; episodeDates?: EpisodeDate[]; anilistIds?: Record<string, number>; unavailable?: boolean; locale?: Locale; renderCard?: (anime: AnimeTitle, dubbingAnilistId?: number) => ReactNode;
 }) {
   const d = getDictionary(locale);
