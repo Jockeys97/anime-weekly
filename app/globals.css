@@ -343,6 +343,14 @@
 .week-glance-how-icon { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; background: var(--dark); color: var(--green); }
 .week-glance-how-icon svg { width: 16px; height: 16px; }
 .week-glance-how .only-touch { display: none; }
+.week-glance-how li.is-off { color: #9aa59c; }
+.week-glance-how li.is-off .week-glance-how-icon { background: #c9d1c6; color: #fff; }
+.week-glance-how li.is-off strong { color: var(--muted); }
+.week-glance-switch { position: relative; flex-shrink: 0; width: 34px; height: 20px; margin: 0 -6px 0 4px; padding: 0; border: 0; border-radius: 999px; background: var(--dark); cursor: pointer; transition: background .15s; }
+.week-glance-switch span { position: absolute; top: 3px; left: 17px; width: 14px; height: 14px; border-radius: 50%; background: var(--green); transition: left .15s, background .15s; }
+.week-glance-switch[aria-checked="false"] { background: #c9d1c6; }
+.week-glance-switch[aria-checked="false"] span { left: 3px; background: #fff; }
+.week-glance-switch:focus-visible { outline: 3px solid #769641; outline-offset: 2px; }
 @media (hover: none), (pointer: coarse) {
   .week-glance-how .only-pointer { display: none; }
   .week-glance-how .only-touch { display: inline; }

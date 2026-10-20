@@ -162,6 +162,8 @@
       "label": "Come usare il calendario",
       "hover": "Passa sopra",
       "hoverResult": "guarda il trailer",
+      "hoverOff": "trailer disattivati",
+      "hoverToggle": "Trailer al passaggio del mouse",
       "click": "Clic",
       "tap": "Tocca",
       "clickResult": "vedi orario e piattaforme",

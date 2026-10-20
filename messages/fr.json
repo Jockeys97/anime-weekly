@@ -180,6 +180,8 @@
       "label": "Comment utiliser le calendrier",
       "hover": "Survolez",
       "hoverResult": "voir la bande-annonce",
+      "hoverOff": "bandes-annonces désactivées",
+      "hoverToggle": "Bandes-annonces au survol",
       "click": "Clic",
       "tap": "Touchez",
       "clickResult": "voir l’horaire et les plateformes",

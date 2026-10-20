@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useStreamingCountry } from '@/components/StreamingCountry';
 import { useTrailerHover } from '@/components/GlanceTrailer';
+import { useTrailerPreviews } from '@/lib/trailer-preference';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { providerBase } from '@/lib/landing-providers';
@@ -69,7 +70,8 @@ export function visibleDayRange(columns: { left: number; width: number }[], scro
 export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: CalendarDay[]; locale?: Locale; anilistIds?: Record<string, number> }) {
   const d = getDictionary(locale);
   const { region } = useStreamingCountry();
-  const trailer = useTrailerHover();
+  const [trailersOn, setTrailersOn] = useTrailerPreviews();
+  const trailer = useTrailerHover(trailersOn);
   const how = d.calendar.glanceHow;
   const pendingClick = useRef<{ timer: number; key: string } | null>(null);
   useEffect(() => () => { if (pendingClick.current) clearTimeout(pendingClick.current.timer); }, []);
@@ -129,7 +131,8 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
     <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
     {/* Pointer and touch labels are both rendered; CSS shows the ones matching the input device (SSR-safe). */}
     <ul className="week-glance-how" aria-label={how.label}>
-      <li className="only-pointer"><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg></span><strong>{how.hover}</strong><span>{how.hoverResult}</span></li>
+      <li className={`only-pointer${trailersOn ? '' : ' is-off'}`}><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg></span><strong>{how.hover}</strong><span>{trailersOn ? how.hoverResult : how.hoverOff}</span>
+        <button type="button" role="switch" aria-checked={trailersOn} aria-label={how.hoverToggle} title={how.hoverToggle} className="week-glance-switch" onClick={() => setTrailersOn(!trailersOn)}><span aria-hidden="true" /></button></li>
       <li><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor" /><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg></span><strong><span className="only-pointer">{how.click}</span><span className="only-touch">{how.tap}</span></strong><span>{how.clickResult}</span></li>
       <li><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6" fill="currentColor" /><circle cx="12" cy="12" r="5.8" fill="none" stroke="currentColor" strokeWidth="1.5" /><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" opacity=".6" /></svg></span><strong><span className="only-pointer">{how.double}</span><span className="only-touch">{how.doubleTap}</span></strong><span>{how.doubleResult}</span></li>
     </ul>

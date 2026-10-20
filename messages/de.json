@@ -180,6 +180,8 @@
       "label": "So funktioniert der Kalender",
       "hover": "Darüberfahren",
       "hoverResult": "Trailer ansehen",
+      "hoverOff": "Trailer aus",
+      "hoverToggle": "Trailer beim Darüberfahren",
       "click": "Klick",
       "tap": "Tippen",
       "clickResult": "Uhrzeit und Plattformen ansehen",

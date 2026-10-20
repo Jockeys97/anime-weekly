@@ -180,6 +180,8 @@
       "label": "Como usar o calendário",
       "hover": "Passe o cursor",
       "hoverResult": "veja o trailer",
+      "hoverOff": "trailers desativados",
+      "hoverToggle": "Trailers ao passar o cursor",
       "click": "Clique",
       "tap": "Toque",
       "clickResult": "ver horário e plataformas",
