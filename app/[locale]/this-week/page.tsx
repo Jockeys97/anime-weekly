@@ -1,5 +1,7 @@
 import Link from '@/components/LocaleLink';
 import { JsonLd } from '@/components/JsonLd';
+import { LandingCard } from '@/components/LandingCard';
+import { landingProviders } from '@/lib/landing-providers';
 import { animeDetailLink } from '@/lib/anime-detail-link';
 import { getDictionary } from '@/lib/i18n';
 import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
@@ -25,12 +27,8 @@ export default async function ThisWeek({ params }: { params?: LocaleParams }) {
   const dateFormat = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
   const numberFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   function row(title: AnimeTitle, key: string) {
-    const entry = snapshot.availability?.titles[`${title.kind}:${title.id}`];
-    const offers = Object.entries(entry?.countries ?? {}).flatMap(([country, ids]) => {
-      const names = ids.map(id => snapshot.availability?.providers[id]?.name).filter(Boolean);
-      return names.length ? [`${country}: ${names.join(', ')}`] : [];
-    });
-    return <li key={key} className="landing-card"><div><h3><Link href={animeDetailLink(title)}>{title.name}</Link></h3><p>{title.kind === 'movie' ? d.week.movie : d.week.tv}</p>{offers.length > 0 && <p>{d.landings.platforms}: {offers.join(' · ')}</p>}<p>{ratingSources(title.ratings).map(source => `${source.name} ${numberFormat.format(source.score)}/10`).join(' · ')}</p></div></li>;
+    const { primary, others } = landingProviders(snapshot.availability?.titles[`${title.kind}:${title.id}`], snapshot.availability?.providers, locale);
+    return <li key={key}><LandingCard locale={locale} href={animeDetailLink(title)} name={title.name} poster={title.poster ? `https://image.tmdb.org/t/p/w342${title.poster}` : null} typeLabel={title.kind === 'movie' ? d.week.movie : d.week.tv} ratings={ratingSources(title.ratings).map(source => `${source.name} ${numberFormat.format(source.score)}/10`).join(' · ')} primary={primary} others={others} /></li>;
   }
   return <main id="main" className="catalog-page" lang={locale}>
     <JsonLd data={animeItemList(titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale, { name: heading, path: "/this-week" })} />

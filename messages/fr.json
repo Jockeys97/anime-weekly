@@ -474,6 +474,7 @@
     "undated": "Date à confirmer",
     "weekEmpty": "Aucune sortie n’est encore disponible. Revenez bientôt pour les mises à jour.",
     "bestEmpty": "Aucun anime noté n’est encore disponible pour cette saison.",
-    "platforms": "Plateformes par pays"
+    "platforms": "Plateformes par pays",
+    "otherCountries": "Autres pays"
   }
 }

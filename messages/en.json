@@ -480,6 +480,7 @@
     "undated": "Date to be confirmed",
     "weekEmpty": "No releases are available yet. Check back soon for updates.",
     "bestEmpty": "No rated anime are available for this season yet.",
-    "platforms": "Platforms by country"
+    "platforms": "Platforms by country",
+    "otherCountries": "Other countries"
   }
 }
