@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { observeNearViewport } from '@/lib/viewport-observer';
 import { RatingSummary } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
 import { getDictionary, type Locale } from '@/lib/i18n';
@@ -19,19 +20,11 @@ export function CatalogCardExtras({ id, malId, name, score, locale = 'en', initi
     if (initialSummary && !attempt) return;
     let mounted = true;
     const controller = new AbortController();
-    let observer: IntersectionObserver | undefined;
     const load = () => {
-      observer?.disconnect();
       void loadCatalogCard(id, controller.signal).then(data => { if (mounted) setSummary(data); }).catch(() => { if (mounted && !controller.signal.aborted) setFailed(true); });
     };
-    if (typeof IntersectionObserver === 'undefined') load();
-    else {
-      observer = new IntersectionObserver(entries => {
-        if (entries.some(entry => entry.isIntersecting)) load();
-      }, { rootMargin: '100px' });
-      if (container.current) observer.observe(container.current);
-    }
-    return () => { mounted = false; controller.abort(); observer?.disconnect(); };
+    const stopObserving = container.current ? observeNearViewport(container.current, load) : undefined;
+    return () => { mounted = false; controller.abort(); stopObserving?.(); };
   }, [id, attempt, initialSummary]);
   const pending = !summary && !failed;
   // Seasonal filters already fetched these providers independently of ratings.

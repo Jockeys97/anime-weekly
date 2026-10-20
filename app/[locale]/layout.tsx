@@ -27,5 +27,5 @@ export async function generateMetadata({ params }: { params: LocaleParams }): Pr
 export default async function RootLayout({ children, params }: Readonly<{ children: React.ReactNode; params: LocaleParams }>) {
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale);
-  return <html lang={locale}><body><LocaleProvider key={locale} locale={locale}><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider><Analytics /></body></html>;
+  return <html lang={locale}><body><LocaleProvider key={locale} locale={locale}><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state route-loading" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider><Analytics /></body></html>;
 }

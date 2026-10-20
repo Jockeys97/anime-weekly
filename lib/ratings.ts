@@ -1,7 +1,10 @@
 export interface Ratings { malStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error'; malScoredBy?: number; animeStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error'; imdbErrorReason?: 'quota' | 'authentication' | 'network' | 'upstream'; imdbStatus?: 'ready' | 'unavailable' | 'unmatched' | 'error' | 'unconfigured'; imdbSeriesTitle?: string; imdbId?: string; anilistId?: number; malId?: number; imdbRating?: string; imdbVotes?: string; malScore?: number | null; malMembers?: number | null; anilistScore?: number | null }
+const memberFormatter = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+const voteFormatter = new Intl.NumberFormat('en');
+
 export function formatMembers(value: number | null | undefined): string {
   if (value == null || !Number.isSafeInteger(value) || value < 0) return 'n/a';
-  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  return memberFormatter.format(value);
 }
 export function formatAnimeScore(ratings: Ratings): string {
   const score = ratings.malScore;
@@ -20,7 +23,7 @@ export function formatRating(value: string | number | null | undefined, maximum 
 export function formatVotes(value: string | null | undefined): string {
   if (!value || !/^\d+(,\d{3})*$/.test(value)) return 'n/a';
   const numeric = Number(value.replaceAll(',', ''));
-  return Number.isSafeInteger(numeric) ? new Intl.NumberFormat('en').format(numeric) : 'n/a';
+  return Number.isSafeInteger(numeric) ? voteFormatter.format(numeric) : 'n/a';
 }
 
 export function ratingSourceLink(source: 'imdb' | 'anilist' | 'myanimelist', ratings: Ratings): string | undefined {

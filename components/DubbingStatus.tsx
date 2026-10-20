@@ -4,6 +4,7 @@ import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { validMalId, type DubbingResult } from '@/lib/dubbing';
 import { loadDubbing } from '@/lib/dubbing-client';
+import { observeNearViewport } from '@/lib/viewport-observer';
 import { DubbingFlag } from '@/components/DubbingFlag';
 
 export function DubbingStatus({ malId, anilistId, locale = 'en', initial, followLocale = false }: {
@@ -23,14 +24,11 @@ export function DubbingStatus({ malId, anilistId, locale = 'en', initial, follow
     if (!query || known) return;
     let active = true;
     const load = () => {
-      observer?.disconnect();
       void loadDubbing(query, language, validMalId(malId) ? malId : undefined).then(result => { if (active) setLoaded({ key, result }); })
         .catch(() => { if (active) setLoaded({ key, result: { status: 'unverified', language, reason: 'upstream' } }); });
     };
-    const observer = typeof IntersectionObserver === 'undefined' ? undefined
-      : new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) load(); }, { rootMargin: '100px' });
-    if (observer && ref.current) observer.observe(ref.current); else load();
-    return () => { active = false; observer?.disconnect(); };
+    const stopObserving = ref.current ? observeNearViewport(ref.current, load) : undefined;
+    return () => { active = false; stopObserving?.(); };
   }, [query, language, malId, known, key]);
   const status = result?.status ?? 'unverified';
   const exactId = result?.malId ?? (validMalId(malId) ? malId : undefined);

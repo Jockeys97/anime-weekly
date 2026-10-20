@@ -301,10 +301,22 @@
 .calendar-progress { min-height: 20px; }
 .week-kicker { min-height: 24px; }
 .sponsor { min-height: 78px; }
+/* Loading routes must not briefly expose the footer before SSR content arrives. */
+.route-loading { min-height: 100svh; }
+.platform-filter-status { flex-basis: 100%; min-height: 2lh; }
+/* Keep the three clamped lines and translation attribution through enrichment. */
+.catalog-card .catalog-synopsis { min-height: 3lh; }
+.catalog-card .synopsis-fallback { min-height: 3em; }
+/* Missing/retried scores and series notices need more than the value baseline. */
+.catalog-card .rating-tile, .anime-detail .rating-tile { min-height: 160px; }
+/* Recovery can add series notes and provider rows to the static detail section. */
+.detail-streaming .streaming-static { min-height: 260px; }
 @media (max-width: 600px) {
   .rating-tile { min-height: 94px; }
   .ratings .rating-value { min-height: 29px; }
   .ratings .rating-detail { min-height: 31px; }
+  .catalog-card .rating-tile, .anime-detail .rating-tile { min-height: 130px; }
+  .detail-streaming .streaming-static { min-height: 320px; }
 }
 
 /* Week at a glance */

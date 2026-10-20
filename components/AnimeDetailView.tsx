@@ -37,9 +37,12 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const startDate = date?.year && date.month && date.day ? <VisitorDate value={`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`} /> : date?.year ?? c.unknown;
   return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
-    {anime.bannerImage && <div className="anime-banner"><Image src={anime.bannerImage} alt="" fill unoptimized sizes="(max-width: 1280px) 100vw, 1160px" /></div>}
+    {/* Next Image drops sizes for unoptimized sources; keep this direct CDN image. */}
+    {anime.bannerImage && <div className="anime-banner">{/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={anime.bannerImage} alt="" loading="eager" fetchPriority="high" sizes="100vw" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+    </div>}
     <article className="anime-card anime-detail">
-      <div className="poster">{cover ? <picture style={{ position: 'absolute', inset: 0 }}>{coverSources && <source srcSet={coverSources} sizes="(max-width: 600px) 160px, 220px" />}<Image src={cover} alt={name} fill unoptimized loading="eager" fetchPriority="high" sizes="(max-width: 600px) 160px, 220px" /></picture> : <span>{d.state.noPoster}</span>}</div>
+      <div className="poster">{cover ? <picture style={{ position: 'absolute', inset: 0 }}>{coverSources && <source srcSet={coverSources} sizes="(max-width: 600px) 160px, 220px" />}<Image src={cover} alt={name} fill unoptimized loading="eager" fetchPriority={anime.bannerImage ? "auto" : "high"} sizes="(max-width: 600px) 160px, 220px" /></picture> : <span>{d.state.noPoster}</span>}</div>
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{animeHeading(name, anime, locale)}</h1>

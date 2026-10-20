@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getDictionary } from '@/lib/i18n';
 import { loadSynopsis, synopsisQuery, type SynopsisResult } from '@/lib/synopsis-client';
 import type { Locale } from '@/lib/locales';
+import { observeNearViewport } from '@/lib/viewport-observer';
 
 export function LocalizedSynopsis({ original, titles, year, kind, locale, anilistId, initial, followLocale = false, retryMissing = false, className = 'synopsis catalog-synopsis' }: {
   original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className?: string; initial?: SynopsisResult; followLocale?: boolean; retryMissing?: boolean;
@@ -33,23 +34,15 @@ function SynopsisContent({ original, titles, year, kind, locale, anilistId, init
       }).catch(() => { /* Show the labelled original only if translation fails. */ })
         .finally(() => { if (!cancelled) setChecked(true); });
     };
-    let observer: IntersectionObserver | undefined;
-    const timer = retryMissing || typeof IntersectionObserver === 'undefined' ? setTimeout(load, 0) : undefined;
-    if (timer === undefined) {
-      observer = new IntersectionObserver(entries => {
-        if (!entries.some(entry => entry.isIntersecting)) return;
-        observer?.disconnect(); load();
-      }, { rootMargin: '150px' });
-      observer.observe(ref.current);
-    }
+    const timer = retryMissing ? setTimeout(load, 0) : undefined;
+    const stopObserving = timer === undefined ? observeNearViewport(ref.current, load, '150px') : undefined;
     // Also settle when an observer never fires (for example a hidden card).
     const deadline = setTimeout(() => { if (!cancelled) setChecked(true); }, 31000);
-    return () => { cancelled = true; clearTimeout(timer); clearTimeout(deadline); observer?.disconnect(); };
+    return () => { cancelled = true; clearTimeout(timer); clearTimeout(deadline); stopObserving?.(); };
   }, [locale, query, initial, retryMissing]);
   const pending = locale !== 'en' && Boolean(original) && !translation && !checked;
   return <div ref={ref} className="localized-synopsis">
     <p className={className} lang={pending || translation ? locale : original ? 'en' : locale} role={pending ? 'status' : undefined}>{pending ? d.language.loadingSynopsis : translation || original || d.state.noSynopsis}</p>
-    {translation && machine && <p className="synopsis-fallback">{d.language.machineTranslation} · DeepL</p>}
-    {locale !== 'en' && original && !translation && checked && <p className="synopsis-fallback">{d.language.originalSynopsis}</p>}
+    {locale !== 'en' && <p className="synopsis-fallback">{translation && machine ? `${d.language.machineTranslation} · DeepL` : original && !translation && checked ? d.language.originalSynopsis : '\u00a0'}</p>}
   </div>;
 }

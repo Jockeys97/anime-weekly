@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { formatAnimeScore, formatMembers, formatRating, formatVotes, ratingSourceLink, type Ratings } from '@/lib/ratings';
 import { loadMalRating } from '@/lib/mal-rating-client';
+import { observeNearViewport } from '@/lib/viewport-observer';
 
 function usePendingTimeout(pending: boolean) {
   const [expired, setExpired] = useState(false);
@@ -112,9 +113,8 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
   useEffect(() => {
     if (!needsLookup) return;
     let active = true;
-    let observer: IntersectionObserver | undefined;
+    let stopObserving: (() => void) | undefined;
     const load = () => {
-      observer?.disconnect();
       setLoading(query);
       // Include time spent in the shared catalog queue. A stalled observer or
       // queued request must never leave a visible tile loading indefinitely.
@@ -122,12 +122,11 @@ export function MyAnimeListRatingTile({ ratings, title, locale, pending = false,
         .catch(() => { if (active) setLoaded({ query, ratings: { malStatus: 'error' } }); })
         .finally(() => { if (active) setLoading(null); });
     };
-    const timer = eager || typeof IntersectionObserver === 'undefined' ? setTimeout(load, 0) : undefined;
+    const timer = eager ? setTimeout(load, 0) : undefined;
     if (timer === undefined) {
-      observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) load(); }, { rootMargin: '100px' });
-      if (tile.current) observer.observe(tile.current);
+      if (tile.current) stopObserving = observeNearViewport(tile.current, load);
     }
-    return () => { active = false; clearTimeout(timer); observer?.disconnect(); };
+    return () => { active = false; clearTimeout(timer); stopObserving?.(); };
   }, [needsLookup, query, attempt, eager]);
   const waiting = usePendingTimeout(pending && !initialReady) || (needsLookup && !ready && loading === query && loaded?.query !== query);
   const failed = current.malStatus === 'error';

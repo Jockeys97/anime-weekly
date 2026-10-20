@@ -17,6 +17,6 @@ export function TitleFilters({ genres, platforms, genre, platform, onlyWatchlist
     <label htmlFor={`${id}-platform`}>{d.platform} <select id={`${id}-platform`} value={platform} aria-busy={platformsPending} onChange={event => onPlatform(event.target.value)}><option value="">{d.all}</option>{platformChoices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
     <label><input type="checkbox" checked={onlyWatchlist} onChange={event => onWatchlist(event.target.checked)} /> {d.onlyWatchlist}</label>
     <label><input type="checkbox" checked={showStreaming} onChange={event => setShowStreaming(event.target.checked)} /> {d.showStreaming}</label>
-    {platformsPending ? <span role="status">{dictionary.catalog.loadingAvailability}</span> : platformsFailed && <span role="status">{dictionary.state.providersError} {onRetryPlatforms && <button type="button" onClick={onRetryPlatforms}>{dictionary.error.retry}</button>}</span>}
+    <span className="platform-filter-status" role="status">{platformsPending ? dictionary.catalog.loadingAvailability : platformsFailed ? <>{dictionary.state.providersError} {onRetryPlatforms && <button type="button" onClick={onRetryPlatforms}>{dictionary.error.retry}</button>}</> : '\u00a0'}</span>
   </div>;
 }

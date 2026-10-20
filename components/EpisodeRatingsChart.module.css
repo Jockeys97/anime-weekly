@@ -1,4 +1,4 @@
-.section{margin:36px 0;padding:26px 28px;border:1px solid var(--line);border-radius:16px;background:#fff;min-width:0}
+.section{margin:36px 0;padding:26px 28px;border:1px solid var(--line);border-radius:16px;background:#fff;min-width:0;min-height:600px}
 .heading{display:flex;justify-content:space-between;align-items:center;gap:20px}
 .heading h2,.section>h2{font-size:26px;font-weight:500;letter-spacing:-.8px;margin:0}
 .eyebrow{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#698140;margin:0 0 8px;font-weight:700}
@@ -23,3 +23,5 @@
 .empty{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:72px;color:var(--muted);font-size:13px;line-height:1.6}.empty p{margin-bottom:14px;max-width:620px}.empty button{background:#f0f3e9;border:1px solid #bacba7;border-radius:7px;padding:8px 12px;color:var(--ink);cursor:pointer}
 @media(max-width:600px){.section{padding:20px 16px;margin:26px 0}.heading{align-items:flex-start;gap:12px}.heading h2{font-size:23px}.source{font-size:10px;padding:8px}.source span{margin-left:2px}.description{font-size:11px}.summary{align-items:flex-start;flex-direction:column;justify-content:center;gap:8px;padding:16px 0}.average strong{font-size:24px}.episodes li{width:58px}.episodes{gap:9px}.note{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.bar{transition:none}}
+/* Shared by streamed fallback, unavailable state and recovered chart. */
+@media(max-width:600px){.section{min-height:720px}}

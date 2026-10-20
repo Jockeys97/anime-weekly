@@ -128,3 +128,21 @@ it('prioritizes the displayed CDN cover without lazy loading or extra transforma
   expect(cover).not.toContain('/_next/image');
   expect(cover).not.toContain('loading="lazy"');
 });
+
+it('gives only the direct AniList banner high priority when present', () => {
+  const bannerImage = 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/1535.jpg';
+  const coverImage = { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null };
+  const view = React.createElement(AnimeDetailView, { anime: { ...anime, bannerImage, coverImage }, synopsis: null, imdb: null, ratings: null, availability: null });
+  const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
+  const banner = html.match(/<img[^>]+alt=""[^>]*>/)?.[0];
+  const cover = html.match(/<img[^>]+alt="Example"[^>]*>/)?.[0];
+  expect(banner).toContain(`src="${bannerImage}"`);
+  expect(banner).toContain('loading="eager"');
+  expect(banner).toContain('sizes="100vw"');
+  expect(banner).toMatch(/fetchPriority="high"/i);
+  expect(banner).not.toContain('/_next/image');
+  expect(cover).toContain('loading="eager"');
+  expect(cover).toMatch(/fetchPriority="auto"/i);
+  // React may also emit a preload link for the same high-priority resource.
+  expect(html.match(/<img\b[^>]*fetchPriority="high"[^>]*>/gi)).toHaveLength(1);
+});
