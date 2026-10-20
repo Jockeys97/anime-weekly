@@ -4,7 +4,9 @@ vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: vi.fn().mockResolvedV
 import { listArchivedWeeks } from '../lib/week-archive';
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), animeName: (item: { title: { english: string } }) => item.title.english }));
+vi.mock('@vercel/blob', () => ({ get: vi.fn(), put: vi.fn() }));
 import { getSeason } from '../lib/anilist';
+import { get, put } from '@vercel/blob';
 import sitemap, { generateSitemaps } from '../app/sitemaps/sitemap';
 import { GET } from '../app/sitemap.xml/route';
 import { getSitemapCatalog } from '../lib/sitemap-catalog';
@@ -52,24 +54,48 @@ describe('SEO sitemap', () => {
     expect(entries.find(entry => entry.url.endsWith('/week/2026-01'))?.lastModified).toEqual(date);
     expect(entries.find(entry => entry.url.endsWith('/season/2024/winter'))?.lastModified).toEqual(date);
   });
-  it('paginates all twelve seasons sequentially, deduplicates globally and keeps partial results on failure', async () => {
+  it('paginates the four seasons of one year sequentially and keeps partial results on failure', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     let active = 0;
     vi.mocked(getSeason).mockImplementation(async (year, season, page = 1) => {
       expect(active++).toBe(0);
       await Promise.resolve();
       active--;
-      if (year === 2024 && season === 'winter' && page === 2) throw new Error('offline');
-      if (year === 2025 && season === 'spring') return { media: [], pageInfo: { currentPage: page, hasNextPage: false } };
+      if (season === 'spring') return { media: [], pageInfo: { currentPage: page, hasNextPage: false }, unavailable: true };
+      if (season === 'summer') throw new Error('offline');
       const media = [{ id: 21, title: { english: 'Death Note' } }, ...(page === 2 ? [{ id: 42, title: { english: 'Example' }, updatedAt: 1730000000 }] : [])];
-      return { media, pageInfo: { currentPage: page, hasNextPage: page === 1 } } as Awaited<ReturnType<typeof getSeason>>;
+      return { media, pageInfo: { currentPage: page, hasNextPage: season === 'winter' && page === 1 } } as Awaited<ReturnType<typeof getSeason>>;
     });
     const catalog = await getSitemapCatalog(2026);
     expect(catalog.map(anime => anime.id)).toEqual([21, 42]);
-    expect(getSeason).toHaveBeenCalledTimes(23);
-    for (const year of [2024, 2025, 2026]) {
-      for (const season of ['winter', 'spring', 'summer', 'fall']) expect(getSeason).toHaveBeenCalledWith(year, season, 1);
-    }
-    expect(getSeason).toHaveBeenCalledWith(2026, 'fall', 2);
+    expect(getSeason).toHaveBeenCalledTimes(5);
+    for (const season of ['winter', 'spring', 'summer', 'fall']) expect(getSeason).toHaveBeenCalledWith(2026, season, 1);
+    expect(getSeason).toHaveBeenCalledWith(2026, 'winter', 2);
+    expect(put).not.toHaveBeenCalled();
+  });
+  it('reuses saved ended seasons, saves the crawled current season and falls back to saved lists when AniList fails', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
+    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'fixture-token');
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const saved = (season: string, savedAt: string) => ({ version: 1, year: 2026, season, savedAt, anime: [{ id: { winter: 1, spring: 2, summer: 3, fall: 4 }[season]!, name: season }] });
+    const stored: Record<string, unknown> = {
+      'sitemap/seasons/2026-winter.json': saved('winter', '2026-10-01T06:00:00Z'),
+      'sitemap/seasons/2026-spring.json': saved('spring', '2026-08-01T06:00:00Z'),
+      'sitemap/seasons/2026-summer.json': saved('summer', '2026-10-10T06:00:00Z'),
+      'sitemap/seasons/2026-fall.json': saved('fall', '2026-10-13T06:00:00Z'),
+    };
+    vi.mocked(get).mockImplementation(async (key: string) => (stored[key]
+      ? { statusCode: 200, stream: new Response(JSON.stringify(stored[key])).body! }
+      : null) as Awaited<ReturnType<typeof get>>);
+    vi.mocked(getSeason).mockImplementation(async (_year, season, page = 1) => season === 'fall'
+      ? { media: [{ id: 40, title: { english: 'Fall' }, updatedAt: 1792000000 }], pageInfo: { currentPage: page, hasNextPage: false } } as Awaited<ReturnType<typeof getSeason>>
+      : { media: [], pageInfo: { currentPage: page, hasNextPage: false }, unavailable: true });
+    // Winter and summer are fresh saved lists; spring is stale and AniList fails, so its saved list is kept.
+    expect((await getSitemapCatalog(2026)).map(anime => anime.id)).toEqual([1, 2, 3, 40]);
+    expect(vi.mocked(getSeason).mock.calls.map(([, season]) => season)).toEqual(['spring', 'fall']);
+    expect(put).toHaveBeenCalledOnce();
+    expect(vi.mocked(put).mock.calls[0][0]).toBe('sitemap/seasons/2026-fall.json');
+    expect(JSON.parse(vi.mocked(put).mock.calls[0][1] as string)).toMatchObject({ version: 1, year: 2026, season: 'fall', anime: [{ id: 40, name: 'Fall', updatedAt: 1792000000 }] });
   });
   it('serves independent page/year shards and exposes their Next 16 URLs in the index and robots', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
@@ -87,7 +113,7 @@ describe('SEO sitemap', () => {
     expect(listArchivedWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);
-    expect(getSeason).toHaveBeenCalledTimes(12);
+    expect(getSeason).toHaveBeenCalledTimes(4);
     const xml = await GET().text();
     expect(xml).toContain('<sitemapindex');
     for (const url of sitemapUrls()) {
@@ -96,16 +122,16 @@ describe('SEO sitemap', () => {
     }
     expect(robots().sitemap).toContain('https://anime.example/sitemap.xml');
   });
-  it('shares concurrent cold crawls and assigns each anime to only one year shard', async () => {
+  it('shares concurrent cold crawls of a shard and fills each year shard from its own seasons', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
     vi.mocked(getSeason).mockImplementation(async year => ({
-      media: [{ id: year, title: { english: "Year" } }, { id: 21, title: { english: "Death Note" } }],
+      media: [{ id: year, title: { english: 'Year' } }],
       pageInfo: { currentPage: 1, hasNextPage: false },
     } as Awaited<ReturnType<typeof getSeason>>));
-    const shards = await Promise.all(['2024', '2025', '2026'].map(id => sitemap({ id: Promise.resolve(id) })));
+    const shards = await Promise.all(['2024', '2025', '2026', '2026'].map(id => sitemap({ id: Promise.resolve(id) })));
     expect(getSeason).toHaveBeenCalledTimes(12);
     expect(shards.map(entries => entries.filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => new URL(entry.url).pathname))).toEqual([
-      ['/anime/2024-year', '/anime/21-death-note'], ['/anime/2025-year'], ['/anime/2026-year'],
+      ['/anime/2024-year'], ['/anime/2025-year'], ['/anime/2026-year'], ['/anime/2026-year'],
     ]);
   });
   it('uses the same base URL for robots and metadata', () => {

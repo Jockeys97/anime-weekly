@@ -98,7 +98,7 @@ describe('AniList catalog (offline)', () => {
     const { getSeason, searchAnime, getAnime } = await import('../lib/anilist');
     const pending = Promise.all([getSeason(2026, 'fall', 3), searchAnime('Example'), getAnime(21)]);
     await vi.runAllTimersAsync();
-    expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false } }, [], null]);
+    expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false }, unavailable: true }, [], null]);
   });
 });
 

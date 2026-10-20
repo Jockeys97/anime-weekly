@@ -3,6 +3,7 @@ vi.mock('server-only', () => ({}));
 vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: async () => [] }));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn() }));
+vi.mock('@vercel/blob', () => ({ get: vi.fn(), put: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 import config from '../next.config';
 import { siteUrl, pageMetadata } from '../lib/seo';
