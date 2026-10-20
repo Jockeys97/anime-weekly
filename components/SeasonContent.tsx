@@ -8,7 +8,8 @@ import { mergePlatformSnapshot, type PlatformSnapshot } from '@/lib/platform-dat
 import { invalidateWeeklyLookup, loadWeeklyLookup } from '@/lib/weekly-client';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { CatalogWatchProvider } from '@/components/CatalogWatchContext';
-export function SeasonContent({ entries, locale, providerUrl, initialProviders }: { entries: { id: number; genres: string[]; card: ReactNode }[]; locale: Locale; providerUrl: string; initialProviders?: PlatformSnapshot }) {
+// `showGenre={false}` where the page already filters genres server-side (search).
+export function SeasonContent({ entries, locale, providerUrl, initialProviders, showGenre = true }: { entries: { id: number; genres: string[]; card: ReactNode }[]; locale: Locale; providerUrl: string; initialProviders?: PlatformSnapshot; showGenre?: boolean }) {
   const { region, platformFilter: platform, setPlatformFilter: setPlatform } = useStreamingCountry(); const watchlist = useWatchlist();
   const [genre, setGenre] = useState(''); const [onlyWatchlist, setOnlyWatchlist] = useState(false);
   const [providers, setProviders] = useState<PlatformSnapshot | null>(initialProviders ?? null);
@@ -27,7 +28,7 @@ export function SeasonContent({ entries, locale, providerUrl, initialProviders }
   const incomplete = providers?.unavailable || Boolean(providers && entries.some(entry => !providers.titles[`anilist:${entry.id}`]));
   const options = filterOptions(titles, region, platform);
   const visible = new Set(filterTitles(titles, { genre, platform, region, onlyWatchlist, watchlist }).map(title => title.id));
-  return <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={setPlatform} onWatchlist={setOnlyWatchlist} platformsPending={pending} platformsFailed={incomplete} onRetryPlatforms={() => { setPending(true); retry(value => value + 1); }} />
+  return <><StreamingCountrySelector locale={locale} /><TitleFilters {...options} showGenre={showGenre} genre={genre} platform={platform} onlyWatchlist={onlyWatchlist} onGenre={setGenre} onPlatform={setPlatform} onWatchlist={setOnlyWatchlist} platformsPending={pending} platformsFailed={incomplete} onRetryPlatforms={() => { setPending(true); retry(value => value + 1); }} />
     {!visible.size && (!platform || (!pending && !incomplete)) && <p role="status">{getDictionary(locale).features.noMatches}</p>}
     <CatalogWatchProvider snapshot={providers}><div className="anime-grid">{entries.map(entry => <div key={entry.id} hidden={!visible.has(entry.id)}>{entry.card}</div>)}</div></CatalogWatchProvider>
   </>;
