@@ -398,7 +398,11 @@
     "nextEpisode": "Ep. {episode} · {date}",
     "airing": "In corso",
     "finished": "Concluso",
-    "upcoming": "In arrivo"
+    "upcoming": "In arrivo",
+    "showAll": "Mostra tutti ({count})",
+    "showLess": "Mostra meno",
+    "previous": "Preferiti precedenti",
+    "next": "Preferiti successivi"
   },
   "features": {
     "topFive": "Top 5 episodi della settimana",

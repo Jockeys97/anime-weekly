@@ -398,7 +398,11 @@
     "nextEpisode": "Folge {episode} · {date}",
     "airing": "Läuft",
     "finished": "Abgeschlossen",
-    "upcoming": "Demnächst"
+    "upcoming": "Demnächst",
+    "showAll": "Alle anzeigen ({count})",
+    "showLess": "Weniger anzeigen",
+    "previous": "Vorherige Favoriten",
+    "next": "Nächste Favoriten"
   },
   "features": {
     "topFive": "Top 5 Episoden der Woche",

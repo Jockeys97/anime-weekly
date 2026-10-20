@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from '@/components/LocaleLink';
 import { useWatchlist, WatchlistButton } from '@/components/Watchlist';
 import { getDictionary, type Locale } from '@/lib/i18n';
@@ -15,6 +15,16 @@ export function MyFavorites({ locale }: { locale: Locale }) {
   const key = ids.join(',');
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // One sideways row by default (fixed height, soonest episodes first); "show all" opens the grid.
+  const [expanded, setExpanded] = useState(false);
+  const rail = useRef<HTMLUListElement>(null);
+  const [edges, setEdges] = useState({ overflow: false, prev: false, next: false });
+  const measure = useCallback(() => {
+    const element = rail.current;
+    if (!element) return;
+    const next = { overflow: element.scrollWidth > element.clientWidth + 4, prev: element.scrollLeft > 4, next: element.scrollLeft + element.clientWidth < element.scrollWidth - 4 };
+    setEdges(previous => previous.overflow === next.overflow && previous.prev === next.prev && previous.next === next.next ? previous : next);
+  }, []);
   useEffect(() => {
     if (!key) return;
     const controller = new AbortController();
@@ -29,6 +39,22 @@ export function MyFavorites({ locale }: { locale: Locale }) {
   }, [key, attempt]);
   // Removing a heart updates the list at once, without waiting for a new request.
   const current = result && 'items' in result ? sortFavorites(result.items.filter(item => ids.includes(item.id)), locale) : [];
+  const count = current.length;
+  useEffect(() => {
+    const element = rail.current;
+    if (!element || typeof window === 'undefined' || expanded) return;
+    const frame = window.requestAnimationFrame(measure);
+    element.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(element);
+    return () => { window.cancelAnimationFrame(frame); element.removeEventListener('scroll', measure); observer?.disconnect(); };
+  }, [measure, expanded, count]);
+  const slide = (direction: 1 | -1) => {
+    const element = rail.current;
+    if (!element) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    element.scrollBy({ left: direction * Math.max(160, element.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' });
+  };
   const loading = Boolean(key) && (!result || (result.key !== key && !current.length));
   const failed = result && 'failed' in result && result.key === key;
   const next = (item: FavoriteItem) => item.next && d.nextEpisode.replace('{episode}', String(item.next.episode))
@@ -37,6 +63,8 @@ export function MyFavorites({ locale }: { locale: Locale }) {
   return <section className="my-favorites" aria-labelledby="my-favorites-title">
     <header className="my-favorites-heading">
       <div><p className="eyebrow">{d.eyebrow}</p><h2 id="my-favorites-title">{d.title}{ids.length ? <span className="my-favorites-count">{ids.length}</span> : null}</h2></div>
+      {(edges.overflow || expanded) && count > 0 && <button type="button" className="my-favorites-toggle" aria-expanded={expanded} aria-controls="my-favorites-list" onClick={() => setExpanded(value => !value)}>
+        {expanded ? d.showLess : d.showAll.replace('{count}', String(count))}</button>}
       <p className="my-anime-note">{d.note}</p>
     </header>
     {!ids.length ? <div className="my-favorites-empty"><span aria-hidden="true">♡</span><p>{d.empty}</p></div>
@@ -44,7 +72,9 @@ export function MyFavorites({ locale }: { locale: Locale }) {
       : failed && !current.length ? <p className="my-anime-notice" role="status">{d.error} <button type="button" className="my-favorites-retry" onClick={() => setAttempt(value => value + 1)}>{d.retry}</button></p>
       : <>
         {result && 'unavailable' in result && result.unavailable && <p className="my-anime-note" role="status">{d.partial}</p>}
-        <ul className="my-favorites-grid">{current.map(item => <li key={item.id} className="my-favorites-card">
+        <div className={`my-favorites-rail${expanded ? ' is-expanded' : ''}`}>
+        {!expanded && edges.prev && <button type="button" className="my-favorites-arrow is-prev" onClick={() => slide(-1)} aria-label={d.previous} aria-controls="my-favorites-list">‹</button>}
+        <ul id="my-favorites-list" ref={rail} className={`my-favorites-grid${expanded ? '' : ' is-row'}`}>{current.map(item => <li key={item.id} className="my-favorites-card">
           <Link href={item.href} prefetch={false} className="my-favorites-poster" aria-label={item.name}>
             {item.poster ? <Image src={item.poster} alt="" fill unoptimized sizes="(max-width: 600px) 45vw, 180px" /> : <span aria-hidden="true">✦</span>}
           </Link>
@@ -54,6 +84,8 @@ export function MyFavorites({ locale }: { locale: Locale }) {
           </div>
           <div className="my-favorites-heart"><WatchlistButton id={item.id} /></div>
         </li>)}</ul>
+        {!expanded && edges.next && <button type="button" className="my-favorites-arrow is-next" onClick={() => slide(1)} aria-label={d.next} aria-controls="my-favorites-list">›</button>}
+        </div>
       </>}
   </section>;
 }
