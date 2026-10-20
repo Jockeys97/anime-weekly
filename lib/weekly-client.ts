@@ -35,7 +35,7 @@ export function loadWeeklyLookup<T extends WeeklyTitleDetails | WeeklySchedule |
     }, 60000);
     void promise.finally(() => { clearTimeout(timer); current.settled = true; }).catch(() => {});
     const lane = url.startsWith('/api/weekly-calendar?') ? 'calendar' : url.startsWith('/api/weekly-ratings?') ? 'ratings'
-      : url.startsWith('/api/weekly-providers?') || url.startsWith('/api/season-providers?') ? 'providers' : 'details';
+      : /^\/api\/(?:weekly|season|search)-providers\?/.test(url) ? 'providers' : 'details';
     queue.push({ entry: current, lane, run: async () => {
       try {
         const result = await withTimeout((async () => {
