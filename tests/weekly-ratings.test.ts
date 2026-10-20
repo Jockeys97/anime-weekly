@@ -35,6 +35,7 @@ function fixtureFetch(imdbFailure = false, animeFailure = false) {
     if (url.includes('tenrai')) return Response.json({ data: { mal_id: 456, score: 8.25, members: 1000 } });
     if (url.includes('/watch/providers')) return imdbFailure && animeFailure ? new Response(null, { status: 503 }) : Response.json({ results: {} });
     if (url.includes('/recommendations') || url.includes('/similar')) return Response.json({ results: [] });
+    if (url.startsWith('https://www.justwatch.com/')) return new Response(null, { status: 404 });
     throw new Error(`Unexpected offline fixture: ${url}`);
   });
 }
@@ -59,7 +60,10 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   const repeated = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   expect(await repeated).toMatchObject({ ...snapshot, total, storeHits: 1 });
   expect(await getWeeklyRatings('2026-43')).toEqual({ titles: {}, events: [] });
-  expect(fetchMock).toHaveBeenCalledTimes(calls + 3); // Discovery and airing schedules refresh; completed rating sources do not.
+  // Discovery and airing schedules refresh; completed rating sources do not. TMDB
+  // listed no default-country offers, so one JustWatch seed lookup is attempted.
+  expect(fetchMock).toHaveBeenCalledTimes(calls + 4);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).startsWith('https://www.justwatch.com/'))).toHaveLength(1);
   for (const [input, init] of fetchMock.mock.calls) if (/anilist|tenrai|omdbapi/.test(String(input))) {
     expect(init?.cache).toBe('no-store'); // Only validated snapshots persist.
   }
@@ -395,4 +399,74 @@ it('reads provider-only snapshots through the legacy production API host indepen
   const { getWeeklyRatings } = await import('../lib/weekly-ratings');
   expect(await getWeeklyRatings('2026-42')).toEqual(snapshot);
   expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.vercel.app/api/revalidate?ratings=2026-42', expect.objectContaining({ next: { revalidate: 900, tags: ['weekly-ratings'] } }));
+});
+
+it('fills default-country gaps from JustWatch once per TMDB refresh, without TMDB logos for new services', async () => {
+  const { justWatchPage } = await import('./helpers/justwatch-page');
+  const base = fixtureFetch();
+  const seed = 'https://www.justwatch.com/us/tv-show/ranma1-2';
+  const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('/watch/providers')) return Response.json({ results: { IT: { link: 'https://www.themoviedb.org/tv/1/watch', flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png' }] } } });
+    if (url === seed) return new Response(justWatchPage('/us/tv-show/ranma1-2', 'tt123', { US: [{ id: 283, name: 'Crunchyroll', href: 'https://www.crunchyroll.com/us' }] }, { 'de-DE': 'https://www.justwatch.com/de/Serie/ranma1-2' }));
+    if (url === 'https://www.justwatch.com/de/Serie/ranma1-2') return new Response(justWatchPage('/de/Serie/ranma1-2', 'tt123', { DE: [{ id: 9999, name: 'New Service', href: 'https://example.com/de' }] }));
+    return base(input, init);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const prime = async (previous?: Awaited<ReturnType<typeof primeWeeklyRatings>>) => { const pending = primeWeeklyRatings('2026-42', previous); await vi.runAllTimersAsync(); return pending; };
+  const jw = () => fetchMock.mock.calls.filter(([url]) => String(url).startsWith('https://www.justwatch.com/'));
+  const first = await prime();
+  expect(jw()).toHaveLength(0); // No IMDb mapping yet: the next run recovers.
+  await storePrimedSnapshot('2026-42', first);
+  const second = await prime();
+  expect(second.availability!.titles['tv:1']).toEqual({ countries: { IT: [8], US: [283], DE: [9999] }, fetchedAt: first.availability!.titles['tv:1'].fetchedAt, recoveredAt: expect.any(Number) });
+  expect(second.availability!.providers).toMatchObject({ 8: { name: 'Netflix', logo: '/netflix.png' }, 283: { name: 'Crunchyroll', logo: null }, 9999: { name: 'New Service', logo: null } });
+  expect(jw().map(([url]) => String(url))).toEqual([seed, 'https://www.justwatch.com/de/Serie/ranma1-2']);
+  await storePrimedSnapshot('2026-42', second);
+  fetchMock.mockClear();
+  const third = await prime();
+  expect(jw()).toHaveLength(0); // Already attempted since the last TMDB refresh.
+  expect(third.availability!.titles['tv:1'].countries).toEqual(second.availability!.titles['tv:1'].countries);
+});
+
+it('pins a verified airing cour: own IDs and JustWatch offers instead of the merged TMDB series, until it expires', async () => {
+  const { justWatchPage } = await import('./helpers/justwatch-page');
+  vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+  const seed = 'https://www.justwatch.com/us/tv-show/bleach-thousand-year-blood-war';
+  const italy = 'https://www.justwatch.com/it/serie-tv/bleach-thousand-year-blood-war';
+  const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('/discover/')) return Response.json({ results: url.includes('/tv?') ? [{ id: 30984, name: 'Bleach', original_name: 'BLEACH', first_air_date: '2004-10-05' }] : [], total_pages: 1 });
+    if (url.includes('/30984/watch/providers')) return Response.json({ results: { IT: { link: 'https://www.themoviedb.org/tv/30984/watch', flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png' }] } } });
+    if (url.includes('/external_ids')) return Response.json({ imdb_id: 'tt0434665' });
+    if (url.includes('omdbapi')) return Response.json({ Response: 'True', imdbRating: '8.2', imdbVotes: '1,000' });
+    if (url.includes('tenrai')) return Response.json({ data: { mal_id: 60636, score: 8.9, members: 1000 } });
+    if (url.includes('anilist')) {
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes('airingSchedules')) return Response.json({ data: { Page: { airingSchedules: [], pageInfo: { hasNextPage: false } } } });
+      if (body.variables?.id === 185874) return Response.json({ data: { Media: { id: 185874, idMal: 60636, type: 'ANIME', format: 'TV', title: { english: 'BLEACH: Thousand-Year Blood War - The Calamity' }, startDate: { year: 2026 }, averageScore: 88 } } });
+      return Response.json({ data: { Page: { media: [{ id: 269, idMal: 269, type: 'ANIME', format: 'TV', title: { english: 'Bleach', romaji: 'BLEACH' }, startDate: { year: 2004 }, averageScore: 77 }] } } });
+    }
+    if (url === seed) return new Response(justWatchPage('/us/tv-show/bleach-thousand-year-blood-war', 'tt14986406', { US: [{ id: 15, name: 'Hulu', href: 'https://www.hulu.com/series/bleach' }] }, { 'it-IT': italy }));
+    if (url === italy) return new Response(justWatchPage('/it/serie-tv/bleach-thousand-year-blood-war', 'tt14986406', { IT: [{ id: 337, name: 'Disney Plus', href: 'https://www.disneyplus.com/browse/entity-571475d5' }] }));
+    if (url.startsWith('https://www.justwatch.com/')) return new Response(null, { status: 404 });
+    if (url.includes('/recommendations') || url.includes('/similar')) return Response.json({ results: [] });
+    throw new Error(`Unexpected offline fixture: ${url}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const prime = async (slug: string) => { const pending = primeWeeklyRatings(slug); await vi.runAllTimersAsync(); return pending; };
+  const pinned = await prime('2026-43');
+  expect(pinned.titles['tv:30984']).toMatchObject({ anilistId: 185874, malId: 60636, imdbId: 'tt14986406', anilistScore: 88 });
+  expect(pinned.availability!.titles['tv:30984']).toEqual({ countries: { US: [15], IT: [337] }, fetchedAt: expect.any(Number), recoveredAt: expect.any(Number), identity: 'tt14986406' });
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/30984/watch/providers'))).toHaveLength(0);
+  // No title search: it would match Bleach (2004).
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('anilist') && String(init?.body).includes('search'))).toHaveLength(0);
+  await storePrimedSnapshot('2026-43', pinned);
+  vi.setSystemTime(new Date('2026-11-03T12:00:00Z'));
+  const expired = await prime('2026-45');
+  expect(expired.titles['tv:30984'].anilistId).toBe(269);
+  expect(expired.availability!.titles['tv:30984'].identity).toBeUndefined();
+  expect(expired.availability!.titles['tv:30984'].countries.IT).toEqual([8]);
 });

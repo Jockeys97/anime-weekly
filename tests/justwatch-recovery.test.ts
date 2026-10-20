@@ -56,3 +56,22 @@ it.each(['https://evil.example/icon.png', '//evil.example/icon.png', '/icon/1/s1
   const result = parseJustWatchPage(fixture('IT', 'tt7441658', 'FLATRATE', 'https://www.netflix.com/title/80238012', icon), 'https://www.justwatch.com/it/serie-tv/black-clover', 'tt7441658', 'IT');
   expect(result?.providers[0].logo_url).toBeUndefined();
 });
+it('serves several countries from one verified seed, follows /uk/ for GB and keeps failed countries retryable', async () => {
+  const { justWatchPage } = await import('./helpers/justwatch-page');
+  const { recoverJustWatchRegions } = await import('../lib/justwatch-recovery');
+  const imdb = 'tt7441658';
+  const alternates = { 'it-IT': 'https://www.justwatch.com/it/serie-tv/black-clover', 'en-GB': 'https://www.justwatch.com/uk/tv-series/black-clover', 'de-DE': 'https://www.justwatch.com/de/Serie/black-clover' };
+  const pages: Record<string, string | null> = {
+    'https://www.justwatch.com/us/tv-show/black-clover': justWatchPage('/us/tv-show/black-clover', imdb, { US: [{ id: 283, name: 'Crunchyroll', href: 'https://www.crunchyroll.com/us' }] }, alternates),
+    'https://www.justwatch.com/it/serie-tv/black-clover': justWatchPage('/it/serie-tv/black-clover', imdb, { IT: [{ id: 283, name: 'Crunchyroll', href: 'https://www.crunchyroll.com/it' }] }),
+    'https://www.justwatch.com/uk/tv-series/black-clover': justWatchPage('/uk/tv-series/black-clover', imdb, { GB: [] }),
+    'https://www.justwatch.com/de/Serie/black-clover': null,
+  };
+  const fetch = vi.fn(async (url: string) => pages[url] ? new Response(pages[url]) : new Response(null, { status: 503 }));
+  vi.stubGlobal('fetch', fetch);
+  const found = await recoverJustWatchRegions('Black Clover', imdb, ['US', 'IT', 'GB', 'DE']);
+  expect(Object.keys(found!).sort()).toEqual(['GB', 'IT', 'US']);
+  expect(found!.IT!.providers.map(p => p.provider_id)).toEqual([283]);
+  expect(found!.GB!.providers).toEqual([]); // Loaded without offers: data, not a failure.
+  expect(fetch.mock.calls.filter(([url]) => url.includes('/us/'))).toHaveLength(1);
+});
