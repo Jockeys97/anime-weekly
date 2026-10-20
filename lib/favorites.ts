@@ -11,6 +11,8 @@ export interface FavoriteItem {
   next?: { episode: number; airingAt: number };
   /** Name of the airing or announced season when the saved entry itself has finished. */
   current?: string;
+  /** Platforms in the requested country (logo links, max 3). */
+  providers?: { id: number; name: string; logo: string; href: string }[];
 }
 export const MAX_FAVORITES = 200;
 

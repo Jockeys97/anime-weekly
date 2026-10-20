@@ -448,3 +448,8 @@
 .my-anime .my-favorites-subscribe:hover { background: #35553e; }
 .my-anime .my-favorites-download { font-size: 13px; color: var(--dark); text-decoration: underline; text-underline-offset: 3px; }
 .my-favorites-calendar .my-anime-note { flex-basis: 100%; margin: 0; font-size: 12px; }
+
+.my-favorites-providers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.my-favorites-providers a { display: block; line-height: 0; border-radius: 5px; transition: transform .12s; }
+.my-favorites-providers a:hover { transform: scale(1.1); }
+.my-favorites-providers img { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; box-shadow: 0 0 0 1px var(--line); }

@@ -409,7 +409,8 @@
     "newSeason": "Neue Staffel kommt",
     "subscribe": "Kalender abonnieren",
     "download": ".ics herunterladen",
-    "calendarNote": "Aktualisiert sich mit neuen Folgen. Wenn du deine Favoriten änderst, abonniere erneut."
+    "calendarNote": "Aktualisiert sich mit neuen Folgen. Wenn du deine Favoriten änderst, abonniere erneut.",
+    "watchOn": "ansehen"
   },
   "features": {
     "topFive": "Top 5 Episoden der Woche",

@@ -415,7 +415,8 @@
     "newSeason": "New season coming",
     "subscribe": "Subscribe to calendar",
     "download": "Download .ics",
-    "calendarNote": "Updates itself with new episodes. If you change your favourites, subscribe again."
+    "calendarNote": "Updates itself with new episodes. If you change your favourites, subscribe again.",
+    "watchOn": "watch"
   },
   "features": {
     "topFive": "Top 5 episodes this week",
