@@ -20,6 +20,8 @@ import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { animeIntro, formatAnimeSeo } from '@/lib/anime-seo';
+import { getTitleLogos } from '@/lib/tmdb';
+import { withTimeout } from '@/lib/async-timeout';
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -58,9 +60,12 @@ export default async function AnimePage({ params }: Props) {
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const { ratings: animeRatings, availability, synopsis } = await getAnimeDetailData(anime, locale);
+  // Official logo over the banner when TMDB has one; series-level, so a season uses its series' logo.
+  const logoSource = availability.seriesWatch ?? availability.match;
+  const logos = anime.bannerImage && logoSource ? await withTimeout(getTitleLogos(logoSource.kind, logoSource.id), 4000).catch(() => ({})) : {};
   const structured = animeStructuredData(anime, name, formatAnimeSeo(name, anime, localizedSynopsis(synopsis, locale), undefined, locale).description, locale);
   return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name, locale)} />
-    <AnimeDetailView anime={anime} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
+    <AnimeDetailView anime={anime} logos={logos} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
