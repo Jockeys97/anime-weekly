@@ -9,7 +9,8 @@ import { japanDate } from '@/lib/weekly-episodes';
 import { storeImdbEpisodeIndex, hasImdbEpisodeIndex, type EpisodeShard } from '@/lib/imdb-episode-index';
 
 export interface ImdbEpisodeTarget { imdbId: string; seriesImdbId: string }
-export interface DatasetEpisodeScore { season: number; episode: number; score: number; votes: number }
+/** season/episode are IMDb's numbering; absent when only TMDB vouched for the episode ID. */
+export interface DatasetEpisodeScore { season?: number; episode?: number; score: number; votes: number }
 export interface ImdbDatasetEpisodes {
   status: 'ready' | 'unavailable';
   ratings: Record<string, DatasetEpisodeScore>;
@@ -17,6 +18,10 @@ export interface ImdbDatasetEpisodes {
   dataUpdatedAt?: string;
 }
 const MAX_EPISODES = 60;
+// The rating file is small; title.episode is millions of rows and needs longer.
+// Both run inside the 300-second cron alongside the ratings collector.
+const RATING_STREAM_TIMEOUT = 45000;
+const EPISODE_STREAM_TIMEOUT = 120000;
 const MAX_BYTES = 1024 * 1024 * 1024; // Decompressed stream limit.
 const MAX_LINE = 4096;
 const files = {
@@ -125,6 +130,12 @@ function targetsForCache(targets: readonly ImdbEpisodeTarget[]): ImdbEpisodeTarg
   return [...unique.values()].filter(target => !ambiguous.has(target.imdbId)).sort((a, b) => a.imdbId.localeCompare(b.imdbId));
 }
 
+function episodeScore(row: string[] | undefined): DatasetEpisodeScore | null {
+  if (!row || !/^\d+(?:\.\d+)?$/.test(row[1]) || !/^\d+$/.test(row[2])) return null;
+  const score = Number(row[1]), votes = Number(row[2]);
+  return Number.isFinite(score) && score > 0 && score <= 10 && Number.isSafeInteger(votes) && votes > 0 ? { score, votes } : null;
+}
+
 interface DailyDatasetEpisodes extends ImdbDatasetEpisodes { indexVersion?: number; parents: Record<string, string>; chartStatus?: 'ready' | 'unavailable' }
 const pendingTargets = new Map<string, ImdbEpisodeTarget[]>();
 const inFlight = new Map<string, Promise<DailyDatasetEpisodes>>();
@@ -138,24 +149,37 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
     const updatedAt = new Date().toISOString();
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const episodeController = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), RATING_STREAM_TIMEOUT);
+    const episodeTimeout = setTimeout(() => episodeController.abort(), EPISODE_STREAM_TIMEOUT);
     try {
       const wanted = new Set(targets.map(target => target.imdbId));
       const shards: RatingShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
       const chartShards: EpisodeShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
       const ratingTask = matchingRows('ratings', wanted, controller.signal, shards);
       const [ratingResult, episodeResult] = await Promise.allSettled([
-        ratingTask, matchingRows('episodes', wanted, controller.signal, undefined, { shards: chartShards, ratings: ratingTask.then(() => shards) }),
+        ratingTask, matchingRows('episodes', wanted, AbortSignal.any([controller.signal, episodeController.signal]), undefined, { shards: chartShards, ratings: ratingTask.then(() => shards) }),
       ]);
       if (ratingResult.status === 'rejected') throw ratingResult.reason;
       const ratings = ratingResult.value;
       // The optional global episode stream must never prevent a complete
       // title-rating file from refreshing, including days with no weekly targets.
       await storeImdbRatingIndex(day, shards);
-      if (episodeResult.status === 'rejected') return {
-        status: targets.length ? 'unavailable' : 'ready', indexVersion: 2, chartStatus: 'unavailable', ratings: {}, parents: {}, updatedAt,
-        ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}),
-      };
+      if (episodeResult.status === 'rejected') {
+        // Without title.episode the parent cannot be confirmed by IMDb itself.
+        // Keep the Top 5 alive on the episode IDs TMDB vouched for (never the
+        // series' own score), with TMDB's numbering; charts wait for tomorrow.
+        console.warn('[imdb-datasets] episode stream unavailable, using TMDB episode identities');
+        const result: Record<string, DatasetEpisodeScore> = {};
+        const parents: Record<string, string> = {};
+        for (const target of targets) {
+          const score = episodeScore(ratings.rows.get(target.imdbId));
+          if (!score || target.imdbId === target.seriesImdbId) continue;
+          result[target.imdbId] = score;
+          parents[target.imdbId] = target.seriesImdbId;
+        }
+        return { status: 'ready', indexVersion: 2, chartStatus: 'unavailable', ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
+      }
       const episodes = episodeResult.value;
       const result: Record<string, DatasetEpisodeScore> = {};
       const parents: Record<string, string> = {};
@@ -181,7 +205,7 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
       controller.abort();
       // Cache the failed daily attempt too; tomorrow has a different key.
       return { status: 'unavailable', chartStatus: 'unavailable', ratings: {}, parents: {}, updatedAt };
-    } finally { clearTimeout(timeout); }
+    } finally { clearTimeout(timeout); clearTimeout(episodeTimeout); }
   })();
   inFlight.set(key, task);
   try { return await task; }
