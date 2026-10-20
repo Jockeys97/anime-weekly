@@ -386,6 +386,20 @@
     "noCover": "Sans affiche",
     "animeOnlyNote": "Uniquement des séries anime et épisodes spéciaux. Les séries en prises de vues réelles sont exclues."
   },
+  "myFavorites": {
+    "eyebrow": "Enregistrés avec le cœur",
+    "title": "Mes favoris",
+    "note": "Les favoris sont enregistrés uniquement dans ce navigateur : un autre appareil a sa propre liste.",
+    "empty": "Pas encore de favoris. Touchez le cœur d’une fiche pour la retrouver ici.",
+    "loading": "Chargement des favoris…",
+    "error": "Impossible de charger les favoris.",
+    "retry": "Réessayer",
+    "partial": "Certains favoris sont indisponibles pour le moment.",
+    "nextEpisode": "Ép. {episode} · {date}",
+    "airing": "En cours",
+    "finished": "Terminé",
+    "upcoming": "À venir"
+  },
   "features": {
     "topFive": "Top 5 des épisodes de la semaine",
     "topFiveDescription": "Les épisodes sortis cette semaine les mieux notés sur IMDb. Mise à jour quotidienne.",

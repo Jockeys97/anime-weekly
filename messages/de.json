@@ -386,6 +386,20 @@
     "noCover": "Kein Cover",
     "animeOnlyNote": "Nur Anime-Serien und Specials. Realserien werden ausgeschlossen."
   },
+  "myFavorites": {
+    "eyebrow": "Mit dem Herz gespeichert",
+    "title": "Meine Favoriten",
+    "note": "Favoriten werden nur in diesem Browser gespeichert: andere Geräte haben eine eigene Liste.",
+    "empty": "Noch keine Favoriten. Tippe auf das Herz einer Karte, um sie hier zu finden.",
+    "loading": "Favoriten werden geladen…",
+    "error": "Favoriten konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "partial": "Einige Favoriten sind gerade nicht verfügbar.",
+    "nextEpisode": "Folge {episode} · {date}",
+    "airing": "Läuft",
+    "finished": "Abgeschlossen",
+    "upcoming": "Demnächst"
+  },
   "features": {
     "topFive": "Top 5 Episoden der Woche",
     "topFiveDescription": "Die diese Woche erschienenen Episoden mit den höchsten IMDb-Bewertungen. Täglich aktualisiert.",

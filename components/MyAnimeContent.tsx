@@ -9,6 +9,7 @@ import { getDictionary } from '@/lib/i18n';
 import { formatVisitorDate } from '@/lib/visitor-time';
 import { groupPersonalReleases } from '@/lib/my-anime-week';
 import { MyAnimeStats } from '@/components/MyAnimeStats';
+import { MyFavorites } from '@/components/MyFavorites';
 import type { PersonalWeekData } from '@/lib/my-anime-data';
 import { withTimeout } from '@/lib/async-timeout';
 
@@ -45,6 +46,7 @@ export function MyAnimeContent({ providers, connected, data, start, end, authErr
           : <a className="my-anime-connect" href={`/api/auth/${provider}/login`}>{d.connect.replace('{provider}', names[provider])}</a>}
       </section>)}
     </div>
+    <MyFavorites locale={locale} />
     {connected.trakt && <MyAnimeStats locale={locale} refreshKey={refreshKey} />}
     {data && <section aria-label={d.weekLabel} className="my-anime-calendar">
       <header className="my-anime-calendar-heading"><div><p className="eyebrow">{d.animeOnly}</p><h2>{d.calendarTitle}</h2><p className="my-anime-note">{d.animeOnlyNote}</p></div>

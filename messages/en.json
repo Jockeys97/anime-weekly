@@ -392,6 +392,20 @@
     "noCover": "No cover",
     "animeOnlyNote": "Anime shows and specials only. Live-action series are excluded."
   },
+  "myFavorites": {
+    "eyebrow": "Saved with the heart",
+    "title": "My favourites",
+    "note": "Favourites are saved only in this browser: other devices keep a separate list.",
+    "empty": "No favourites yet. Tap the heart on any card to find it here.",
+    "loading": "Loading favourites…",
+    "error": "Favourites could not be loaded.",
+    "retry": "Retry",
+    "partial": "Some favourites are unavailable right now.",
+    "nextEpisode": "Ep. {episode} · {date}",
+    "airing": "Airing",
+    "finished": "Finished",
+    "upcoming": "Upcoming"
+  },
   "features": {
     "topFive": "Top 5 episodes this week",
     "topFiveDescription": "Episodes released this week with the highest IMDb ratings. Updated daily.",

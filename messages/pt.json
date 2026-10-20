@@ -386,6 +386,20 @@
     "noCover": "Sem capa",
     "animeOnlyNote": "Apenas séries anime e especiais. As séries de imagem real são excluídas."
   },
+  "myFavorites": {
+    "eyebrow": "Guardados com o coração",
+    "title": "Os meus favoritos",
+    "note": "Os favoritos ficam guardados só neste navegador: noutro dispositivo a lista é separada.",
+    "empty": "Ainda não tens favoritos. Toca no coração de uma ficha para a encontrares aqui.",
+    "loading": "A carregar favoritos…",
+    "error": "Não foi possível carregar os favoritos.",
+    "retry": "Tentar de novo",
+    "partial": "Alguns favoritos não estão disponíveis agora.",
+    "nextEpisode": "Ep. {episode} · {date}",
+    "airing": "Em exibição",
+    "finished": "Terminado",
+    "upcoming": "Em breve"
+  },
   "features": {
     "topFive": "Top 5 episódios da semana",
     "topFiveDescription": "Os episódios lançados esta semana com as melhores avaliações no IMDb. Atualização diária.",

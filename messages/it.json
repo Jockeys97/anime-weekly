@@ -386,6 +386,20 @@
     "noCover": "Copertina non disponibile",
     "animeOnlyNote": "Solo serie anime e speciali. Le serie dal vivo sono escluse."
   },
+  "myFavorites": {
+    "eyebrow": "Salvati con il cuore",
+    "title": "I miei preferiti",
+    "note": "I preferiti sono salvati solo in questo browser: su un altro dispositivo la lista è separata.",
+    "empty": "Non hai ancora preferiti. Tocca il cuore su una scheda per ritrovarla qui.",
+    "loading": "Carico i preferiti…",
+    "error": "Non riesco a caricare i preferiti.",
+    "retry": "Riprova",
+    "partial": "Alcuni preferiti non sono disponibili in questo momento.",
+    "nextEpisode": "Ep. {episode} · {date}",
+    "airing": "In corso",
+    "finished": "Concluso",
+    "upcoming": "In arrivo"
+  },
   "features": {
     "topFive": "Top 5 episodi della settimana",
     "topFiveDescription": "Gli episodi usciti questa settimana con i voti IMDb più alti. Aggiornamento giornaliero.",

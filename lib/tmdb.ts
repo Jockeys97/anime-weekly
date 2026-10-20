@@ -345,3 +345,14 @@ export async function getPlatformAnime(providerId: number, region: string, local
   try { return await cachedPlatformAnime(providerId, region, locale); }
   catch { return { status: 'error', titles: [] }; }
 }
+
+/** Name and poster for a saved TMDB-only title (no AniList match). */
+export async function getTmdbTitleCard(kind: Kind, id: number): Promise<{ name: string; poster: string | null } | null> {
+  if (!isTMDBConfigured() || !Number.isSafeInteger(id) || id <= 0) return null;
+  try {
+    const data = await tmdb<{ id: number; name?: string; title?: string; poster_path?: string | null }>(`${kind}/${id}`, {}, 604800);
+    const name = (kind === 'tv' ? data.name : data.title)?.trim();
+    if (data.id !== id || !name) return null;
+    return { name: displayTitle(name), poster: data.poster_path && /^\/[A-Za-z0-9_.-]+$/.test(data.poster_path) ? `https://image.tmdb.org/t/p/w342${data.poster_path}` : null };
+  } catch { return null; }
+}
