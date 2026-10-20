@@ -71,13 +71,16 @@ export function WeekAtAGlance({ days, locale = 'it' }: { days: CalendarDay[]; lo
   }, [columns]);
   useEffect(() => {
     const element = scroller.current;
-    if (!element) return;
+    if (!element || typeof window === 'undefined') return;
+    // Animation frames are absent in some non-browser runtimes: fall back to a timer.
+    const frames = typeof window.requestAnimationFrame === 'function';
     let frame = 0;
-    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
+    const cancel = () => frames ? window.cancelAnimationFrame(frame) : window.clearTimeout(frame);
+    const schedule = () => { cancel(); frame = frames ? window.requestAnimationFrame(measure) : window.setTimeout(measure, 16); };
     schedule();
     element.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
-    return () => { cancelAnimationFrame(frame); element.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); };
+    return () => { cancel(); element.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); };
   }, [measure, days.length]);
   const scrollToDay = (index: number) => {
     const target = columns()[Math.max(0, Math.min(index, days.length - 1))];
