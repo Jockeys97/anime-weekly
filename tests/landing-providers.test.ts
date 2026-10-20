@@ -26,3 +26,14 @@ describe('landing providers', () => {
     expect(landingProviders(undefined, undefined, 'de')).toEqual({ primary: null, others: [] });
   });
 });
+
+import { landingProvidersFromTitle } from '../lib/landing-providers';
+describe('landingProvidersFromTitle', () => {
+  it('applies region choice, dedupe and the chip limit to full TMDB provider maps', () => {
+    const offer = (provider_id: number, provider_name: string) => ({ provider_id, provider_name, logo_path: `/${provider_id}.png` });
+    const result = landingProvidersFromTitle({ FR: { link: 'x', providers: [offer(1, 'Crunchyroll'), offer(2, 'Crunchyroll Amazon Channel'), offer(3, 'ADN'), offer(4, 'Netflix'), offer(5, 'Prime Video')] }, JP: { link: 'y', providers: [offer(6, 'U-Next')] } }, 'fr');
+    expect(result.primary?.providers.map(p => p.name)).toEqual(['Crunchyroll', 'ADN', 'Netflix']);
+    expect(result.others.map(o => o.country)).toEqual(['JP']);
+    expect(landingProvidersFromTitle(undefined, 'it')).toEqual({ primary: null, others: [] });
+  });
+});

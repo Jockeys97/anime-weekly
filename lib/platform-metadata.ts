@@ -55,3 +55,7 @@ export async function getSeasonPlatformMetadata(year: number, season: Season, pa
   if (!catalog.media.length) throw new MissingProviders();
   return collect(catalog.media.map(anime => ({ key: `anilist:${anime.id}`, load: () => seasonProviders(anime) })), deadline);
 }
+/** Real TMDB watch providers for specific AniList titles (cached per title, bounded concurrency/deadline). */
+export async function getAnimePlatformMetadata(media: readonly AniListAnime[], budgetMs = 23000): Promise<PlatformSnapshot> {
+  return collect(media.map(anime => ({ key: `anilist:${anime.id}`, load: () => seasonProviders(anime) })), Date.now() + budgetMs);
+}

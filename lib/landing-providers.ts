@@ -1,6 +1,7 @@
 import type { StreamingRegion } from '@/lib/config';
 import type { Locale } from '@/lib/i18n';
 import type { ProviderSnapshot, StoredAvailability } from '@/lib/provider-snapshot';
+import type { AnimeTitle } from '@/lib/tmdb';
 
 export interface LandingProvider { id: number; name: string; logo: string | null }
 export interface LandingCountry { country: StreamingRegion; providers: LandingProvider[] }
@@ -24,12 +25,22 @@ export function dedupeProviders(providers: LandingProvider[]): LandingProvider[]
   }
   return [...byBase.values()];
 }
-export function landingProviders(entry: StoredAvailability | undefined, table: ProviderSnapshot['providers'] | undefined, locale: Locale): { primary: LandingCountry | null; others: LandingCountry[] } {
-  const countries = (Object.entries(entry?.countries ?? {}) as [StreamingRegion, number[]][]).map(([country, ids]) => ({
-    country,
-    providers: dedupeProviders(ids.flatMap(id => { const p = table?.[id]; return p ? [{ id, name: p.name, logo: p.logo }] : []; })),
-  })).filter(item => item.providers.length);
+function pick(countries: LandingCountry[], locale: Locale): { primary: LandingCountry | null; others: LandingCountry[] } {
+  countries = countries.filter(item => item.providers.length);
   const primaryCountry = LOCALE_REGIONS[locale].find(region => countries.some(item => item.country === region));
   const primary = countries.find(item => item.country === primaryCountry) ?? null;
   return { primary: primary && { ...primary, providers: primary.providers.slice(0, LANDING_PROVIDER_LIMIT) }, others: countries.filter(item => item !== primary) };
+}
+export function landingProviders(entry: StoredAvailability | undefined, table: ProviderSnapshot['providers'] | undefined, locale: Locale): { primary: LandingCountry | null; others: LandingCountry[] } {
+  return pick((Object.entries(entry?.countries ?? {}) as [StreamingRegion, number[]][]).map(([country, ids]) => ({
+    country,
+    providers: dedupeProviders(ids.flatMap(id => { const p = table?.[id]; return p ? [{ id, name: p.name, logo: p.logo }] : []; })),
+  })), locale);
+}
+/** Same selection for full TMDB provider maps (e.g. season detail availability). */
+export function landingProvidersFromTitle(providers: AnimeTitle['providers'] | undefined, locale: Locale): { primary: LandingCountry | null; others: LandingCountry[] } {
+  return pick((Object.entries(providers ?? {}) as [StreamingRegion, NonNullable<AnimeTitle['providers'][StreamingRegion]>][]).map(([country, entry]) => ({
+    country,
+    providers: dedupeProviders(entry.providers.map(p => ({ id: p.provider_id, name: p.provider_name, logo: p.logo_path || null }))),
+  })), locale);
 }
