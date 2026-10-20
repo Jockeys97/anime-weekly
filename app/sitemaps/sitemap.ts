@@ -3,7 +3,10 @@ import { getSitemapCatalog } from '@/lib/sitemap-catalog';
 import { listArchivedWeeks } from '@/lib/week-archive';
 import { siteUrl } from '@/lib/seo';
 
-export const revalidate = 86400;
+// Builds often run with the AniList budget already spent by other pages, so
+// a shard may be prerendered empty. Retry hourly: complete year catalogs stay
+// in the data cache for a day and ended seasons in Blob, so this adds no calls.
+export const revalidate = 3600;
 
 export function generateSitemaps() {
   return sitemapIds().map(id => ({ id }));
