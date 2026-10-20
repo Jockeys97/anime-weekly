@@ -289,3 +289,6 @@
   .dubbing-language strong { font-size: 13px; }
   .dubbing-source { font-size: 11px; }
 }
+
+/* Compact discovery lists reuse the catalog palette and card treatment. */
+.landing-home-links{margin-top:24px}.landing-list{list-style:none;padding:0;display:grid;gap:12px}.landing-card{display:flex;align-items:center;gap:18px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:12px}.landing-card>div{flex:1;min-width:0}.landing-card h2,.landing-card h3{font-size:19px;letter-spacing:-.4px;margin:0 0 8px;overflow-wrap:anywhere}.landing-card p{font-size:12px;color:var(--muted);margin:4px 0;overflow-wrap:anywhere}.landing-card>strong{white-space:nowrap;color:#547235}.landing-rank{font-family:Georgia,serif;font-size:25px;color:#547235}.landing-day{margin-top:30px}.landing-day>h2{font-size:24px;font-weight:500}.landing-day time{text-transform:capitalize}@media(max-width:600px){.landing-card{padding:14px;gap:12px;flex-wrap:wrap}.landing-card h2,.landing-card h3{font-size:17px}.landing-card>strong{margin-left:auto}}

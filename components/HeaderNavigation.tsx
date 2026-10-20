@@ -8,7 +8,10 @@ import { getDictionary, type Locale } from '@/lib/i18n';
 export function HeaderNavigation({ locale, myAnimeEnabled = false }: { locale: Locale; myAnimeEnabled?: boolean }) {
   const pathname = stripLocale(usePathname());
   const d = getDictionary(locale).catalog;
+  const landing = getDictionary(locale).landings;
   const items = [
+    { href: '/this-week', label: landing.weekNav, active: pathname === '/this-week', icon: 'week' },
+    { href: '/best-this-season', label: landing.bestNav, active: pathname === '/best-this-season', icon: 'season' },
     { href: '/', label: d.weekly, active: pathname === '/' || pathname.startsWith('/week/'), icon: 'week' },
     { href: '/season', label: d.seasons, active: pathname.startsWith('/season') || pathname.startsWith('/anime/'), icon: 'season' },
     { href: '/search', label: d.search, active: pathname.startsWith('/search'), icon: 'search' },

@@ -3,6 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('../components/NewsletterSignup', () => ({ NewsletterSignup: () => null }));
+vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
 import { supportUrl } from '../lib/support';
 import { SiteFooter } from '../components/SiteChrome';
 import { LocaleProvider } from '../components/LanguageSelector';

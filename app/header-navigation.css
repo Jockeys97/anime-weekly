@@ -64,3 +64,12 @@
 @media (prefers-reduced-motion: reduce) {
   .header-nav a { transition: none; }
 }
+/* Discovery links need room across all six translations. */
+@media (min-width: 601px) {
+  .site-header { flex-wrap: wrap; padding: 20px 0; }
+  .header-tools { flex-wrap: wrap; }
+  .header-nav { flex-wrap: wrap; flex-shrink: 1; }
+}
+@media (max-width: 600px) {
+  .header-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

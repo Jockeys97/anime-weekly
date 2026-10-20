@@ -145,6 +145,7 @@
     "note": "Las fechas y la disponibilidad proceden de las fuentes indicadas. No se estiman valoraciones."
   },
   "language": {
+    "languages": "Idiomas",
     "label": "Idioma",
     "error": "No se pudo cambiar el idioma. Inténtalo de nuevo.",
     "originalSynopsis": "Traducción no disponible; se muestra la sinopsis en inglés.",
@@ -455,5 +456,20 @@
     "animeYear": "Anime {format} de {year}.",
     "animeScore": "Nota {score}/10.",
     "animeFallback": "Sinopsis, valoraciones y dónde ver {name}."
+  },
+  "landings": {
+    "weekNav": "Esta semana",
+    "weekTitle": "Anime en emisión esta semana",
+    "weekDescription": "Los estrenos de anime de la semana, día a día, con formatos, plataformas y valoraciones disponibles.",
+    "bestNav": "Lo mejor de la temporada",
+    "bestTitle": "Los mejores anime de la temporada",
+    "bestDescription": "Descubre los mejores anime de la temporada actual: hasta 50 títulos ordenados por la media de sus valoraciones disponibles.",
+    "rankingRule": "La clasificación usa la media de las valoraciones disponibles en una escala de 0 a 10: IMDb y MyAnimeList sobre 10, AniList dividido entre 10. Se exige al menos una valoración; los empates se resuelven por el número de votos. Se muestran hasta 50 títulos.",
+    "fullGuide": "Guía completa",
+    "home": "Inicio",
+    "undated": "Fecha por confirmar",
+    "weekEmpty": "Todavía no hay estrenos disponibles. Vuelve pronto para ver las novedades.",
+    "bestEmpty": "Todavía no hay anime con valoraciones disponibles para esta temporada.",
+    "platforms": "Plataformas por país"
   }
 }

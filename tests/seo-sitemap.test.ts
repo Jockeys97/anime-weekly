@@ -83,7 +83,7 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
     vi.mocked(listArchivedWeeks).mockResolvedValue([]);
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(59 * 6);
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(61 * 6);
     expect(listArchivedWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);

@@ -234,6 +234,7 @@
     "enrichmentLoading": "Loading ratings and watch options…"
   },
   "language": {
+    "languages": "Languages",
     "label": "Language",
     "error": "The language could not be changed. Please try again.",
     "originalSynopsis": "Translation unavailable; showing the English synopsis.",
@@ -461,5 +462,20 @@
     "animeYear": "{format} anime from {year}.",
     "animeScore": "Rating {score}/10.",
     "animeFallback": "Synopsis, ratings and where to stream {name}."
+  },
+  "landings": {
+    "weekNav": "This week",
+    "weekTitle": "Anime airing this week",
+    "weekDescription": "This week’s anime releases, day by day, with formats, streaming platforms and ratings where available.",
+    "bestNav": "Best this season",
+    "bestTitle": "The best anime this season",
+    "bestDescription": "Discover the best anime of the current season: up to 50 titles ranked by their available ratings.",
+    "rankingRule": "Rankings use the mean of available ratings on a 0–10 scale: IMDb and MyAnimeList out of 10, AniList divided by 10. At least one rating is required; ties are broken by vote count. Up to 50 titles are shown.",
+    "fullGuide": "Full guide",
+    "home": "Home",
+    "undated": "Date to be confirmed",
+    "weekEmpty": "No releases are available yet. Check back soon for updates.",
+    "bestEmpty": "No rated anime are available for this season yet.",
+    "platforms": "Platforms by country"
   }
 }

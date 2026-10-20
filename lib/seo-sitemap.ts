@@ -25,7 +25,7 @@ export function sitemapUrls(date = new Date(), base = siteUrl()): string[] {
 
 export function buildPagesSitemap(date = new Date(), base = siteUrl(), archivedWeeks: readonly ArchivedWeek[] = []): MetadataRoute.Sitemap {
   const week = isoWeek(date);
-  const paths = ['/', '/season', '/piattaforma',
+  const paths = ['/', '/season', '/piattaforma', '/this-week', '/best-this-season',
     ...sitemapSeasons(date).map(seasonPath), ...platformPaths()];
   const entries: MetadataRoute.Sitemap = paths.map(path => ({
     url: new URL(path, base).href, alternates: { languages: languageAlternates(path, base) }, changeFrequency: 'daily', lastModified: date,

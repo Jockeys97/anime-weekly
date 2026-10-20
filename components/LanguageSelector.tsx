@@ -1,7 +1,8 @@
 'use client';
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { localePath } from '@/lib/locale-routing';
+import { saveLanguage } from '@/lib/language-client';
 import { getDictionary } from '@/lib/i18n';
 import { isLocale, localeNames, locales, type Locale } from '@/lib/locales';
 const LocaleContext = createContext<Locale>('it');
@@ -22,10 +23,30 @@ export function LanguageSelector({ locale: fallback }: { locale?: Locale }) {
     if (!isLocale(value)) return;
     setFailed(false); setBusy(true);
     try {
-      const response = await fetch('/api/language', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: value }), signal: AbortSignal.timeout(10000) });
-      if (!response.ok) throw new Error('Language update failed');
+      await saveLanguage(value);
       router.push(localePath(window.location.pathname + window.location.search + window.location.hash, value));
     } catch { setFailed(true); }
     finally { setBusy(false); }
   }}>{locales.map(value => <option key={value} value={value} lang={value}>{localeNames[value]}</option>)}</select>{failed && <span role="alert">{d.language.error}</span>}</div>;
+}
+
+export function LanguageLinks() {
+  const locale = useLocale();
+  const pathname = usePathname();
+  const d = getDictionary(locale);
+  return <nav className="catalog-filters" aria-label={d.language.languages}>
+    {locales.map(value => <a key={value} href={localePath(pathname, value)} hrefLang={value} lang={value} aria-current={value === locale ? 'page' : undefined} onClick={async event => {
+      // Keep modified clicks and native links usable, including without JavaScript.
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        void saveLanguage(value).catch(() => {});
+        return;
+      }
+      event.preventDefault();
+      const href = event.currentTarget.href;
+      try { await saveLanguage(value); }
+      catch { /* The locale URL still works if saving the preference fails. */ }
+      window.location.assign(href);
+    }}>{localeNames[value]}</a>)}
+  </nav>;
 }
