@@ -25,6 +25,17 @@ it('defaults production SEO to weeklyanime.com regardless of the Vercel API host
   }
 });
 
+it('gives pages without their own image the localized weekly share card', () => {
+  vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://weeklyanime.com');
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+  const home = pageMetadata('Title', 'Description', '/');
+  expect(home.openGraph).toMatchObject({ images: [{ url: 'https://weeklyanime.com/week/2026-43/opengraph-image', alt: 'Title' }] });
+  expect(home.twitter).toMatchObject({ card: 'summary_large_image', images: ['https://weeklyanime.com/week/2026-43/opengraph-image'] });
+  expect(pageMetadata('T', 'D', '/this-week', undefined, 'es').openGraph).toMatchObject({ images: [{ url: 'https://weeklyanime.com/es/week/2026-43/opengraph-image' }] });
+  const cover = 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21.jpg';
+  expect(pageMetadata('T', 'D', '/anime/21', cover).openGraph).toMatchObject({ images: [{ url: cover }] });
+});
+
 it('redirects only legacy app hosts permanently while preserving paths and query forwarding', async () => {
   const redirects = await config.redirects!();
   const canonical = redirects.filter(rule => rule.destination.startsWith('https://weeklyanime.com'));
