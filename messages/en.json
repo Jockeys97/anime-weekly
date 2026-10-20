@@ -221,6 +221,8 @@
     "glanceJumpToDay": "Jump to {day}",
     "glanceJumpToRelease": "Show {title} in the list",
     "glanceEmpty": "No releases",
+    "glanceSeriesOne": "{count} series",
+    "glanceSeriesOther": "{count} series",
     "releases": "releases",
     "titles": "titles",
     "episode": "Episode",
