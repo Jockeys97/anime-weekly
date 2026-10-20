@@ -157,6 +157,10 @@
   "calendar": {
     "timezoneNote": "Gli orari sono mostrati nel tuo fuso locale (Europe/Rome predefinito). Le date degli episodi TMDB non hanno orario né fuso e sono riportate come fornite. Le uscite streaming possono variare per servizio e paese. I film usano la prima data di uscita TMDB.",
     "navigation": "Sfoglia i giorni di uscita",
+    "glanceTitle": "La settimana in un colpo d'occhio",
+    "glanceJumpToDay": "Vai a {day}",
+    "glanceJumpToRelease": "Mostra {title} nell'elenco",
+    "glanceEmpty": "Nessuna uscita",
     "releases": "uscite",
     "titles": "titoli",
     "episode": "Episodio",

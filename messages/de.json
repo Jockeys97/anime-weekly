@@ -175,6 +175,10 @@
   "calendar": {
     "timezoneNote": "Sendezeiten werden in deiner lokalen Zeitzone angezeigt (standardmäßig Europe/Rome). TMDB-Episodendaten werden unverändert angezeigt. Streaming-Starts können je nach Dienst und Land variieren.",
     "navigation": "Veröffentlichungstage durchsehen",
+    "glanceTitle": "Die Woche auf einen Blick",
+    "glanceJumpToDay": "Zu {day} springen",
+    "glanceJumpToRelease": "{title} in der Liste anzeigen",
+    "glanceEmpty": "Keine Veröffentlichungen",
     "releases": "Veröffentlichungen",
     "titles": "Titel",
     "episode": "Folge",
