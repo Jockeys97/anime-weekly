@@ -27,3 +27,19 @@ it('does not guess title identity when IMDb and the series match are absent', as
   expect(response.headers.get('cache-control')).toBe('no-store');
   expect(recoverJustWatchOffers).not.toHaveBeenCalled();
 });
+it('answers a pinned airing cour from its own verified page, and stops after it expires', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+    vi.mocked(recoverJustWatchOffers).mockResolvedValue({ link: 'https://www.justwatch.com/it/serie-tv/bleach-thousand-year-blood-war', providers: [{ provider_id: 337, provider_name: 'Disney Plus', logo_path: null, watch_url: 'https://www.disneyplus.com/browse/entity-571475d5' }] });
+    const response = await GET(new Request('https://example.com/api/streaming-recovery?anime=185874&region=IT'));
+    expect(recoverJustWatchOffers).toHaveBeenCalledWith('Bleach: Thousand-Year Blood War', 'tt14986406', 'IT');
+    expect(getAnime).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({ id: 30984, kind: 'tv', series: false, providers: { IT: { providers: [{ provider_name: 'Disney Plus' }] } } });
+    vi.mocked(recoverJustWatchOffers).mockClear();
+    vi.setSystemTime(new Date('2026-11-03T00:00:00Z'));
+    vi.mocked(getAnime).mockResolvedValue(null);
+    expect((await GET(new Request('https://example.com/api/streaming-recovery?anime=185874&region=IT'))).status).toBe(404);
+    expect(recoverJustWatchOffers).not.toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
+});

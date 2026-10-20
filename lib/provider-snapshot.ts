@@ -4,6 +4,10 @@ import type { AnimeTitle } from '@/lib/tmdb';
 export interface StoredAvailability {
   countries: Partial<Record<StreamingRegion, number[]>>;
   fetchedAt: number;
+  /** Last JustWatch recovery attempt for countries TMDB left empty. */
+  recoveredAt?: number;
+  /** IMDb ID of a verified weekly identity whose offers replaced TMDB's. */
+  identity?: string;
 }
 export interface ProviderSnapshot {
   titles: Record<string, StoredAvailability>;

@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { CACHE_TAG, type StreamingRegion } from '@/lib/config';
 import { findProviderOffer, regionalWatchPage, type WatchTarget } from '@/lib/watch-links';
 import { recoverJustWatchOffers } from '@/lib/justwatch-recovery';
+import { verifiedWeeklyIdentity } from '@/lib/verified-weekly-identities';
 
 const LINK_CACHE_SECONDS = 3600;
 interface TitleIdentity {
@@ -16,6 +17,9 @@ interface TitleIdentity {
 // The official metadata API remains usable when the public TMDB watch page
 // blocks a server request. Never search by a visitor-supplied name or IMDb ID.
 async function watchIdentity(kind: WatchTarget['kind'], id: number) {
+  // The weekly snapshot lists a verified identity's own offers; resolve them from the same page.
+  const pinned = verifiedWeeklyIdentity(`${kind}:${id}`);
+  if (pinned) return { name: pinned.justWatchName, imdbId: pinned.imdbId };
   const token = process.env.TMDB_READ_TOKEN?.trim(), key = process.env.TMDB_API_KEY?.trim();
   if (!token && !key) return null;
   const url = new URL(`https://api.themoviedb.org/3/${kind}/${id}`);

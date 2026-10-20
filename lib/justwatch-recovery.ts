@@ -67,7 +67,13 @@ export function parseJustWatchPage(html: string, pageUrl: string, imdbId: string
   } catch { return null; }
 }
 
-export async function recoverJustWatchOffers(name: string, imdbId: string, region: StreamingRegion, kind: 'tv' | 'movie' = 'tv') {
+export type JustWatchRegions = Partial<Record<StreamingRegion, { providers: Provider[]; link: string }>>;
+
+// One verified US seed page serves every requested country: each regional page
+// is reached only through the seed's own canonical link, never a guessed slug.
+// Returns null when the seed cannot be verified; a country that fails to load
+// is omitted (retryable), while a loaded country without offers is data.
+export async function recoverJustWatchRegions(name: string, imdbId: string, regions: readonly StreamingRegion[], kind: 'tv' | 'movie' = 'tv'): Promise<JustWatchRegions | null> {
   // The canonical slug omits AniList's remake label. The page's IMDb identity
   // is still mandatory, so this cannot inherit offers from the older adaptation.
   const slug = name.replace(/\s*\((?:19|20)\d{2}\)\s*$/u, '').replaceAll('½', '1/2')
@@ -77,17 +83,30 @@ export async function recoverJustWatchOffers(name: string, imdbId: string, regio
     const response = await fetch(url, { next: { revalidate: 3600, tags: ['anime-week'] }, signal: AbortSignal.timeout(7000), redirect: 'error' });
     if (!response.ok) return null;
     const html = await response.text();
-    return html.length <= 2_000_000 ? parseJustWatchPage(html, url, imdbId, region) : null;
+    return html.length <= 2_000_000 ? html : null;
   };
   try {
     const seed = `https://www.justwatch.com/us/${kind === 'movie' ? 'movie' : 'tv-show'}/${slug}`;
-    const first = await load(seed);
-    if (!first) return null;
-    if (region === 'US') return { providers: first.providers, link: seed };
-    if (!first.regionalUrl) return null;
-    const next = new URL(first.regionalUrl);
-    if (next.origin !== 'https://www.justwatch.com' || next.username || next.password || !next.pathname.startsWith(`/${region.toLowerCase()}/`)) return null;
-    const regional = await load(next.href);
-    return regional ? { providers: regional.providers, link: next.href } : null;
+    const seedHtml = await load(seed);
+    if (!seedHtml || !parseJustWatchPage(seedHtml, seed, imdbId, 'US')) return null;
+    const found: JustWatchRegions = {};
+    // JustWatch's United Kingdom paths use /uk/, not the ISO code.
+    for (const region of regions) {
+      try {
+        const first = parseJustWatchPage(seedHtml, seed, imdbId, region);
+        if (region === 'US') { if (first) found.US = { providers: first.providers, link: seed }; continue; }
+        if (!first?.regionalUrl) continue;
+        const next = new URL(first.regionalUrl);
+        if (next.origin !== 'https://www.justwatch.com' || next.username || next.password || !next.pathname.startsWith(`/${region === 'GB' ? 'uk' : region.toLowerCase()}/`)) continue;
+        const html = await load(next.href);
+        const regional = html ? parseJustWatchPage(html, next.href, imdbId, region) : null;
+        if (regional) found[region] = { providers: regional.providers, link: next.href };
+      } catch { /* This country stays retryable; the others are kept. */ }
+    }
+    return found;
   } catch { return null; }
+}
+
+export async function recoverJustWatchOffers(name: string, imdbId: string, region: StreamingRegion, kind: 'tv' | 'movie' = 'tv') {
+  return (await recoverJustWatchRegions(name, imdbId, [region], kind))?.[region] ?? null;
 }

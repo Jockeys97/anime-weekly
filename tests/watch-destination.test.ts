@@ -106,3 +106,22 @@ it('fails safely without credentials or usable source pages', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
   expect((await GET(request())).headers.get('location')).toBe(regionalWatchPage(target));
 });
+it('resolves a pinned airing cour from its own JustWatch page, not the merged TMDB series', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+  const { justWatchPage } = await import('./helpers/justwatch-page');
+  const disney = 'https://www.disneyplus.com/browse/entity-571475d5';
+  const italy = 'https://www.justwatch.com/it/serie-tv/bleach-thousand-year-blood-war';
+  const fetchMock = vi.fn(async (input: URL | string) => {
+    const url = String(input);
+    if (url.startsWith('https://www.themoviedb.org/')) return new Response('', { status: 403 });
+    if (url.startsWith('https://api.themoviedb.org/')) throw new Error('A pinned identity needs no TMDB lookup');
+    if (url === 'https://www.justwatch.com/us/tv-show/bleach-thousand-year-blood-war') return new Response(justWatchPage('/us/tv-show/bleach-thousand-year-blood-war', 'tt14986406', {}, { 'it-IT': italy }));
+    if (url === italy) return new Response(justWatchPage('/it/serie-tv/bleach-thousand-year-blood-war', 'tt14986406', { IT: [{ id: 337, name: 'Disney Plus', href: disney }] }));
+    return new Response(null, { status: 404 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  try {
+    const response = await GET(request({ id: 30984, region: 'IT', provider: 337 }));
+    expect(response.headers.get('location')).toBe(disney);
+  } finally { vi.useRealTimers(); }
+});
