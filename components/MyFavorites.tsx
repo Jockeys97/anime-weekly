@@ -40,6 +40,12 @@ export function MyFavorites({ locale }: { locale: Locale }) {
   // Removing a heart updates the list at once, without waiting for a new request.
   const current = result && 'items' in result ? sortFavorites(result.items.filter(item => ids.includes(item.id)), locale) : [];
   const count = current.length;
+  // The list travels in the URL: calendar apps refetch it without any account.
+  const calendarUrl = (scheme: 'webcal' | 'https') => {
+    const path = `/api/ics/favorites?${new URLSearchParams({ ids: ids.filter(id => id.startsWith('anilist:')).join(',') })}`;
+    if (typeof window === 'undefined') return path;
+    return scheme === 'https' ? path : `webcal://${window.location.host}${path}`;
+  };
   useEffect(() => {
     const element = rail.current;
     if (!element || typeof window === 'undefined' || expanded) return;
@@ -66,6 +72,11 @@ export function MyFavorites({ locale }: { locale: Locale }) {
       {(edges.overflow || expanded) && count > 0 && <button type="button" className="my-favorites-toggle" aria-expanded={expanded} aria-controls="my-favorites-list" onClick={() => setExpanded(value => !value)}>
         {expanded ? d.showLess : d.showAll.replace('{count}', String(count))}</button>}
       <p className="my-anime-note">{d.note}</p>
+      {ids.some(id => id.startsWith('anilist:')) && <div className="my-favorites-calendar">
+        <a className="my-favorites-subscribe" href={calendarUrl('webcal')}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4" /></svg> {d.subscribe}</a>
+        <a className="my-favorites-download" href={calendarUrl('https')} download>{d.download}</a>
+        <span className="my-anime-note">{d.calendarNote}</span>
+      </div>}
     </header>
     {!ids.length ? <div className="my-favorites-empty"><span aria-hidden="true">♡</span><p>{d.empty}</p></div>
       : loading ? <p className="my-anime-note" role="status">{d.loading}</p>

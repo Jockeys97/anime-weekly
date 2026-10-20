@@ -403,7 +403,10 @@
     "showLess": "Ver menos",
     "previous": "Favoritos anteriores",
     "next": "Favoritos siguientes",
-    "newSeason": "Nueva temporada en camino"
+    "newSeason": "Nueva temporada en camino",
+    "subscribe": "Suscribirse al calendario",
+    "download": "Descargar .ics",
+    "calendarNote": "Se actualiza solo con los nuevos episodios. Si cambias tus favoritos, suscríbete de nuevo."
   },
   "features": {
     "topFive": "Top 5 episodios de la semana",
