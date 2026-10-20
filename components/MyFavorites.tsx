@@ -1,11 +1,25 @@
 'use client';
 import Image from 'next/image';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from '@/components/LocaleLink';
-import { useWatchlist, WatchlistButton } from '@/components/Watchlist';
+import { importWatchlist, useWatchlist, WatchlistButton } from '@/components/Watchlist';
 import { getDictionary, type Locale } from '@/lib/i18n';
-import { sortFavorites, type FavoriteItem } from '@/lib/favorites';
+import { favoriteIds, sortFavorites, type FavoriteItem } from '@/lib/favorites';
 import { useStreamingCountry } from '@/components/StreamingCountry';
+
+// The import link carries the list in ?import=…; read it as an external store (SSR-safe).
+const locationChanged = 'aw:location-change';
+function subscribeLocation(callback: () => void) {
+  window.addEventListener('popstate', callback); window.addEventListener(locationChanged, callback);
+  return () => { window.removeEventListener('popstate', callback); window.removeEventListener(locationChanged, callback); };
+}
+const importParam = () => new URLSearchParams(window.location.search).get('import') ?? '';
+function clearImportParam() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('import');
+  window.history.replaceState(window.history.state, '', url);
+  window.dispatchEvent(new Event(locationChanged));
+}
 
 type Result = { key: string; items: FavoriteItem[]; unavailable: boolean } | { key: string; failed: true };
 
@@ -18,6 +32,17 @@ export function MyFavorites({ locale }: { locale: Locale }) {
   const key = `${region}|${idsParam}`;
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const incoming = favoriteIds(useSyncExternalStore(subscribeLocation, importParam, () => ''));
+  const newcomers = incoming.filter(id => !ids.includes(id));
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareUrl = () => `${window.location.origin}${window.location.pathname}?${new URLSearchParams({ import: ids.join(',') })}`;
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(shareUrl()); setCopied(true); } catch { setCopied(false); }
+  };
+  const shareLink = async () => {
+    try { await navigator.share({ title: d.title, url: shareUrl() }); } catch { /* Dismissed or unsupported. */ }
+  };
   // One sideways row by default (fixed height, soonest episodes first); "show all" opens the grid.
   const [expanded, setExpanded] = useState(false);
   const rail = useRef<HTMLUListElement>(null);
@@ -70,6 +95,13 @@ export function MyFavorites({ locale }: { locale: Locale }) {
     .replace('{date}', new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(item.next.airingAt * 1000));
   const status = (item: FavoriteItem) => item.status === 'FINISHED' ? d.finished : item.status === 'NOT_YET_RELEASED' ? d.upcoming : item.status === 'RELEASING' || item.status === 'HIATUS' ? d.airing : null;
   return <section className="my-favorites" aria-labelledby="my-favorites-title">
+    {incoming.length > 0 && <div className="my-favorites-import" role="status">
+      {newcomers.length ? <>
+        <p>{d.importAsk.replace('{count}', String(newcomers.length))}</p>
+        <div><button type="button" onClick={() => { importWatchlist(newcomers); clearImportParam(); }}>{d.importConfirm}</button>
+          <button type="button" className="is-secondary" onClick={clearImportParam}>{d.importDismiss}</button></div>
+      </> : <><p>{d.importNothing}</p><div><button type="button" className="is-secondary" onClick={clearImportParam}>{d.importDismiss}</button></div></>}
+    </div>}
     <header className="my-favorites-heading">
       <div><p className="eyebrow">{d.eyebrow}</p><h2 id="my-favorites-title">{d.title}{ids.length ? <span className="my-favorites-count">{ids.length}</span> : null}</h2></div>
       {(edges.overflow || expanded) && count > 0 && <button type="button" className="my-favorites-toggle" aria-expanded={expanded} aria-controls="my-favorites-list" onClick={() => setExpanded(value => !value)}>
@@ -79,6 +111,16 @@ export function MyFavorites({ locale }: { locale: Locale }) {
         <a className="my-favorites-subscribe" href={calendarUrl('webcal')}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4" /></svg> {d.subscribe}</a>
         <a className="my-favorites-download" href={calendarUrl('https')} download>{d.download}</a>
         <span className="my-anime-note">{d.calendarNote}</span>
+      </div>}
+      {ids.length > 0 && <div className="my-favorites-transfer">
+        <button type="button" className="my-favorites-transfer-toggle" aria-expanded={sharing} onClick={() => { setSharing(value => !value); setCopied(false); }}>{d.transfer}</button>
+        {sharing && <div className="my-favorites-transfer-panel">
+          <p className="my-anime-note">{d.transferNote}</p>
+          <div className="my-favorites-transfer-actions">
+            <button type="button" onClick={copyLink}>{copied ? d.copied : d.copyLink}</button>
+            {typeof navigator !== 'undefined' && 'share' in navigator && <button type="button" className="is-secondary" onClick={shareLink}>{d.shareLink}</button>}
+          </div>
+        </div>}
       </div>}
     </header>
     {!ids.length ? <div className="my-favorites-empty"><span aria-hidden="true">♡</span><p>{d.empty}</p></div>

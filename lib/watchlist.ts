@@ -19,3 +19,13 @@ export function toggleWatchlist(storage: Pick<Storage, 'getItem' | 'setItem'>, i
     return true;
   } catch { return false; }
 }
+
+/** Add ids (validated) to the saved list without duplicates; returns how many were new, or -1 if storage failed. */
+export function mergeWatchlist(storage: Pick<Storage, 'getItem' | 'setItem'>, ids: readonly string[]): number {
+  try {
+    const current = readWatchlist(storage);
+    const added = parseWatchlist(JSON.stringify(ids)).filter(id => !current.includes(id));
+    if (added.length) storage.setItem(WATCHLIST_KEY, JSON.stringify([...current, ...added]));
+    return added.length;
+  } catch { return -1; }
+}

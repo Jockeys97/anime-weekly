@@ -453,3 +453,13 @@
 .my-favorites-providers a { display: block; line-height: 0; border-radius: 5px; transition: transform .12s; }
 .my-favorites-providers a:hover { transform: scale(1.1); }
 .my-favorites-providers img { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; box-shadow: 0 0 0 1px var(--line); }
+
+.my-favorites-import { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 20px; padding: 14px 16px; border-radius: 14px; background: #eef3e4; border: 1px solid #c9d8b4; }
+.my-favorites-import p { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink); }
+.my-favorites-import div, .my-favorites-transfer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.my-anime .my-favorites-import button, .my-anime .my-favorites-transfer-actions button { min-height: 38px; padding: 6px 16px; font-size: 13px; font-weight: 700; border-radius: 999px; }
+.my-anime .my-favorites-import .is-secondary, .my-anime .my-favorites-transfer-actions .is-secondary { background: #fff; color: var(--dark); border-color: var(--line); }
+.my-favorites-transfer { flex-basis: 100%; }
+.my-anime .my-favorites-transfer-toggle { min-height: 0; padding: 0; border: 0; background: none; color: var(--dark); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.my-favorites-transfer-panel { margin-top: 10px; padding: 14px 16px; border: 1px dashed #cfd7c7; border-radius: 12px; background: #f8f9f3; }
+.my-favorites-transfer-panel .my-anime-note { margin: 0 0 10px; font-size: 12px; }

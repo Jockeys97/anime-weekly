@@ -416,7 +416,16 @@
     "subscribe": "Subscribe to calendar",
     "download": "Download .ics",
     "calendarNote": "Updates itself with new episodes. If you change your favourites, subscribe again.",
-    "watchOn": "watch"
+    "watchOn": "watch",
+    "transfer": "Move to another device",
+    "transferNote": "Open this link on the other phone or computer: it will ask to add the favourites to its list.",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "shareLink": "Share",
+    "importAsk": "Add {count} favourites from another device?",
+    "importConfirm": "Add",
+    "importDismiss": "Dismiss",
+    "importNothing": "You already have every favourite in this link."
   },
   "features": {
     "topFive": "Top 5 episodes this week",
