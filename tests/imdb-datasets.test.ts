@@ -100,7 +100,11 @@ it('keeps title and weekly scores when the optional chart cache rejects writes',
 
 it('still publishes the daily title index when the episode stream is unavailable', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('title.ratings') ? response(ratings) : new Response(null, { status: 503 })));
-  expect((await primeImdbDatasetEpisodes([target], '2026-10-14')).status).toBe('unavailable');
+  // Top 5 falls back to the TMDB-vouched episode ID: its own score, TMDB numbering kept (no IMDb season/episode).
+  const result = await primeImdbDatasetEpisodes([target, { imdbId: 'tt100', seriesImdbId: 'tt100' }], '2026-10-14');
+  expect(result).toMatchObject({ status: 'ready', ratings: { tt1: { score: 8.2, votes: 37 } }, dataUpdatedAt: '2026-10-14T00:00:00.000Z' });
+  expect(result.ratings.tt1).not.toHaveProperty('season');
+  expect(result.ratings).not.toHaveProperty('tt100'); // Never the series' own score.
   const now = new Date('2026-10-14T12:00:00Z');
   const { readImdbDatasetRating } = await import('../lib/imdb-rating-index');
   const { readImdbEpisodeChart } = await import('../lib/imdb-episode-index');
