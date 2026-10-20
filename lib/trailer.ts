@@ -8,3 +8,12 @@ export function trailerLinks(trailer: AnimeTrailer | null | undefined): { watch:
   }
   return null;
 }
+
+/** Muted, chrome-less autoplay embed for hover previews (browsers block autoplay with sound). */
+export function trailerPreview(trailer: AnimeTrailer | null | undefined): string | null {
+  const links = trailerLinks(trailer);
+  if (!links) return null;
+  return trailer!.site === 'youtube'
+    ? `${links.embed}&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1`
+    : `${links.embed}&mute=1&controls=0&queue-enable=false&ui-start-screen-info=false`;
+}

@@ -23,7 +23,7 @@ export function WeeklyCalendarContent({ titles, week, events, episodeDates = emp
   const dayDate = (date: string) => <VisitorDate value={date} options={{ month: 'short', day: 'numeric' }} />;
   return <div className="weekly-calendar">
     <p className="calendar-note">{d.calendar.timezoneNote}</p>
-    <WeekAtAGlance days={days} locale={locale} />
+    <WeekAtAGlance days={days} locale={locale} anilistIds={anilistIds} />
     <nav className="calendar-days" aria-label={d.calendar.navigation}>{days.map(day => <a key={day.date} href={`#day-${day.date}`}><span>{weekday(day.date, true)}</span><strong>{dayDate(day.date)}</strong><small>{releaseCount(day.releases.length)}</small></a>)}</nav>
     {unavailable && <p className="notice" role="status">{d.calendar.partial}</p>}
     {days.map(day => <section className="calendar-day" key={day.date} aria-labelledby={`day-${day.date}`}>
