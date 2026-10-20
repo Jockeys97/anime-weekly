@@ -1,0 +1,39 @@
+name: Daily data health
+
+# The Vercel cron runs at 06:00 UTC and Hobby keeps runtime logs for one hour.
+# Check its output afterwards and keep one open issue while something is wrong.
+on:
+  schedule:
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the health summary
+        id: health
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 60 --retry 3 --retry-delay 20 'https://weeklyanime.com/api/revalidate?health=1' -o health.json
+          cat health.json
+          echo "ok=$(jq -r '.ok' health.json)" >> "$GITHUB_OUTPUT"
+      - name: Open or update the health issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OK: ${{ steps.health.outputs.ok }}
+        run: |
+          set -euo pipefail
+          gh label create daily-health --color d93f0b --description 'Daily cron output check' --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          issue=$(gh issue list --repo "$GITHUB_REPOSITORY" --label daily-health --state open --json number --jq '.[0].number // empty')
+          body=$(jq -r '"**Settimana:** \(.week) · controllo \(.checkedAt)\n\n" + (if .problems|length>0 then (.problems|map("- "+.)|join("\n")) else "Tutto regolare." end) + "\n\n```json\n" + (.|tostring) + "\n```"' health.json)
+          if [ "$OK" = "true" ]; then
+            if [ -n "$issue" ]; then gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Risolto: $body"; fi
+          elif [ -n "$issue" ]; then
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label daily-health --title 'Aggiornamento giornaliero: dati incompleti' --body "$body"
+          fi
