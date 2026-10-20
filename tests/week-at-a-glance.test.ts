@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { glanceDayNumber, glanceProviders, posterClickAction, visibleDayRange, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
+import { glanceDayNumber, glanceProviders, isFavoriteTitle, posterClickAction, visibleDayRange, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
 import type { CalendarRelease } from '@/lib/weekly-calendar';
 const r = (id: number, episode: number) => ({ anime: { id, kind: 'tv', name: `A${id}` }, date: '2026-10-20', episode }) as unknown as CalendarRelease;
 describe('groupReleases', () => {
@@ -80,5 +80,15 @@ describe('posterClickAction', () => {
     expect(posterClickAction({ ...click, detail: 0 }, null, 'a')).toBe('native');
     expect(posterClickAction({ ...click, metaKey: true }, 'a', 'a')).toBe('native');
     expect(posterClickAction({ ...click, button: 1 }, null, 'a')).toBe('native');
+  });
+});
+
+describe('isFavoriteTitle', () => {
+  const anime = { id: 30984, kind: 'tv', name: 'Bleach', ratings: { anilistId: 185874 } } as never;
+  it('matches the card heart, the TMDB id or the calendar AniList id', () => {
+    expect(isFavoriteTitle(['anilist:185874'], anime)).toBe(true);
+    expect(isFavoriteTitle(['tv:30984'], { ...(anime as object), ratings: {} } as never)).toBe(true);
+    expect(isFavoriteTitle(['anilist:269'], { ...(anime as object), ratings: {} } as never, 269)).toBe(true);
+    expect(isFavoriteTitle(['anilist:1'], anime, 2)).toBe(false);
   });
 });

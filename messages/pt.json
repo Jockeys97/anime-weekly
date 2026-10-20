@@ -176,6 +176,9 @@
     "timezoneNote": "Os horários são apresentados no teu fuso local (Europe/Rome por padrão). As datas TMDB são apresentadas como fornecidas. Os lançamentos em streaming podem variar por serviço e país.",
     "navigation": "Explorar dias de estreia",
     "glanceTitle": "A semana num relance",
+    "glanceOnlyFavorites": "Só os meus favoritos",
+    "glanceNoFavorites": "Nenhum favorito",
+    "glanceFavorite": "Nos favoritos",
     "glanceHow": {
       "label": "Como usar o calendário",
       "hover": "Passe o cursor",
