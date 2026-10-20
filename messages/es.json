@@ -176,6 +176,9 @@
     "timezoneNote": "Los horarios se muestran en tu zona horaria local (Europe/Rome por defecto). Las fechas de episodios TMDB se muestran tal como se proporcionan. Los estrenos en streaming pueden variar según servicio y país.",
     "navigation": "Explorar días de estreno",
     "glanceTitle": "La semana de un vistazo",
+    "glanceOnlyFavorites": "Solo mis favoritos",
+    "glanceNoFavorites": "Ningún favorito",
+    "glanceFavorite": "En favoritos",
     "glanceHow": {
       "label": "Cómo usar el calendario",
       "hover": "Pasa el cursor",

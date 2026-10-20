@@ -176,6 +176,9 @@
     "timezoneNote": "Les horaires sont affichés dans votre fuseau local (Europe/Rome par défaut). Les dates TMDB sont affichées telles que fournies. Les sorties en streaming peuvent varier selon le service et le pays.",
     "navigation": "Parcourir les jours de sortie",
     "glanceTitle": "La semaine en un coup d'œil",
+    "glanceOnlyFavorites": "Seulement mes favoris",
+    "glanceNoFavorites": "Aucun favori",
+    "glanceFavorite": "Dans les favoris",
     "glanceHow": {
       "label": "Comment utiliser le calendrier",
       "hover": "Survolez",

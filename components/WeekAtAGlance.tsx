@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react
 import { useStreamingCountry } from '@/components/StreamingCountry';
 import { useTrailerHover } from '@/components/GlanceTrailer';
 import { useTrailerPreviews } from '@/lib/trailer-preference';
+import { useWatchlist } from '@/components/Watchlist';
+import { watchlistId } from '@/lib/watchlist';
 import type { StreamingRegion } from '@/lib/config';
 import { getDictionary, type Locale } from '@/lib/i18n';
 import { providerBase } from '@/lib/landing-providers';
@@ -50,6 +52,11 @@ export function glanceSeriesLabel(count: number, locale: Locale) {
   return template.replace('{count}', String(count));
 }
 
+/** A weekly title matches a heart saved on its card (TMDB or AniList id) or on its AniList entry. */
+export function isFavoriteTitle(favorites: readonly string[], anime: CalendarRelease['anime'], anilistId?: number) {
+  return favorites.includes(watchlistId(anime)) || Boolean(anilistId && favorites.includes(`anilist:${anilistId}`));
+}
+
 export const DOUBLE_CLICK_DELAY = 280;
 /** 'native': keyboard or modified click keeps the plain link; 'details': second click on the same poster; 'wait': first click. */
 export function posterClickAction(click: { detail: number; button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }, pendingKey: string | null, key: string) {
@@ -73,6 +80,10 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const [trailersOn, setTrailersOn] = useTrailerPreviews();
   const trailer = useTrailerHover(trailersOn);
   const how = d.calendar.glanceHow;
+  const favorites = useWatchlist();
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const isFavorite = (anime: CalendarRelease['anime'], anilistId?: number) => isFavoriteTitle(favorites, anime, anilistId);
+  const favoritesFilter = onlyFavorites && favorites.length > 0;
   const pendingClick = useRef<{ timer: number; key: string } | null>(null);
   useEffect(() => () => { if (pendingClick.current) clearTimeout(pendingClick.current.timer); }, []);
   // One click/tap jumps to the release below; a second within the delay opens
@@ -128,7 +139,12 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
   const longDay = (date: string) => new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(utcDate(date));
   const releaseLabel = (release: CalendarRelease) => release.episode != null ? `${d.calendar.episode} ${release.episode}` : d.calendar.movieRelease;
   return <section className="week-glance" aria-labelledby="week-glance-title">
-    <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
+    <div className="week-glance-titlebar">
+      <h2 id="week-glance-title" className="week-glance-title">{d.calendar.glanceTitle}</h2>
+      {favorites.length > 0 && <button type="button" className="week-glance-favorites-toggle" aria-pressed={favoritesFilter} onClick={() => setOnlyFavorites(value => !value)}>
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill={favoritesFilter ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" /></svg>
+        {d.calendar.glanceOnlyFavorites}</button>}
+    </div>
     {/* Pointer and touch labels are both rendered; CSS shows the ones matching the input device (SSR-safe). */}
     <ul className="week-glance-how" aria-label={how.label}>
       <li className={`only-pointer${trailersOn ? '' : ' is-off'}`}><span className="week-glance-how-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg></span><strong>{how.hover}</strong><span>{trailersOn ? how.hoverResult : how.hoverOff}</span>
@@ -150,7 +166,7 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
     </div>}
     <div className="week-glance-scroller" id="week-glance-scroller" ref={scroller}>
       <ol className="week-glance-days">{days.map(day => {
-        const groups = groupReleases(day.releases);
+        const groups = groupReleases(day.releases).filter(group => !favoritesFilter || isFavorite(group[0].anime, anilistIds[`${group[0].anime.kind}:${group[0].anime.id}`] ?? group[0].anime.ratings?.anilistId));
         const seriesLabel = glanceSeriesLabel(groups.length, locale);
         return <li className="week-glance-day" key={day.date}>
           <a className="week-glance-head" href={`#day-${day.date}`} aria-label={`${fill(d.calendar.glanceJumpToDay, { day: longDay(day.date) })} — ${seriesLabel}`}>
@@ -165,10 +181,14 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
             const providers = glanceProviders(first.anime, region);
             const anilistId = anilistIds[`${first.anime.kind}:${first.anime.id}`] ?? first.anime.ratings?.anilistId;
             const detailHref = localePath(animeDetailLink({ name: first.anime.name, ratings: { ...first.anime.ratings, anilistId } }), locale);
-            return <li key={releaseAnchorId(first)} {...trailer.bind(releaseAnchorId(first), anilistId, `${d.trailer.heading} · ${first.anime.name}`)}>
-              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} onClick={event => posterClick(event, releaseAnchorId(first), detailHref)} aria-label={fill(d.calendar.glanceJumpToRelease, { title: caption })}>
+            const favorite = isFavorite(first.anime, anilistId);
+            return <li key={releaseAnchorId(first)} className={favorite ? 'is-favorite' : undefined} {...trailer.bind(releaseAnchorId(first), anilistId, `${d.trailer.heading} · ${first.anime.name}`)}>
+              <a className="week-glance-poster" href={`#${releaseAnchorId(first)}`} onClick={event => posterClick(event, releaseAnchorId(first), detailHref)} aria-label={`${fill(d.calendar.glanceJumpToRelease, { title: caption })}${favorite ? ` · ${d.calendar.glanceFavorite}` : ''}`}>
                 {first.anime.poster ? <Image src={`https://image.tmdb.org/t/p/w185${first.anime.poster}`} alt={first.anime.name} fill loading="lazy" sizes="(max-width: 899px) 96px, 14vw" /> : <span className="week-glance-nopic" aria-hidden="true">{first.anime.name}</span>}
-                {group.length > 1 && <span className="week-glance-count" aria-hidden="true">×{group.length}</span>}
+                {(group.length > 1 || favorite) && <span className="week-glance-badges" aria-hidden="true">
+                  {group.length > 1 && <span className="week-glance-count">×{group.length}</span>}
+                  {favorite && <span className="week-glance-fav"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z" /></svg></span>}
+                </span>}
                 <span className="week-glance-caption" aria-hidden="true">{caption}</span>
               </a>
               {/* Siblings of the poster link (links cannot nest); same destination as the detail page's platform links. */}
@@ -178,7 +198,7 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
                 <Image src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" width={22} height={22} loading="lazy" />
               </a>)}</span>}
             </li>;
-          })}</ul> : <p className="week-glance-empty">{d.calendar.glanceEmpty}</p>}
+          })}</ul> : <p className="week-glance-empty">{favoritesFilter ? d.calendar.glanceNoFavorites : d.calendar.glanceEmpty}</p>}
         </li>;
       })}</ol>
     </div>
