@@ -1,4 +1,3 @@
-import Link from '@/components/LocaleLink';
 import { WeeklyGuide } from '@/components/WeeklyGuide';
 import { isoWeek } from '@/lib/week';
 import { pageMetadata } from '@/lib/seo';
@@ -12,4 +11,4 @@ export async function generateMetadata({ params }: { params?: LocaleParams }) {
 }
 export const dynamic = 'error';
 export const revalidate = 900; // re-read the cron-cached ratings snapshot (cache-only) every 15 min
-export default async function Home({ params }: { params?: LocaleParams } = {}) { const locale = await getRequestLocale(params); const d = getDictionary(locale); return <><nav className="catalog-filters landing-home-links"><Link href="/this-week">{d.landings.weekNav}</Link><Link href="/best-this-season">{d.landings.bestNav}</Link></nav><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /></>; }
+export default async function Home({ params }: { params?: LocaleParams } = {}) { const locale = await getRequestLocale(params); return <><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /></>; }
