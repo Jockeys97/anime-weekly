@@ -345,3 +345,26 @@ export async function getPlatformAnime(providerId: number, region: string, local
   try { return await cachedPlatformAnime(providerId, region, locale); }
   catch { return { status: 'error', titles: [] }; }
 }
+
+type TitleLogo = { file_path: string; iso_639_1: string | null; vote_average?: number; width?: number };
+/** Best official title logo per language (TMDB logos are series-level). */
+export function pickTitleLogos(logos: TitleLogo[]): Record<string, string> {
+  const best = new Map<string, TitleLogo>();
+  const score = (logo: TitleLogo) => [logo.file_path.endsWith('.png') ? 1 : 0, logo.vote_average ?? 0, logo.width ?? 0];
+  const better = (a: TitleLogo, b: TitleLogo) => { const x = score(a), y = score(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+  for (const logo of logos) {
+    const language = logo.iso_639_1;
+    if (!language || !/^[a-z]{2}$/.test(language) || !/^\/[A-Za-z0-9_-]+\.(png|svg)$/.test(logo.file_path)) continue;
+    const current = best.get(language);
+    if (!current || better(logo, current)) best.set(language, logo);
+  }
+  // PNGs come resized; SVGs are served only at their original path.
+  return Object.fromEntries([...best].map(([language, logo]) => [language, `https://image.tmdb.org/t/p/${logo.file_path.endsWith('.svg') ? 'original' : 'w500'}${logo.file_path}`]));
+}
+export async function getTitleLogos(kind: Kind, id: number): Promise<Record<string, string>> {
+  if (!isTMDBConfigured() || !Number.isSafeInteger(id) || id <= 0) return {};
+  try {
+    const data = await tmdb<{ logos?: TitleLogo[] }>(`${kind}/${id}/images`, { include_image_language: 'it,en,es,fr,de,pt,ja' }, 86400);
+    return pickTitleLogos(Array.isArray(data.logos) ? data.logos : []);
+  } catch { return {}; }
+}

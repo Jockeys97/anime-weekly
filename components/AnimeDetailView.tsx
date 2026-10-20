@@ -17,8 +17,10 @@ import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 import { detailDesktopMedia, detailMobileMedia, emptyDetailImage, useDetailMobileViewport } from '@/lib/detail-viewport';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro }: {
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro, logos = {} }: {
   anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string;
+  /** Official title logos by language (TMDB), shown over the banner. */
+  logos?: Record<string, string>;
 }) {
   const locale = useLocale();
   const mobile = useDetailMobileViewport();
@@ -27,6 +29,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const name = displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
+  const logo = anime.bannerImage ? logos[locale] ?? logos.en ?? logos.ja ?? Object.values(logos)[0] : undefined;
   // AniList large is ~230px wide; extraLarge is ~460px. Let DPR choose the
   // larger original only when needed, without creating Vercel transformations.
   const coverSources = anime.coverImage?.large && anime.coverImage?.extraLarge
@@ -46,12 +49,16 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
       <source media={detailDesktopMedia} srcSet={anime.bannerImage} />
       <img src={emptyDetailImage} alt="" loading="eager" fetchPriority="high" sizes="100vw" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
     </picture>
+    {/* Decorative: the h1 below carries the title for search engines and screen readers.
+        A plain img: logos have arbitrary aspect ratios, sized by max-width/max-height. */}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {logo && <img className="anime-banner-logo" src={logo} alt="" loading="eager" decoding="async" />}
     </div>}
     <article className="anime-card anime-detail">
       <div className="poster">{cover ? <picture style={{ position: 'absolute', inset: 0 }}>{coverSources && <source srcSet={coverSources} sizes="(max-width: 600px) 160px, 220px" />}<Image src={cover} alt={name} fill unoptimized loading="eager" fetchPriority={anime.bannerImage && !mobile ? "auto" : "high"} sizes="(max-width: 600px) 160px, 220px" /></picture> : <span>{d.state.noPoster}</span>}</div>
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
-        <h1>{animeHeading(name, anime, locale)}</h1>
+        <h1 className={logo ? 'has-logo' : undefined}>{animeHeading(name, anime, locale)}</h1>
         {intro && <p className="catalog-intro">{intro}</p>}
         <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
         {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
