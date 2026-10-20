@@ -1,5 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
+import { detailDesktopMedia, detailMobileMedia, emptyDetailImage } from '../lib/detail-viewport';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); } }));
@@ -129,14 +131,21 @@ it('prioritizes the displayed CDN cover without lazy loading or extra transforma
   expect(cover).not.toContain('loading="lazy"');
 });
 
-it('gives only the direct AniList banner high priority when present', () => {
+it('serves the banner only on desktop and preloads the mobile cover without hydration-dependent requests', () => {
   const bannerImage = 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/1535.jpg';
   const coverImage = { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null };
   const view = React.createElement(AnimeDetailView, { anime: { ...anime, bannerImage, coverImage }, synopsis: null, imdb: null, ratings: null, availability: null });
   const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
   const banner = html.match(/<img[^>]+alt=""[^>]*>/)?.[0];
   const cover = html.match(/<img[^>]+alt="Example"[^>]*>/)?.[0];
-  expect(banner).toContain(`src="${bannerImage}"`);
+  expect(banner).toContain(`src="${emptyDetailImage}"`);
+  expect(banner).not.toContain(bannerImage);
+  expect(html).toContain(`<picture><source media="${detailDesktopMedia}" srcSet="${bannerImage}"/>`);
+  const preload = html.match(/<link[^>]+media="\(max-width: 720px\)"[^>]*>/)?.[0];
+  expect(preload).toContain(`href="${coverImage.large}"`);
+  expect(preload).toContain('rel="preload"');
+  expect(preload).toMatch(/fetchPriority="high"/i);
+  expect(html).not.toMatch(new RegExp(`<link[^>]+href="${bannerImage}"`));
   expect(banner).toContain('loading="eager"');
   expect(banner).toContain('sizes="100vw"');
   expect(banner).toMatch(/fetchPriority="high"/i);
@@ -145,4 +154,33 @@ it('gives only the direct AniList banner high priority when present', () => {
   expect(cover).toMatch(/fetchPriority="auto"/i);
   // React may also emit a preload link for the same high-priority resource.
   expect(html.match(/<img\b[^>]*fetchPriority="high"[^>]*>/gi)).toHaveLength(1);
+});
+
+
+it('uses the responsive cover candidates for the early mobile preload', () => {
+  const coverImage = { large: 'https://s4.anilist.co/medium.jpg', extraLarge: 'https://s4.anilist.co/large.jpg', color: null };
+  const view = React.createElement(AnimeDetailView, { anime: { ...anime, bannerImage: 'https://s4.anilist.co/banner.jpg', coverImage }, synopsis: null, imdb: null, ratings: null, availability: null });
+  const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
+  const preload = html.match(/<link[^>]+media="\(max-width: 720px\)"[^>]*>/)?.[0];
+  expect(preload).toContain(`imageSrcSet="${coverImage.large} 230w, ${coverImage.extraLarge} 460w"`);
+  expect(preload).toContain('imageSizes="(max-width: 600px) 160px, 220px"');
+});
+
+it.each([true, false])('keeps the trailer from downloading the banner on mobile (cover: %s)', hasCover => {
+  const bannerImage = 'https://s4.anilist.co/banner.jpg';
+  const cover = 'https://s4.anilist.co/cover.jpg';
+  const view = React.createElement(AnimeDetailView, { anime: { ...anime, bannerImage, coverImage: hasCover ? { large: cover, extraLarge: null, color: null } : null, trailer: { site: 'youtube', id: 'vPBU0xBjFFY' } }, synopsis: null, imdb: null, ratings: null, availability: null });
+  const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
+  expect(html.match(/<source[^>]+srcSet="https:\/\/s4.anilist.co\/banner.jpg"[^>]*>/g)).toHaveLength(2);
+  for (const tag of html.match(/<(?:img|link)\b[^>]*>/g) ?? []) expect(tag).not.toContain(bannerImage);
+  const trailer = html.match(/<picture><source[^>]+banner.jpg[^>]*\/><img[^>]*>/g)?.at(-1);
+  expect(trailer).toContain(`src="${hasCover ? cover : emptyDetailImage}"`);
+});
+
+it('hides the banner at the picture breakpoint and reserves cover space before loading', () => {
+  const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  expect(css).toContain(`@media${detailMobileMedia.replaceAll(' ', '')}{.anime-banner{display:none}}`);
+  expect(css).toMatch(/\.poster\{[^}]*aspect-ratio:2\/3/);
+  expect(css).toMatch(/\.anime-detail\{grid-template-columns:220px/);
+  expect(css).toContain('.anime-detail>.poster{width:160px}');
 });
