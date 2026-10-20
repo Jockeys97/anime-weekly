@@ -49,6 +49,13 @@ it('recovers anime scores independently of stalled streaming and calendar reques
   controller.abort(); await Promise.all(stalled); await vi.runAllTimersAsync();
 });
 
+it.each(['/api/season-providers?year=2026&season=fall&page=1', '/api/search-providers?sort=popular'])('accepts platform snapshots from %s', async url => {
+  const snapshot = { titles: { 'anilist:21': { providers: { IT: { link: '', providers: [{ provider_id: 9, provider_name: 'Amazon Prime Video', logo_path: null }] } }, providersUnavailable: false } }, unavailable: false };
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(snapshot)));
+  const { loadWeeklyLookup } = await import('../lib/weekly-client');
+  expect(await loadWeeklyLookup(url, new AbortController().signal)).toEqual(snapshot);
+});
+
 it('loads provider filter metadata independently of stalled streaming cards', async () => {
   const fetchMock = vi.fn(async (url: string) => url.startsWith('/api/weekly-providers?')
     ? Response.json({ titles: { 'tv:1': { providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } }, unavailable: false })
