@@ -13,6 +13,7 @@ it('builds muted, chrome-less preview embeds only for validated trailer IDs', ()
   expect(trailerPreview({ site: 'dailymotion', id: 'x8abc12' })).toContain('mute=1');
   expect(trailerPreview({ site: 'youtube', id: 'bad"id' })).toBeNull();
   expect(trailerPreview(null)).toBeNull();
+  expect(trailerPreview({ site: 'youtube', id: 'dQw4w9WgXcQ' }, false)).toContain('&mute=0&');
 });
 it('centres the 16:9 box on the poster and keeps it inside the viewport', () => {
   expect(previewBox({ left: 500, top: 300, width: 200, height: 300 }, { width: 1400, height: 900 })).toEqual({ left: 408, top: 342, width: 384, height: 216 });
@@ -22,7 +23,7 @@ it('centres the 16:9 box on the poster and keeps it inside the viewport', () => 
 it('serves only the trailer, cached at the edge, and rejects invalid IDs', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 185874, trailer: { site: 'youtube', id: 'dQw4w9WgXcQ' } } as Awaited<ReturnType<typeof getAnime>>);
   const ok = await call('185874');
-  expect(await ok.json()).toEqual({ preview: expect.stringContaining('mute=1'), watch: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
+  expect(await ok.json()).toEqual({ preview: expect.stringContaining('mute=1'), sound: expect.stringContaining('mute=0'), watch: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
   expect(ok.headers.get('cache-control')).toContain('s-maxage=86400');
   vi.mocked(getAnime).mockResolvedValue({ id: 1, trailer: null } as Awaited<ReturnType<typeof getAnime>>);
   expect(await (await call('1')).json()).toEqual({});

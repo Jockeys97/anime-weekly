@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { glanceDayNumber, glanceProviders, visibleDayRange, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
+import { glanceDayNumber, glanceProviders, posterClickAction, visibleDayRange, glanceSeriesLabel, glanceWeekday, groupReleases } from '@/components/WeekAtAGlance';
 import type { CalendarRelease } from '@/lib/weekly-calendar';
 const r = (id: number, episode: number) => ({ anime: { id, kind: 'tv', name: `A${id}` }, date: '2026-10-20', episode }) as unknown as CalendarRelease;
 describe('groupReleases', () => {
@@ -66,5 +66,19 @@ describe('visibleDayRange', () => {
   it('stops at the last day and handles an empty week', () => {
     expect(visibleDayRange(columns, 480, 400)).toEqual({ first: 4, last: 6 });
     expect(visibleDayRange([], 0, 400)).toEqual({ first: 0, last: 0 });
+  });
+});
+
+describe('posterClickAction', () => {
+  const click = { detail: 1, button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false };
+  it('waits on a first click and opens details on a second click of the same poster', () => {
+    expect(posterClickAction(click, null, 'a')).toBe('wait');
+    expect(posterClickAction({ ...click, detail: 2 }, 'a', 'a')).toBe('details');
+    expect(posterClickAction(click, 'b', 'a')).toBe('wait');
+  });
+  it('keeps keyboard activation and modified clicks as the plain link', () => {
+    expect(posterClickAction({ ...click, detail: 0 }, null, 'a')).toBe('native');
+    expect(posterClickAction({ ...click, metaKey: true }, 'a', 'a')).toBe('native');
+    expect(posterClickAction({ ...click, button: 1 }, null, 'a')).toBe('native');
   });
 });
