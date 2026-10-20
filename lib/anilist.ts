@@ -182,6 +182,32 @@ export async function getAnimeMappings(ids: number[], byMal = false, maxWaitMs =
   } catch { return { media, unavailable: true }; }
 }
 
+export type FavoriteAnime = Pick<AniListAnime, 'id' | 'title' | 'format' | 'status' | 'episodes'> & { coverImage?: AniListAnime['coverImage']; nextAiringEpisode?: { episode: number; airingAt: number } | null };
+// "My favourites": covers, status and the next episode for a saved list, 50 per request.
+export async function getFavoriteAnime(ids: number[], maxWaitMs = 12000): Promise<{ media: FavoriteAnime[]; unavailable: boolean }> {
+  const selected = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0 && id <= 2147483647))].slice(0, 200);
+  const media: FavoriteAnime[] = [];
+  const deadline = Date.now() + maxWaitMs;
+  try {
+    for (let offset = 0; offset < selected.length; offset += 50) {
+      const chunk = selected.slice(offset, offset + 50);
+      const response = await anilistFetch('https://graphql.anilist.co', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) {
+          media(type: ANIME, id_in: $ids) { id title { romaji english native } coverImage { large extraLarge color } format status episodes nextAiringEpisode { episode airingAt } }
+        } }`, variables: { ids: chunk } }),
+        next: { revalidate: 600 },
+      }, Math.max(0, deadline - Date.now()));
+      if (!response.ok) return { media, unavailable: true };
+      const result = await response.json() as { data?: { Page?: { media?: FavoriteAnime[] } }; errors?: unknown[] };
+      const page = result.data?.Page;
+      if (result.errors?.length || !Array.isArray(page?.media)) return { media, unavailable: true };
+      media.push(...page.media.filter(anime => Number.isSafeInteger(anime.id) && chunk.includes(anime.id) && anime.title));
+    }
+    return { media, unavailable: false };
+  } catch { return { media, unavailable: true }; }
+}
+
 export function animeName(anime: AniListAnime): string {
   return displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
 }
