@@ -5,7 +5,8 @@ import { getAnimeRatingsById, lookupAnimeRatings } from '@/lib/anime-ratings';
 import { getAnime } from '@/lib/anilist';
 import { recoverJustWatchRegions } from '@/lib/justwatch-recovery';
 import { LOCALE_REGIONS } from '@/lib/landing-providers';
-import { isExpiredWeeklyIdentity, verifiedWeeklyIdentity, type WeeklyIdentity } from '@/lib/verified-weekly-identities';
+import { isExpiredWeeklyIdentity, verifiedWeeklyIdentity } from '@/lib/verified-weekly-identities';
+import { resolveFavoriteAnime } from '@/lib/season-chain';
 import { getRatings, getWeeklyRatingSources, getWeeklyProviders } from '@/lib/tmdb';
 import { compactAvailability, PROVIDER_MAX_AGE, type ProviderSnapshot, type ProviderStore, type StoredAvailability } from '@/lib/provider-snapshot';
 import type { StreamingRegion } from '@/lib/config';
@@ -113,18 +114,40 @@ function mergeRecovered(entry: StoredAvailability, found: Awaited<ReturnType<typ
   return countries;
 }
 
-// A verified identity's scores come from its own AniList/MAL IDs: a title
-// search would match the older series TMDB merged it with.
-async function identityRatings(identity: WeeklyIdentity, existing: Ratings, skipJikan: boolean, onTimeout: () => void): Promise<{ ratings: Ratings; unavailable: boolean }> {
-  const ratings: Ratings = { anilistId: identity.anilistId, malId: identity.malId };
+// Scores of a known season come from its own AniList/MAL IDs: a title search
+// would match the first season TMDB merged it with (and undo the mapping).
+async function seasonRatings(season: { anilistId: number; malId?: number }, existing: Ratings, skipJikan: boolean, onTimeout: () => void): Promise<{ ratings: Ratings; unavailable: boolean }> {
+  const ratings: Ratings = { anilistId: season.anilistId, ...(season.malId ? { malId: season.malId } : {}) };
   let score = existing.anilistScore;
   if (score == null) {
-    const anime = await getAnime(identity.anilistId);
+    const anime = await getAnime(season.anilistId);
     if (!anime) return { ratings, unavailable: true };
     if (anime.averageScore != null) ratings.anilistScore = score = anime.averageScore;
+    if (!season.malId && anime.idMal) ratings.malId = anime.idMal;
   }
-  if (existing.malScore == null && !skipJikan) Object.assign(ratings, await getAnimeRatingsById(identity.malId, score, CACHE_SECONDS, 6000, true, onTimeout));
+  const malId = ratings.malId;
+  if (malId && existing.malScore == null && !skipJikan) Object.assign(ratings, await getAnimeRatingsById(malId, score, CACHE_SECONDS, 6000, true, onTimeout));
   return { ratings, unavailable: false };
+}
+
+// TMDB lists a series once; its AniList mapping is often the first season. Pin
+// each weekly title to the season airing now: the mapped entry itself when it
+// is airing, else its airing series sequel. Unknown or idle titles keep today's
+// behaviour. One batched AniList request per sequel hop; failures change nothing.
+async function airingSeasons(targets: { key: string; anilistId: number }[], budget: number): Promise<Map<string, { anilistId: number; malId?: number }>> {
+  const seasons = new Map<string, { anilistId: number; malId?: number }>();
+  if (!targets.length || budget <= 0) return seasons;
+  try {
+    const { entries } = await withTimeout(resolveFavoriteAnime([...new Set(targets.map(target => target.anilistId))], true), budget);
+    const byId = new Map(entries.map(entry => [entry.media.id, entry]));
+    for (const target of targets) {
+      const entry = byId.get(target.anilistId);
+      const season = entry?.sequel ?? entry?.media;
+      if (!season || season.status !== 'RELEASING') continue;
+      seasons.set(target.key, { anilistId: season.id, ...(season.idMal ? { malId: season.idMal } : {}) });
+    }
+  } catch { /* Keep the stored mappings when AniList is unavailable. */ }
+  return seasons;
 }
 
 // Compute before invalidating: provider failures must never erase a good snapshot.
@@ -212,6 +235,11 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
   }));
   Object.assign(watchStore.providers, availability.providers);
   let storeHits = 0;
+  const seasons = await airingSeasons(sources.flatMap(source => {
+    const key = `${source.kind}:${source.id}`;
+    const anilistId = store.sources[key]?.anilistId ?? old.titles[key]?.anilistId;
+    return source.kind === 'tv' && !verifiedWeeklyIdentity(key) && anilistId ? [{ key, anilistId }] : [];
+  }), Math.min(20000, deadline - Date.now() - 60000));
   // Populate every source before completed ratings or the time budget skip it.
   for (const source of sources) {
     const name = displayTitle(source.title);
@@ -228,6 +256,12 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
       for (const provider of providers) if (mapped[provider.id] != null) Object.assign(existing, { [provider.id]: mapped[provider.id] });
     }
     if (identity) Object.assign(existing, { anilistId: identity.anilistId, malId: identity.malId, imdbId: identity.imdbId });
+    const season = seasons.get(key);
+    if (season && existing.anilistId !== season.anilistId) {
+      // Another season: its AniList/MAL scores differ; the series-level IMDb score stays.
+      for (const field of ['anilistId', 'anilistScore', 'malId', 'malScore', 'malMembers'] as const) delete existing[field];
+      Object.assign(existing, { anilistId: season.anilistId, ...(season.malId ? { malId: season.malId } : {}) });
+    }
     // Migrate a pre-store snapshot once. Never renew a stored score's timestamp
     // merely because it appeared in a weekly snapshot again.
     const migrated: Ratings = {};
@@ -276,8 +310,8 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
         ? withTimeout(getRatings(source.kind, source.id), 13000).catch(() => ({} as Ratings))
         : Promise.resolve({} as Ratings),
       needsAnilist || (needsMal && jikanAvailable)
-        ? verifiedWeeklyIdentity(key)
-          ? withTimeout(identityRatings(verifiedWeeklyIdentity(key)!, animeExisting, !jikanAvailable || !needsMal, () => { jikanAvailable = false; }), 16000).catch(() => ({ ratings: {}, unavailable: true }))
+        ? verifiedWeeklyIdentity(key) || seasons.has(key)
+          ? withTimeout(seasonRatings(verifiedWeeklyIdentity(key) ?? seasons.get(key)!, animeExisting, !jikanAvailable || !needsMal, () => { jikanAvailable = false; }), 16000).catch(() => ({ ratings: {}, unavailable: true }))
           : withTimeout(lookupAnimeRatings(source, {
           weekly: true, existing: animeExisting, skipJikan: !jikanAvailable || !needsMal,
           onJikanTimeout: () => { jikanAvailable = false; },

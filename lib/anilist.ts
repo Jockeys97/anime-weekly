@@ -182,11 +182,11 @@ export async function getAnimeMappings(ids: number[], byMal = false, maxWaitMs =
   } catch { return { media, unavailable: true }; }
 }
 
-export type FavoriteSequel = Pick<AniListAnime, 'id' | 'title' | 'format' | 'status'> & { nextAiringEpisode?: { episode: number; airingAt: number } | null };
-export type FavoriteAnime = Pick<AniListAnime, 'id' | 'title' | 'format' | 'status' | 'episodes'> & { coverImage?: AniListAnime['coverImage']; nextAiringEpisode?: { episode: number; airingAt: number } | null;
+export type FavoriteSequel = Pick<AniListAnime, 'id' | 'idMal' | 'title' | 'format' | 'status'> & { nextAiringEpisode?: { episode: number; airingAt: number } | null };
+export type FavoriteAnime = Pick<AniListAnime, 'id' | 'idMal' | 'title' | 'format' | 'status' | 'episodes'> & { coverImage?: AniListAnime['coverImage']; nextAiringEpisode?: { episode: number; airingAt: number } | null;
   relations?: { edges?: { relationType: string; node: FavoriteSequel }[] } };
 // "My favourites": covers, status and the next episode for a saved list, 50 per request.
-export async function getFavoriteAnime(ids: number[], maxWaitMs = 12000): Promise<{ media: FavoriteAnime[]; unavailable: boolean }> {
+export async function getFavoriteAnime(ids: number[], maxWaitMs = 12000, fresh = false): Promise<{ media: FavoriteAnime[]; unavailable: boolean }> {
   const selected = [...new Set(ids.filter(id => Number.isSafeInteger(id) && id > 0 && id <= 2147483647))].slice(0, 200);
   const media: FavoriteAnime[] = [];
   const deadline = Date.now() + maxWaitMs;
@@ -196,10 +196,11 @@ export async function getFavoriteAnime(ids: number[], maxWaitMs = 12000): Promis
       const response = await anilistFetch('https://graphql.anilist.co', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) {
-          media(type: ANIME, id_in: $ids) { id title { romaji english native } coverImage { large extraLarge color } format status episodes nextAiringEpisode { episode airingAt }
-            relations { edges { relationType node { id type format status title { romaji english native } nextAiringEpisode { episode airingAt } } } } }
+          media(type: ANIME, id_in: $ids) { id idMal title { romaji english native } coverImage { large extraLarge color } format status episodes nextAiringEpisode { episode airingAt }
+            relations { edges { relationType node { id idMal type format status title { romaji english native } nextAiringEpisode { episode airingAt } } } } }
         } }`, variables: { ids: chunk } }),
-        next: { revalidate: 600 },
+        // The weekly cron caches only its validated snapshot, never raw responses.
+        ...(fresh ? { cache: 'no-store' as const } : { next: { revalidate: 600 } }),
       }, Math.max(0, deadline - Date.now()));
       if (!response.ok) return { media, unavailable: true };
       const result = await response.json() as { data?: { Page?: { media?: FavoriteAnime[] } }; errors?: unknown[] };

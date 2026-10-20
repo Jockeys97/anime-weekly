@@ -20,6 +20,11 @@ async function storePrimedSnapshot(slug: string, primed: Awaited<ReturnType<type
   await storeWeeklyRatingsSnapshot(slug, snapshot);
   await storeRatingsStore(store);
 }
+// AniList rating lookups. Airing schedules and the daily season-chain batch
+// (its query asks for relations) are expected on every run.
+function isRatingLookup(url: unknown, init?: RequestInit) {
+  return String(url).includes('anilist') && !/airingSchedules|relations \{/.test(String(init?.body));
+}
 function fixtureFetch(imdbFailure = false, animeFailure = false) {
   return vi.fn(async (input: string | URL, init?: RequestInit) => {
     const url = String(input);
@@ -60,9 +65,9 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   const repeated = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   expect(await repeated).toMatchObject({ ...snapshot, total, storeHits: 1 });
   expect(await getWeeklyRatings('2026-43')).toEqual({ titles: {}, events: [] });
-  // Discovery and airing schedules refresh; completed rating sources do not. TMDB
-  // listed no default-country offers, so one JustWatch seed lookup is attempted.
-  expect(fetchMock).toHaveBeenCalledTimes(calls + 4);
+  // Discovery, airing schedules and the season-chain batch refresh; completed rating
+  // sources do not. TMDB listed no default-country offers, so one JustWatch seed lookup is attempted.
+  expect(fetchMock).toHaveBeenCalledTimes(calls + 5);
   expect(fetchMock.mock.calls.filter(([url]) => String(url).startsWith('https://www.justwatch.com/'))).toHaveLength(1);
   for (const [input, init] of fetchMock.mock.calls) if (/anilist|tenrai|omdbapi/.test(String(input))) {
     expect(init?.cache).toBe('no-store'); // Only validated snapshots persist.
@@ -71,7 +76,8 @@ it('a cold read cannot call any rating provider or cache an empty result; cron f
   const details = await getWeeklyTitleDetails('2026-42', 'tv', 1);
   expect(details).not.toHaveProperty('ratings');
   expect((await getWeeklyTitleSchedule('2026-42', 'tv', 1))?.events).toEqual(primed.events);
-  expect(fetchMock.mock.calls.filter(([url]) => /anilist|tenrai|omdbapi/.test(String(url)))).toHaveLength(5);
+  // Includes the second run's season-chain batch (one AniList request per daily run).
+  expect(fetchMock.mock.calls.filter(([url]) => /anilist|tenrai|omdbapi/.test(String(url)))).toHaveLength(6);
 });
 it('stores AniList/MAL successes together, but never persists OMDb quota errors', async () => {
   vi.stubGlobal('fetch', fixtureFetch(true));
@@ -111,7 +117,7 @@ it('retries missing scores on a warm snapshot without querying completed sources
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1']).not.toHaveProperty('imdbRating');
   await storePrimedSnapshot('2026-42', completed);
   expect(retryFetch.mock.calls.some(([url]) => String(url).includes('tenrai') || String(url).includes('/external_ids'))).toBe(false);
-  expect(retryFetch.mock.calls.filter(([url, init]) => String(url).includes('anilist') && !String(init?.body).includes('airingSchedules'))).toHaveLength(0);
+  expect(retryFetch.mock.calls.filter(([url, init]) => isRatingLookup(url, init))).toHaveLength(0);
   expect((await readWeeklyRatingsSnapshot('2026-42')).titles['tv:1'].imdbRating).toBe('8.1');
 });
 it('fills only MAL using the saved ID, and preserves scores and events on failure', async () => {
@@ -132,7 +138,7 @@ it('fills only MAL using the saved ID, and preserves scores and events on failur
   const retry = primeWeeklyRatings('2026-42'); await vi.runAllTimersAsync();
   expect((await retry).titles['tv:1']).toMatchObject({ ...previous.titles['tv:1'], malScore: 8.25 });
   expect(fetchMock.mock.calls.some(([url]) => /omdbapi|external_ids/.test(String(url)))).toBe(false);
-  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('anilist') && !String(init?.body).includes('airingSchedules'))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => isRatingLookup(url, init))).toHaveLength(0);
 });
 it('stops OMDb after quota errors and Tenrai after timeouts while continuing AniList', async () => {
   const base = fixtureFetch(true);
@@ -222,7 +228,7 @@ it('reuses stable ratings across weeks without OMDb, AniList score, Tenrai or ID
   const reused = await second;
   expect(reused.titles).toEqual(primed.titles);
   expect(reused.storeHits).toBe(1);
-  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (isRatingLookup(url, init)))).toHaveLength(0);
   expect(reused.store.ratings['imdb:tt123'].fetchedAt).toBe(saved.ratings['imdb:tt123'].fetchedAt);
   expect(saved.ratings['imdb:tt123'].lastSeenAt).toBeLessThan(reused.store.ratings['imdb:tt123'].lastSeenAt);
   await storePrimedSnapshot('2026-43', reused);
@@ -320,7 +326,7 @@ it('refreshes only stale MAL and does not renew the AniList fallback timestamp',
   const pending = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync();
   const refreshed = await pending;
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('tenrai'))).toHaveLength(1);
-  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('omdbapi') || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => String(url).includes('omdbapi') || (isRatingLookup(url, init)))).toHaveLength(0);
   expect(refreshed.store.ratings['anilist:123'].fetchedAt).toBe(primed.store.ratings['anilist:123'].fetchedAt);
   expect(refreshed.store.ratings['mal:456'].fetchedAt).toBeGreaterThan(primed.store.ratings['mal:456'].fetchedAt);
 });
@@ -380,7 +386,7 @@ it('reuses providers across weeks for seven days, retains stale offers on failur
   expect(refreshed.availability!.titles['tv:1'].countries).toEqual({});
   expect(refreshed.availability!.titles['tv:1'].fetchedAt).toBeGreaterThan(first.availability!.titles['tv:1'].fetchedAt);
   expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/watch/providers'))).toHaveLength(1);
-  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (String(url).includes('anilist') && !String(init?.body).includes('airingSchedules')))).toHaveLength(0);
+  expect(fetchMock.mock.calls.filter(([url, init]) => /omdbapi|tenrai|external_ids/.test(String(url)) || (isRatingLookup(url, init)))).toHaveLength(0);
 });
 
 it('warms availability even when all ratings are missing', async () => {
@@ -469,4 +475,49 @@ it('pins a verified airing cour: own IDs and JustWatch offers instead of the mer
   expect(expired.titles['tv:30984'].anilistId).toBe(269);
   expect(expired.availability!.titles['tv:30984'].identity).toBeUndefined();
   expect(expired.availability!.titles['tv:30984'].countries.IT).toEqual([8]);
+});
+
+it('pins a weekly title to its airing season: sequel IDs, scores and schedule, never a title search afterwards', async () => {
+  const seasons: Record<number, object> = {
+    161645: { id: 161645, idMal: 54492, status: 'FINISHED', format: 'TV', title: { english: 'The Apothecary Diaries' }, relations: { edges: [{ relationType: 'SEQUEL', node: { id: 176301, idMal: 58514, status: 'FINISHED', format: 'TV', title: { english: 'The Apothecary Diaries Season 2' } } }] } },
+    176301: { id: 176301, idMal: 58514, status: 'FINISHED', format: 'TV', title: { english: 'The Apothecary Diaries Season 2' }, relations: { edges: [{ relationType: 'SEQUEL', node: { id: 195516, idMal: 61987, status: 'RELEASING', format: 'TV', title: { english: 'The Apothecary Diaries Season 3' }, nextAiringEpisode: { episode: 4, airingAt: 1792850400 } } }] } },
+    195516: { id: 195516, idMal: 61987, status: 'RELEASING', format: 'TV', title: { english: 'The Apothecary Diaries Season 3' }, relations: { edges: [] } },
+  };
+  const airingQueries: number[][] = [];
+  const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('/discover/')) return Response.json({ results: url.includes('/tv?') ? [{ id: 99, name: 'The Apothecary Diaries', original_name: '薬屋のひとりごと', first_air_date: '2023-10-22' }] : [], total_pages: 1 });
+    if (url.includes('/external_ids')) return Response.json({ imdb_id: 'tt28220040' });
+    if (url.includes('omdbapi')) return Response.json({ Response: 'True', imdbRating: '8.6', imdbVotes: '28,453' });
+    if (url.includes('tenrai')) return Response.json({ data: { mal_id: url.includes('61987') ? 61987 : 54492, score: url.includes('61987') ? 8.9 : 8.84, members: 1000 } });
+    if (url.includes('/watch/providers')) return Response.json({ results: {} });
+    if (url.startsWith('https://www.justwatch.com/')) return new Response(null, { status: 404 });
+    if (url.includes('/recommendations') || url.includes('/similar')) return Response.json({ results: [] });
+    if (url.includes('anilist')) {
+      const body = JSON.parse(String(init?.body));
+      if (body.query.includes('airingSchedules')) { airingQueries.push(body.variables.ids ?? body.variables.mediaIds ?? []); return Response.json({ data: { Page: { airingSchedules: [], pageInfo: { hasNextPage: false } } } }); }
+      if (body.query.includes('relations {') && body.variables.ids) return Response.json({ data: { Page: { media: body.variables.ids.map((id: number) => seasons[id]).filter(Boolean) } } });
+      if (body.variables?.id === 195516) return Response.json({ data: { Media: { ...seasons[195516], averageScore: 90 } } });
+      return Response.json({ data: { Page: { media: [{ id: 161645, idMal: 54492, type: 'ANIME', format: 'TV', title: { english: 'The Apothecary Diaries', romaji: 'Kusuriya no Hitorigoto' }, startDate: { year: 2023 }, averageScore: 88 }] } } });
+    }
+    throw new Error(`Unexpected offline fixture: ${url}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const { primeWeeklyRatings } = await import('../lib/weekly-ratings');
+  const prime = async () => { const pending = primeWeeklyRatings('2026-43'); await vi.runAllTimersAsync(); return pending; };
+  const titleSearches = () => fetchMock.mock.calls.filter(([url, init]) => String(url).includes('anilist') && String(init?.body).includes('"search"')).length;
+  const first = await prime();
+  expect(first.titles['tv:99']).toMatchObject({ anilistId: 161645, malId: 54492, anilistScore: 88 });
+  await storePrimedSnapshot('2026-43', first);
+  fetchMock.mockClear();
+  const second = await prime();
+  expect(second.titles['tv:99']).toMatchObject({ anilistId: 195516, malId: 61987, anilistScore: 90, malScore: 8.9, imdbRating: '8.6' });
+  expect(titleSearches()).toBe(0);
+  expect(airingQueries.at(-1)).toContain(195516);
+  await storePrimedSnapshot('2026-43', second);
+  vi.setSystemTime(Date.now() + 31 * 86400000);
+  fetchMock.mockClear();
+  const refreshed = await prime();
+  expect(refreshed.titles['tv:99']).toMatchObject({ anilistId: 195516, malId: 61987 });
+  expect(titleSearches()).toBe(0); // The monthly refresh reads the pinned season by ID.
 });
