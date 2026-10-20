@@ -402,7 +402,8 @@
     "showAll": "Ver todos ({count})",
     "showLess": "Ver menos",
     "previous": "Favoritos anteriores",
-    "next": "Favoritos siguientes"
+    "next": "Favoritos siguientes",
+    "newSeason": "Nueva temporada en camino"
   },
   "features": {
     "topFive": "Top 5 episodios de la semana",
