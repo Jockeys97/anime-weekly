@@ -40,7 +40,12 @@ it('gives pages without their own image the localized weekly share card', () => 
 });
 
 it('redirects only legacy app hosts permanently while preserving paths and query forwarding', async () => {
+  const previous = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = 'preview';
+  expect((await config.redirects!()).filter(rule => rule.destination.startsWith('https://weeklyanime.com'))).toHaveLength(0);
+  process.env.VERCEL_ENV = 'production';
   const redirects = await config.redirects!();
+  if (previous === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = previous;
   const canonical = redirects.filter(rule => rule.destination.startsWith('https://weeklyanime.com'));
   expect(canonical).toHaveLength(2);
   for (const rule of canonical) {
