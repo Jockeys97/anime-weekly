@@ -51,12 +51,14 @@ function rememberCatalog(media: AniListAnime[]): void {
 }
 const emptyPage = (page: number): AniListPage => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false } });
 
-async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null>): Promise<T | null> {
+interface FetchOptions { fresh?: boolean; maxWaitMs?: number }
+async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null>, options: FetchOptions = {}): Promise<T | null> {
   try {
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }), next: { revalidate: ANILIST_REVALIDATE },
-    });
+      body: JSON.stringify({ query, variables }),
+      ...(options.fresh ? { cache: 'no-store' as const } : { next: { revalidate: ANILIST_REVALIDATE } }),
+    }, options.maxWaitMs);
     if (!response.ok) return null;
     const result = await response.json() as { data?: T; errors?: unknown[] };
     return result.errors?.length ? null : result.data ?? null;
@@ -64,7 +66,7 @@ async function graphql<T>(query: string, variables: Record<string, string | numb
 }
 
 // `unavailable` separates an upstream failure from a genuinely empty page.
-export async function getSeason(year: number, season: Season, page = 1): Promise<AniListPage & { unavailable?: boolean }> {
+export async function getSeason(year: number, season: Season, page = 1, options: FetchOptions = {}): Promise<AniListPage & { unavailable?: boolean }> {
   if (!Number.isSafeInteger(year) || year < 1 || year > 9999 || !isSeason(season) || !Number.isSafeInteger(page) || page < 1) return emptyPage(page);
   const data = await graphql<{ Page?: AniListPage }>(`query ($year: Int!, $season: MediaSeason!, $page: Int!) {
     Page(page: $page, perPage: 50) {
@@ -72,7 +74,7 @@ export async function getSeason(year: number, season: Season, page = 1): Promise
       media(type: ANIME, season: $season, seasonYear: $year, sort: POPULARITY_DESC,
         format_in: [TV, TV_SHORT, MOVIE, ONA, OVA]) { ${fields} }
     }
-  }`, { year, season: season.toUpperCase(), page });
+  }`, { year, season: season.toUpperCase(), page }, options);
   if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(page), unavailable: true };
   rememberCatalog(data.Page.media);
   return { media: data.Page.media, pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
