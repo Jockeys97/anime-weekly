@@ -535,5 +535,18 @@
     "bestEmpty": "No rated anime are available for this season yet.",
     "platforms": "Platforms by country",
     "otherCountries": "Other countries"
+  },
+  "rankings": {
+    "title": "Top airing anime · week {week}",
+    "description": "Top airing anime in week {week}, ranked by IMDb and MyAnimeList scores with vote counts.",
+    "nav": "Weekly rankings",
+    "thresholds": "Minimum: {imdb} IMDb votes and {mal} MyAnimeList ratings. Ties use vote counts, then AniList ID.",
+    "votes": "{count} votes",
+    "empty": "No anime meet this list’s minimum vote threshold.",
+    "appearances": "Weeks and rankings",
+    "animeTitle": "{name} release schedule, episodes and IMDb/MAL scores",
+    "animeDescription": "Release schedule, episodes, streaming platforms and IMDb/MAL scores for {name}.",
+    "currentTitle": "Top airing anime this week · {week}",
+    "currentDescription": "This week’s airing anime rankings ({week}), with IMDb and MyAnimeList scores and vote counts."
   }
 }

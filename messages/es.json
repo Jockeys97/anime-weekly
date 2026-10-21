@@ -529,5 +529,18 @@
     "bestEmpty": "Todavía no hay anime con valoraciones disponibles para esta temporada.",
     "platforms": "Plataformas por país",
     "otherCountries": "Otros países"
+  },
+  "rankings": {
+    "title": "Mejores animes en emisión · semana {week}",
+    "description": "Los mejores animes en emisión en la semana {week}, ordenados por nota IMDb y MyAnimeList con número de votos.",
+    "nav": "Clasificaciones semanales",
+    "thresholds": "Mínimo: {imdb} votos IMDb y {mal} valoraciones MyAnimeList. Los empates se resuelven por votos y después por ID AniList.",
+    "votes": "{count} votos",
+    "empty": "Ningún anime alcanza el mínimo de votos de esta lista.",
+    "appearances": "Semanas y clasificaciones",
+    "animeTitle": "{name}: calendario de estrenos, episodios y notas IMDb/MAL",
+    "animeDescription": "Calendario de estrenos, episodios, plataformas de streaming y notas IMDb/MAL de {name}.",
+    "currentTitle": "Mejores animes de esta semana · {week}",
+    "currentDescription": "Clasificaciones de animes en emisión esta semana ({week}), con notas IMDb, MyAnimeList y número de votos."
   }
 }

@@ -1,7 +1,8 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: vi.fn().mockResolvedValue([]) }));
-import { listArchivedWeeks } from '../lib/week-archive';
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeeks: vi.fn().mockResolvedValue([]) }));
+import { getSeoWeeks } from '../lib/weekly-seo-data';
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), animeName: (item: { title: { english: string } }) => item.title.english }));
 vi.mock('@vercel/blob', () => ({ get: vi.fn(), put: vi.fn() }));
@@ -19,8 +20,8 @@ describe('SEO sitemap', () => {
     const urls = buildSitemap([21, 21, -1, NaN, 2147483648, 42], new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example')).filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => entry.url);
     expect(urls).toContain('https://anime.example/');
     expect(urls).not.toContain('https://anime.example/week/2025-52');
-    expect(urls).toContain('https://anime.example/week/2026-01');
-    expect(urls).toContain('https://anime.example/week/2026-02');
+    expect(urls).not.toContain('https://anime.example/week/2026-01');
+    expect(urls).not.toContain('https://anime.example/week/2026-02');
     expect(urls.filter(url => /\/season\//.test(url))).toHaveLength(12);
     expect(urls).toContain('https://anime.example/season/2024/winter');
     expect(urls.filter(url => /\/piattaforma\//.test(url))).toHaveLength(42);
@@ -51,7 +52,7 @@ describe('SEO sitemap', () => {
     expect(archives[0].lastModified).toBe(uploadedAt);
     expect(archives[0].alternates?.languages).toMatchObject({ it: 'https://anime.example/week/2025-52', en: 'https://anime.example/en/week/2025-52' });
     expect(entries.some(entry => entry.url.endsWith('/week/2025-51'))).toBe(false);
-    expect(entries.find(entry => entry.url.endsWith('/week/2026-01'))?.lastModified).toEqual(date);
+    expect(entries.find(entry => entry.url.endsWith('/week/2026-01'))?.lastModified).toBe(uploadedAt);
     expect(entries.find(entry => entry.url.endsWith('/season/2024/winter'))?.lastModified).toEqual(date);
   });
   it('paginates the four seasons of one year sequentially and keeps partial results on failure', async () => {
@@ -108,9 +109,9 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2025.xml',
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
-    vi.mocked(listArchivedWeeks).mockResolvedValue([]);
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(61 * 6);
-    expect(listArchivedWeeks).toHaveBeenCalledOnce();
+    vi.mocked(getSeoWeeks).mockResolvedValue([]);
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(59 * 6);
+    expect(getSeoWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);
     expect(getSeason).toHaveBeenCalledTimes(4);
@@ -148,4 +149,20 @@ describe('SEO sitemap', () => {
     expect(serializeJsonLd(data)).not.toContain('<');
     expect(JSON.parse(serializeJsonLd(data))).toEqual(data);
   });
+});
+
+
+it('includes only proven nonempty nonfuture weeks, and rankings with qualifying entries', () => {
+  const uploadedAt = '2026-10-20T10:00:00Z';
+  const entries = buildSitemap([], new Date('2026-10-21T12:00:00Z'), new URL('https://anime.example'), [
+    { week: '2026-43', titleCount: 10, rankingCount: 2, uploadedAt },
+    { week: '2026-42', titleCount: 4, rankingCount: 1, uploadedAt },
+    { week: '2026-44', titleCount: 10, rankingCount: 2, uploadedAt },
+    { week: '2026-41', titleCount: 0, rankingCount: 2, uploadedAt },
+    { week: '2026-40', titleCount: 5, rankingCount: 0, uploadedAt },
+  ]);
+  const urls = entries.map(entry => new URL(entry.url).pathname);
+  for (const path of ['/week/2026-43', '/week/2026-42', '/week/2026-40', '/rankings/2026-43', '/rankings/2026-42', '/rankings/questa-settimana', '/en/rankings/this-week']) expect(urls).toContain(path);
+  for (const path of ['/week/2026-44', '/rankings/2026-44', '/week/2026-41', '/rankings/2026-41', '/rankings/2026-40']) expect(urls).not.toContain(path);
+  expect(new Set(urls).size).toBe(urls.length);
 });

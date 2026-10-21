@@ -1,3 +1,5 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
 import React from 'react';
 import { PassThrough } from 'node:stream';
 import { renderToPipeableStream } from 'react-dom/server';
@@ -21,7 +23,7 @@ const { anime, snapshot, weekData } = vi.hoisted(() => ({
 vi.mock('server-only', () => ({}));
 vi.mock('next/server', () => ({ connection: async () => {} }));
 vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getAnime: async () => anime, getSeason: async () => ({ media: [anime], pageInfo: { currentPage: 1, hasNextPage: false } }) }));
-vi.mock('../lib/anime-detail-data', () => ({ getAnimeDetailData: async () => ({ ratings: {}, availability: { ratings: {} }, synopsis: {} }) }));
+vi.mock('../lib/anime-detail-data', () => ({ getAnimeDetailData: async () => ({ ratings: {}, availability: { ratings: {}, providers: {} }, synopsis: {} }) }));
 vi.mock('../lib/weekly-ratings', () => ({ getWeeklyRatings: async () => snapshot, readWeeklyRatingsSnapshot: async () => snapshot, trackWeeklyPage: async () => {} }));
 vi.mock('../lib/tmdb', () => ({ getQuickWeekData: async () => weekData }));
 vi.mock('../lib/week-archive', () => ({ readWeekArchive: async () => null }));

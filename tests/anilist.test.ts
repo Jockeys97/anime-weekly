@@ -89,6 +89,7 @@ describe('AniList catalog (offline)', () => {
   });
 
   it.each(['network', 'http', 'graphql', 'malformed'] as const)('returns empty results on %s errors', async failure => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn(async () => {
       if (failure === 'network') throw new Error('offline');
       if (failure === 'http') return new Response(null, { status: 503 });
@@ -99,6 +100,8 @@ describe('AniList catalog (offline)', () => {
     const pending = Promise.all([getSeason(2026, 'fall', 3), searchAnime('Example'), getAnime(21)]);
     await vi.runAllTimersAsync();
     expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false }, unavailable: true }, [], null]);
+    expect(log).toHaveBeenCalledWith('[anilist] getAnime failed', { id: 21, message: 'Anime details unavailable' });
+    log.mockRestore();
   });
 });
 

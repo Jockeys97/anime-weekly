@@ -100,7 +100,7 @@ export function animeIntro(anime: Pick<AniListAnime, 'nextAiringEpisode' | 'seas
   const next = nextAnimeEpisode(anime);
   if (next) {
     const zone = locale === 'it' ? 'Europe/Rome' : 'UTC';
-    const date = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short', timeZone: zone }).format(next.date);
+    const date = new Intl.DateTimeFormat(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: zone }).format(next.date);
     parts.push(episodeCopy[locale].next.replace('{n}', String(next.episode)).replace('{date}', `${date} (${zone})`));
   }
   const season = anime.season?.toLowerCase();
@@ -115,4 +115,14 @@ export function animeIntro(anime: Pick<AniListAnime, 'nextAiringEpisode' | 'seas
     if (typeof score === 'number' && Number.isFinite(score) && score > 0 && score <= 10) parts.push(`${name} ${number.format(score)}/10`);
   }
   return parts.length ? `${parts.join(' · ')}.` : '';
+}
+
+// Keep the full published title: truncating it can make distinct anime share
+// metadata. The template describes the page; facts below are only real inputs.
+export function animeScheduleSeo(name: string, anime: Parameters<typeof formatAnimeSeo>[1], synopsis: string, locale: Locale) {
+  const d = getDictionary(locale).rankings;
+  const title = d.animeTitle.replace('{name}', compact(name));
+  const intro = animeIntro(anime, {}, locale);
+  const description = [d.animeDescription.replace('{name}', compact(name)), intro, compact(synopsis)].filter(Boolean).join(' ');
+  return { title, description: truncate(description, Math.max(300, compact(name).length + 100)) };
 }

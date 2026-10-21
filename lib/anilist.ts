@@ -151,7 +151,11 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
   const known = catalogAnime.get(id);
   if (known && known.expires > Date.now()) return known.anime;
-  try { return await getCachedAnime(id); } catch { return null; }
+  try { return await getCachedAnime(id); }
+  catch (error) {
+    console.error('[anilist] getAnime failed', { id, message: error instanceof Error ? error.message : 'Unknown error' });
+    return null;
+  }
 }
 
 export type AnimeMapping = Pick<AniListAnime, 'id' | 'idMal' | 'title'> & { coverImage?: AniListAnime['coverImage'] };

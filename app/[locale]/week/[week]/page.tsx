@@ -1,3 +1,4 @@
+import { getSeoWeek } from '@/lib/weekly-seo-data';
 import { getRequestLocale } from '@/lib/request-locale';
 import { getDictionary } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
@@ -12,7 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ week: str
   if (!value) notFound();
   const locale = await getRequestLocale(params); const d = getDictionary(locale);
   const dates = weekDateRange(value, locale);
-  return pageMetadata(`Anime ${dates} · ${d.week.label.toLowerCase()} ${value.week}`, d.seo.weekDescription.replace('{dates}', dates).replace('{week}', String(value.week)), `/week/${week}`, undefined, locale);
+  const metadata = pageMetadata(`Anime ${dates} · ${d.week.label.toLowerCase()} ${value.week}`, d.seo.weekDescription.replace('{dates}', dates).replace('{week}', String(value.week)), `/week/${week}`, undefined, locale);
+  if (!await getSeoWeek(week)) metadata.robots = { index: false, follow: true };
+  return metadata;
 }
 export const dynamic = 'error';
 export const revalidate = 900; // re-read the cron-cached ratings snapshot (cache-only) every 15 min
