@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import { SeasonContent } from '@/components/SeasonContent';
 import { CatalogCard } from '@/components/CatalogCard';
-import { animeName, getSeason } from '@/lib/anilist';
+import { animeName } from '@/lib/anilist';
+import { getSeasonWithSnapshot } from '@/lib/anilist-resilient';
 import { JsonLd } from '@/components/JsonLd';
 import { animeItemList, breadcrumbList, homeBreadcrumb, seasonBreadcrumb } from '@/lib/structured-data';
 import { getDictionary } from '@/lib/i18n';
@@ -47,7 +48,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const { page: pageQuery } = await searchParams;
   const page = parsePage(pageQuery);
   await connection();
-  const [data, snapshot] = await Promise.all([getSeason(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
+  const [data, snapshot] = await Promise.all([getSeasonWithSnapshot(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
   const summaries = snapshotCatalog(snapshot);
   const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.

@@ -1,6 +1,6 @@
 import { repairLegacyImdbRatingIndex, ensureImdbEpisodeIndex } from '@/lib/imdb-datasets';
 import { readSharedImdbScore, hasImdbScore } from '@/lib/imdb';
-import { timingSafeEqual } from 'node:crypto';
+import { authorizedCron as authorized } from '@/lib/cron-auth';
 import { revalidateTag } from 'next/cache';
 import { after } from 'next/server';
 import { CACHE_TAG } from '@/lib/config';
@@ -17,13 +17,6 @@ import { assessDailyHealth } from '@/lib/daily-health';
 export const maxDuration = 300;
 // Runtime Cache is regional: collector and shared read endpoints use one region.
 export const preferredRegion = 'iad1';
-function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret?.trim()) return false;
-  const actual = Buffer.from(request.headers.get('authorization') || '');
-  const expected = Buffer.from(`Bearer ${secret}`);
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
 
 // Second step of the cron: persist the merged snapshot in a fresh request,
 // after the GET invalidated the previous entry's tag.
@@ -141,9 +134,7 @@ export async function GET(request: Request) {
   }
   const d = getDictionary(); const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) return Response.json({ error: d.api.missingSecret }, { status: 500 });
-  const actual = Buffer.from(request.headers.get('authorization') || '');
-  const expected = Buffer.from(`Bearer ${secret}`);
-  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
+  if (!authorized(request)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
   const week = isoWeek(new Date());
   // The global ratings tag below also expires last week's entry. Capture it
   // first, then deliver it to the archive invocation after the current work.
