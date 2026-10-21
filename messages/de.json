@@ -530,6 +530,28 @@
     "platforms": "Streamingdienste nach Land",
     "otherCountries": "Weitere Länder"
   },
+  "tierList": {
+    "nav": "Tier-Liste",
+    "title": "Anime-Tier-Liste",
+    "heading": "Tier-Liste · {season} {year}",
+    "description": "Ordne die Anime der Season in einer Tier-Liste und lade das Bild herunter oder teile es.",
+    "intro": "Ziehe die Poster in die Reihen. Auf Touchscreens kannst du auch ein Poster und dann eine Reihe antippen. Deine Liste wird in diesem Browser gespeichert.",
+    "cta": "Erstelle deine Tier-Liste",
+    "unranked": "Nicht eingeordnet",
+    "reset": "Zurücksetzen",
+    "download": "Bild herunterladen",
+    "exporting": "Bild wird erstellt…",
+    "share": "Teilen",
+    "shareX": "Auf X teilen",
+    "shareReddit": "Auf Reddit teilen",
+    "shareText": "Meine Anime-Tier-Liste {season} {year}",
+    "editLabel": "Reihenbeschriftung bearbeiten",
+    "selected": "Ausgewählt: {name}. Tippe auf eine Reihe, um es einzuordnen.",
+    "cancel": "Abbrechen",
+    "empty": "Für diese Season sind noch keine Anime verfügbar.",
+    "exportError": "Das Bild konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "count": "{count} Anime zum Einordnen"
+  },
   "rankings": {
     "title": "Beste laufende Anime · Woche {week}",
     "description": "Die besten laufenden Anime in Woche {week}, nach IMDb- und MyAnimeList-Wertungen mit Stimmenzahlen sortiert.",

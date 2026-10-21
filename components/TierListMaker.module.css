@@ -1,0 +1,54 @@
+.maker { --row-h: 180px; --label-w: 170px; --label-size: 22px; margin-top: 8px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.toolbar .button:disabled { opacity: .7; cursor: progress; }
+.secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 41px; padding: 10px 15px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font-size: 12px; cursor: pointer; }
+.secondary:hover { background: #eef2e6; text-decoration: none; }
+.reset { margin-left: auto; }
+.error { color: #843c30; font-size: 12px; margin: 0 0 10px; }
+.status { display: flex; align-items: center; gap: 12px; min-height: 22px; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.status button { border: 0; background: none; padding: 0; color: var(--ink); text-decoration: underline; cursor: pointer; font-size: 12px; }
+
+/* The board mirrors the shared image: dark, flat, edge-to-edge posters. */
+.board { position: relative; background: #1a1a1a; font-family: Arial, Helvetica, sans-serif; }
+.row { display: flex; min-height: var(--row-h); border-bottom: 2px solid #1a1a1a; }
+.label { flex: 0 0 var(--label-w); display: flex; align-items: center; justify-content: center; padding: 10px; color: #000; text-align: center; }
+.label span { display: block; max-width: 100%; font-size: var(--label-size); font-weight: 700; line-height: 1.1; text-transform: uppercase; overflow-wrap: anywhere; outline: none; cursor: text; }
+.label span:focus-visible { box-shadow: 0 2px 0 #000; }
+.items { flex: 1; display: flex; flex-wrap: wrap; align-content: flex-start; min-width: 0; margin-left: 8px; }
+.poster { position: relative; display: block; flex: 0 0 auto; width: calc(var(--row-h) * 2 / 3); height: var(--row-h); padding: 0; border: 0; border-radius: 0; background: #2a2a2a; overflow: hidden; cursor: grab;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.poster img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.poster:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+.missing { display: flex; align-items: center; justify-content: center; height: 100%; padding: 8px; color: #ddd; font-size: 11px; line-height: 1.3; text-align: center; overflow-wrap: anywhere; }
+.selected { box-shadow: inset 0 0 0 4px #fff; }
+.selected img { opacity: .75; }
+.dragging { opacity: .3; }
+.insert { box-shadow: inset 4px 0 0 #fff; }
+.overlay { cursor: grabbing; box-shadow: 0 10px 30px #000a; transform: scale(1.04); }
+.over { background: #262626; }
+.picking { cursor: pointer; }
+.picking .label span { cursor: pointer; }
+.picking .items, .picking.pool { outline: 1px dashed #ffffff40; outline-offset: -1px; }
+
+.poolWrap { margin-top: 22px; }
+.poolTitle { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+.pool { --row-h: 120px; display: flex; flex-wrap: wrap; min-height: var(--row-h); background: #1a1a1a; }
+
+.watermark, .screenWatermark { position: absolute; right: 22px; bottom: 22px; padding: 14px 24px; border-radius: 999px; background: #000; color: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 22px; line-height: 1; white-space: nowrap; pointer-events: none; }
+.watermark strong, .screenWatermark strong { font-weight: 900; letter-spacing: -.3px; }
+.screenWatermark { right: 14px; bottom: 14px; padding: 10px 18px; font-size: 15px; opacity: .92; }
+
+/* Fixed-size copy rendered only while exporting, so the PNG is viewport independent. */
+.offscreen { position: fixed; top: 0; left: -20000px; pointer-events: none; }
+.exportBoard { --row-h: 210px; --label-w: 200px; --label-size: 26px; width: 1400px; }
+.exportBoard .poster { cursor: default; }
+
+@media (max-width: 700px) {
+  .maker { --row-h: 105px; --label-w: 84px; --label-size: 13px; }
+  .label { padding: 6px; }
+  .items { margin-left: 4px; }
+  .pool { --row-h: 96px; }
+  .screenWatermark { display: none; }
+  .reset { margin-left: 0; }
+  .toolbar > * { flex: 1 1 auto; }
+}

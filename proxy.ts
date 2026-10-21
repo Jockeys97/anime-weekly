@@ -60,5 +60,5 @@ export function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/rankings/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/this-week', '/best-this-season', '/questa-settimana', '/migliori-della-stagione', '/esta-semana', '/mejores-de-la-temporada', '/cette-semaine', '/meilleurs-de-la-saison', '/diese-woche', '/beste-der-saison', '/melhores-da-temporada'],
+  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/rankings/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/tier-list', '/this-week', '/best-this-season', '/questa-settimana', '/migliori-della-stagione', '/esta-semana', '/mejores-de-la-temporada', '/cette-semaine', '/meilleurs-de-la-saison', '/diese-woche', '/beste-der-saison', '/melhores-da-temporada'],
 };

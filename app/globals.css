@@ -403,3 +403,6 @@
 
 /* Keep in sync with lib/detail-viewport.ts. The poster reserves space via aspect-ratio:2/3. */
 @media(max-width:720px){.anime-banner{display:none}}
+
+.tier-cta{margin:0 0 22px}.tier-cta .button{font-weight:700;font-size:13px;gap:10px}
+.season-explorer-header .tier-cta{grid-column:1/-1;margin:0}
