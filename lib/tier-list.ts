@@ -1,6 +1,7 @@
 import { isSeason, type AnimeSeason } from '@/lib/season';
 
-export interface TierItem { id: number; name: string; poster: string | null }
+// `poster` is the small on-screen image; `exportPoster` (up to TMDB w342) is only fetched for the PNG export.
+export interface TierItem { id: number; name: string; poster: string | null; exportPoster?: string | null }
 export interface Tier { id: string; label: string; color: string }
 export interface TierBoard { tiers: Tier[]; rows: Record<string, number[]> }
 
@@ -86,6 +87,10 @@ export function isAllowedTierImage(value: string): boolean {
     return url.protocol === 'https:' && allowedImageHosts.has(url.hostname) && !url.username && !url.password && !url.port
       && (url.hostname !== 'image.tmdb.org' || url.pathname.startsWith('/t/p/'));
   } catch { return false; }
+}
+/** Swaps the size segment of a TMDB poster URL (`/t/p/w342/x.jpg` -> `/t/p/w185/x.jpg`); other URLs pass through. */
+export function tmdbPosterSize(url: string, size: 'w154' | 'w185' | 'w342'): string {
+  return url.replace(/^(https:\/\/image\.tmdb\.org\/t\/p\/)w\d+\//, `$1${size}/`);
 }
 export function tierImageProxy(value: string): string {
   return `/api/tier-image?url=${encodeURIComponent(value)}`;
