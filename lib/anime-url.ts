@@ -15,3 +15,10 @@ export function parseAnimeId(segment: string): number | null {
   const id = match ? Number(match[1]) : NaN;
   return Number.isSafeInteger(id) && id <= 2147483647 ? id : null;
 }
+
+export function animeLanguageAlternates(id: number, name: string, names: Partial<Record<import('@/lib/locales').Locale, string>>, base: URL): Record<string, string> {
+  const languages = Object.fromEntries((['it', 'en', 'es', 'fr', 'de', 'pt'] as const).map(locale => [locale,
+    new URL(`${locale === 'it' ? '' : `/${locale}`}${animePath(id, names[locale] || name)}`, base).href,
+  ]));
+  return { ...languages, 'x-default': languages.it };
+}

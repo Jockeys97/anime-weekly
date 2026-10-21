@@ -34,7 +34,7 @@ export default async function ThisWeek({ params }: { params?: LocaleParams }) {
     <JsonLd data={animeItemList(titles.map(title => ({ name: title.name, anilistId: title.ratings.anilistId })), locale, { name: heading, path: "/this-week" })} />
     <JsonLd data={breadcrumbList([{ name: d.landings.home, path: '/' }, { name: heading, path: '/this-week' }], locale)} />
     <h1>{heading}</h1><p className="catalog-intro">{d.landings.weekDescription}</p>
-    <nav className="catalog-filters"><Link href={`/week/${slug}`}>{d.landings.fullGuide}</Link><Link href="/">{d.landings.home}</Link><Link href="/best-this-season">{d.landings.bestNav}</Link></nav>
+    <nav className="catalog-filters"><Link href="/rankings/this-week">{d.rankings.nav}</Link><Link href={`/week/${slug}`}>{d.landings.fullGuide}</Link><Link href="/">{d.landings.home}</Link><Link href="/best-this-season">{d.landings.bestNav}</Link></nav>
     {calendar.days.filter(day => day.releases.length).map(day => <section key={day.date} className="landing-day"><h2><time dateTime={day.date}>{dateFormat.format(new Date(`${day.date}T12:00:00Z`))}</time></h2><ul className="landing-list">{day.releases.map((release, index) => row(release.anime, `${release.anime.kind}:${release.anime.id}:${index}`))}</ul></section>)}
     {calendar.undated.length > 0 && <section className="landing-day"><h2>{d.landings.undated}</h2><ul className="landing-list">{calendar.undated.map(title => row(title, `${title.kind}:${title.id}`))}</ul></section>}
     {!titles.length && <div className="empty-state"><p>{d.landings.weekEmpty}</p></div>}

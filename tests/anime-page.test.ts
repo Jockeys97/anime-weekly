@@ -1,3 +1,5 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
 vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -67,8 +69,8 @@ describe('server-rendered anime details', () => {
 it('generates detail SEO with the existing cached availability loader', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(metadata.title).toBe('Example anime – Anime: dove vederlo in streaming');
-  expect(metadata.description).toBe('Trama, valutazioni e dove guardare Example anime in streaming.');
+  expect(metadata.title).toBe('Example anime: calendario uscite, episodi e voti IMDb/MAL');
+  expect(metadata.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime.');
   expect(metadata.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
@@ -88,11 +90,11 @@ it.each([null, NaN, -1, 101])('omits unavailable or invalid aggregate ratings (%
   expect(structured).not.toHaveProperty('aggregateRating');
 });
 
-it('limits metadata to a clean 155-character synopsis', async () => {
+it('limits metadata to a clean bounded synopsis', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: `<b>${'Trama italiana '.repeat(30)}</b>`, coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: `<b>${'Trama italiana '.repeat(30)}</b>`, language: 'it', source: 'tmdb' });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.description!.length).toBeLessThanOrEqual(155);
+  expect(meta.description!.length).toBeLessThanOrEqual(300);
   expect(meta.description).toMatch(/…$/);
   expect(meta.description).not.toContain('<');
 });
@@ -105,8 +107,8 @@ it('shares factual Italian metadata with Open Graph and Twitter without changing
     providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
   });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.title).toBe('Example anime (2026) – Film anime: dove vederlo in streaming');
-  expect(meta.description).toBe('Film anime del 2026. Voto 8,1/10. In streaming su Netflix in Italia. Una storia italiana.');
+  expect(meta.title).toBe('Example anime: calendario uscite, episodi e voti IMDb/MAL');
+  expect(meta.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. AniList 8,1/10. Una storia italiana.');
   expect(meta.openGraph).toMatchObject({ title: meta.title, description: meta.description });
   expect(meta.twitter).toMatchObject({ title: meta.title, description: meta.description });
   expect(meta.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
@@ -119,7 +121,7 @@ it('keeps metadata available on a provider failure and excludes the English syno
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'English story.', language: 'en', source: 'tmdb' });
   vi.mocked(getAnimeAvailability).mockRejectedValue(new Error('Provider unavailable'));
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.description).toBe('ONA anime. Voto 7,5/10.');
+  expect(meta.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. AniList 7,5/10.');
 });
 
 
@@ -146,7 +148,7 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
   const structured = page.props.children[0].props.data;
   expect(structured.description).toBe(meta.description);
-  expect(structured.description).toBe(localized ? 'Serie TV anime. Una trama italiana.' : 'Serie TV anime.');
+  expect(structured.description).toBe(localized ? 'Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. Una trama italiana.' : 'Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime.');
 });
 
 it.each(['it', 'en', 'es', 'fr', 'de', 'pt'] as const)('loads %s synopsis and emits localized detail SEO without client effects', async locale => {

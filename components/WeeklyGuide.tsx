@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { localePath } from '@/lib/locale-routing';
 import { Suspense } from 'react';
 import { WeeklyContent } from '@/components/WeeklyContent';
 import { WeeklyHeadingContent, WeeklyScopeContent } from '@/components/WeeklyIntro';
@@ -13,6 +15,7 @@ import { readWeekArchive } from '@/lib/week-archive';
 export function WeeklyGuide({ week, newsletter = false, archive = false, locale = 'it' }: { week: ISOWeek; locale?: Locale; newsletter?: boolean; archive?: boolean }) {
   return <main id="main">
     <WeeklyHeadingContent week={week} archive={archive} locale={locale} />
+    <nav className="catalog-filters"><Link href={localePath(`/rankings/${formatWeek(week)}`, locale)}>{getDictionary(locale).rankings.nav}</Link></nav>
     {newsletter && <NewsletterSignup />}
     <section className="guide" aria-labelledby="releases-heading">
       <Suspense fallback={<p className="calendar-note" role="status">{getDictionary(locale).loading}</p>}>

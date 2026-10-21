@@ -1,3 +1,5 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('../lib/week-archive', () => ({ listArchivedWeeks: async () => [] }));

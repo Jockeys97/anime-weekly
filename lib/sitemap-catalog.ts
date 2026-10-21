@@ -1,4 +1,5 @@
 import 'server-only';
+import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { get, put } from '@vercel/blob';
 import { unstable_cache } from 'next/cache';
 import { animeName, getSeason } from '@/lib/anilist';
@@ -105,6 +106,15 @@ export async function getSitemapCatalog(year: number): Promise<SitemapAnime[]> {
     request = getCachedYearCatalog(year).catch(error => error instanceof IncompleteCatalog ? error.anime : []);
     pending.set(year, request);
   }
-  try { return await request; }
+  try {
+    const catalog = await request;
+    const localized: SitemapAnime[] = [];
+    for (let offset = 0; offset < catalog.length; offset += 4) {
+      localized.push(...await Promise.all(catalog.slice(offset, offset + 4).map(async item => ({
+        ...item, localizedNames: await getAnimeLocalizedTitles(item.id, item.name || ''),
+      }))));
+    }
+    return localized;
+  }
   finally { if (pending.get(year) === request) pending.delete(year); }
 }
