@@ -159,7 +159,7 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   if (result.data?.Media === null) return null;
   if (response.status !== 200 || result.data?.Media?.id !== id) throw new Error('Anime details unavailable');
   return result.data.Media;
-}, ['anime-detail-v7-upstream-errors'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v6-next-airing'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
