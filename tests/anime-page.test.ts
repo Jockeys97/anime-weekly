@@ -1,5 +1,5 @@
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
-vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: vi.fn().mockResolvedValue([]) }));
 vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -24,8 +24,15 @@ import { LocaleProvider } from '../components/LanguageSelector';
 import { renderToStaticMarkup } from 'react-dom/server';
 import AnimePage, { generateMetadata, revalidate } from '../app/[locale]/anime/[id]/page';
 import { AnimeDetailView } from '../components/AnimeDetailView';
+import { AnimeWeekLinks } from '../components/AnimeWeekLinks';
+import { getAnimeWeekAppearances } from '../lib/weekly-seo-data';
 
 afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
+
+it('omits optional week links when the membership lookup fails', async () => {
+  vi.mocked(getAnimeWeekAppearances).mockRejectedValue(new Error('Weekly source unavailable'));
+  expect(await AnimeWeekLinks({ id: 185874, locale: 'it' })).toBeNull();
+});
 
 function textInTree(node: unknown, text: string): boolean {
   if (node === text) return true;

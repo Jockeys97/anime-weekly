@@ -7,10 +7,9 @@ import { getRequestLocale } from '@/lib/request-locale';
 import { localePath } from '@/lib/locale-routing';
 import { pageMetadata } from '@/lib/seo';
 import { animeItemList, breadcrumbList } from '@/lib/structured-data';
-import { getSeoWeek } from '@/lib/weekly-seo-data';
+import { getRankingsWeek } from '@/lib/rankings-seo-data';
 import { MIN_IMDB_VOTES, MIN_MAL_SCORED_BY } from '@/lib/weekly-rankings';
 import { animePath } from '@/lib/anime-url';
-import { formatWeek, isoWeek } from '@/lib/week';
 
 type Props = { params: Promise<{ week: string; locale?: string }> };
 export const revalidate = 900;
@@ -18,9 +17,8 @@ export const dynamic = 'error';
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
 async function load(segment: string) {
-  const slug = segment === 'this-week' ? formatWeek(isoWeek(new Date())) : segment;
-  const data = await getSeoWeek(slug);
-  if (!data || (!data.rankings.imdb.length && !data.rankings.mal.length)) notFound();
+  const data = await getRankingsWeek(segment);
+  if (!data) notFound();
   return data;
 }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

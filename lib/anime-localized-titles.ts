@@ -12,7 +12,7 @@ const sources = cache(readRatingsStore);
 // No mapping/translation means the real AniList title remains the fallback.
 export const getAnimeLocalizedTitles = cache(async (id: number, name: string): Promise<Partial<Record<Locale, string>>> => {
   try {
-    const store = await sources();
+    const store = await withTimeout(sources(), 2500);
     const key = Object.keys(store.sources).find(key => store.sources[key].anilistId === id && /^(tv|movie):[1-9]\d*$/.test(key));
     if (!key) return {};
     const [kind, tmdbId] = key.split(':');

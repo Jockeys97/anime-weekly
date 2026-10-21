@@ -27,3 +27,10 @@ it('never substitutes the merged parent title for a differently named season or 
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
   expect(await getAnimeLocalizedTitles(21, 'Real Title')).toEqual({});
 });
+it('falls back to the default title when the store or translations fail', async () => {
+  vi.mocked(readRatingsStore).mockRejectedValue(new Error('Store unavailable'));
+  expect(await getAnimeLocalizedTitles(21, 'Real Title')).toEqual({});
+  vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: { 'tv:10': { anilistId: 21, fetchedAt: 1, lastSeenAt: 1 } } });
+  vi.mocked(getTMDBTextTranslations).mockRejectedValue(new Error('TMDB not configured'));
+  expect(await getAnimeLocalizedTitles(21, 'Real Title')).toEqual({});
+});
