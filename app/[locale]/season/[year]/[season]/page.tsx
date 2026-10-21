@@ -10,6 +10,7 @@ import { animeItemList, breadcrumbList, homeBreadcrumb, seasonBreadcrumb } from 
 import { getDictionary } from '@/lib/i18n';
 import { currentSeason, parseSeason, SEASONS, seasonPath, shiftSeason, type Season } from '@/lib/season';
 
+import { tierListPath } from '@/lib/tier-list';
 import './season-explorer.css';
 import { pageMetadata } from '@/lib/seo';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
@@ -51,7 +52,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.
   const locale = await getRequestLocale(params);
-  const d = getDictionary(locale).catalog;
+  const dictionary = getDictionary(locale); const d = dictionary.catalog;
   const previous = shiftSeason(value, -1);
   const next = shiftSeason(value, 1);
   const years = Array.from({ length: 9 }, (_, index) => value.year + index - 4).filter(item => item >= 1 && item <= 9999);
@@ -71,6 +72,7 @@ export default async function SeasonPage({ params, searchParams }: {
           {next.year <= 9999 && <Link prefetch={false} href={seasonPath(next)} aria-label={d.nextSeason}>→</Link>}
         </nav>
         <p className="season-description">{d.seasonDescription}</p>
+        <p className="tier-cta"><Link prefetch={false} className="button" href={tierListPath(value)}>{dictionary.tierList.cta} →</Link></p>
       </div>
       <div className="season-explorer-controls">
         <div className="season-filter-group">

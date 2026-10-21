@@ -535,5 +535,27 @@
     "bestEmpty": "No rated anime are available for this season yet.",
     "platforms": "Platforms by country",
     "otherCountries": "Other countries"
+  },
+  "tierList": {
+    "nav": "Tier list",
+    "title": "Anime tier list",
+    "heading": "Tier list · {season} {year}",
+    "description": "Rank this season’s anime in a tier list, then download the image or share it.",
+    "intro": "Drag the posters into the rows. On touch screens you can also tap a poster, then tap a row. Your board is saved in this browser.",
+    "cta": "Create your tier list",
+    "unranked": "Unranked",
+    "reset": "Reset",
+    "download": "Download image",
+    "exporting": "Preparing image…",
+    "share": "Share",
+    "shareX": "Share on X",
+    "shareReddit": "Share on Reddit",
+    "shareText": "My {season} {year} anime tier list",
+    "editLabel": "Edit row label",
+    "selected": "Selected: {name}. Tap a row to place it.",
+    "cancel": "Cancel",
+    "empty": "No anime are available for this season yet.",
+    "exportError": "The image could not be created. Please try again.",
+    "count": "{count} anime to rank"
   }
 }

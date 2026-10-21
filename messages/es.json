@@ -529,5 +529,27 @@
     "bestEmpty": "Todavía no hay anime con valoraciones disponibles para esta temporada.",
     "platforms": "Plataformas por país",
     "otherCountries": "Otros países"
+  },
+  "tierList": {
+    "nav": "Tier list",
+    "title": "Tier list de anime",
+    "heading": "Tier list · {season} {year}",
+    "description": "Clasifica el anime de la temporada en una tier list y descarga la imagen o compártela.",
+    "intro": "Arrastra los pósteres a las filas. En pantallas táctiles también puedes tocar un póster y luego una fila. Tu tabla se guarda en este navegador.",
+    "cta": "Crea tu tier list",
+    "unranked": "Sin clasificar",
+    "reset": "Reiniciar",
+    "download": "Descargar imagen",
+    "exporting": "Preparando imagen…",
+    "share": "Compartir",
+    "shareX": "Compartir en X",
+    "shareReddit": "Compartir en Reddit",
+    "shareText": "Mi tier list de anime de {season} {year}",
+    "editLabel": "Editar etiqueta de la fila",
+    "selected": "Seleccionado: {name}. Toca una fila para colocarlo.",
+    "cancel": "Cancelar",
+    "empty": "Todavía no hay anime disponibles para esta temporada.",
+    "exportError": "No se pudo crear la imagen. Inténtalo de nuevo.",
+    "count": "{count} anime por clasificar"
   }
 }

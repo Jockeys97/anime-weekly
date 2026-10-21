@@ -529,5 +529,27 @@
     "bestEmpty": "Non ci sono ancora anime con un voto disponibile per questa stagione.",
     "platforms": "Piattaforme per paese",
     "otherCountries": "Altri paesi"
+  },
+  "tierList": {
+    "nav": "Tier list",
+    "title": "Tier list anime",
+    "heading": "Tier list · {season} {year}",
+    "description": "Classifica gli anime della stagione in una tier list, poi scarica l’immagine o condividila.",
+    "intro": "Trascina le locandine nelle righe. Sui touch screen puoi anche toccare una locandina e poi una riga. La tua classifica resta salvata in questo browser.",
+    "cta": "Crea la tua tier list",
+    "unranked": "Da classificare",
+    "reset": "Ricomincia",
+    "download": "Scarica immagine",
+    "exporting": "Preparazione immagine…",
+    "share": "Condividi",
+    "shareX": "Condividi su X",
+    "shareReddit": "Condividi su Reddit",
+    "shareText": "La mia tier list anime di {season} {year}",
+    "editLabel": "Modifica etichetta della riga",
+    "selected": "Selezionato: {name}. Tocca una riga per posizionarlo.",
+    "cancel": "Annulla",
+    "empty": "Non ci sono ancora anime disponibili per questa stagione.",
+    "exportError": "Non è stato possibile creare l’immagine. Riprova.",
+    "count": "{count} anime da classificare"
   }
 }
