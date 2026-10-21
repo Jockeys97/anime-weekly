@@ -145,6 +145,16 @@ it('returns not-found for a missing numeric anime in both metadata and page', as
   expect(getSynopsis).not.toHaveBeenCalled();
 });
 
+it('propagates AniList failures in metadata and page instead of returning not-found', async () => {
+  const error = new Error('Anime details unavailable');
+  vi.mocked(getAnime).mockRejectedValue(error);
+  const props = { params: Promise.resolve({ id: '21-example-anime' }) };
+  await expect(generateMetadata(props)).rejects.toBe(error);
+  await expect(AnimePage(props)).rejects.toBe(error);
+  expect(getSynopsis).not.toHaveBeenCalled();
+  expect(getAnimeAvailability).not.toHaveBeenCalled();
+});
+
 it.each([true, false])('shares the Italian description between metadata and JSON-LD (localized: %s)', async localized => {
   vi.stubGlobal('React', React);
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime' }, description: 'English synopsis', genres: [], format: 'TV' } as unknown as Awaited<ReturnType<typeof getAnime>>);

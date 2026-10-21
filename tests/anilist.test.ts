@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.useFakeTimers();
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('AniList catalog (offline)', () => {
   it('queries a season with pagination and the MAL ID and average score', async () => {
@@ -83,25 +83,54 @@ describe('AniList catalog (offline)', () => {
   });
 
   it('rejects an anime with a different ID', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: { Media: anime } })));
     const { getAnime } = await import('../lib/anilist');
-    expect(await getAnime(22)).toBeNull();
+    await expect(getAnime(22)).rejects.toThrow('Anime details unavailable');
+  });
+
+  it.each([200, 404])('returns null only for explicit not-found responses (HTTP %s)', async status => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: { Media: null } }, { status }))
+      .mockResolvedValueOnce(Response.json({ errors: [{ message: 'Not Found.', status: 404 }] }, { status }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getAnime } = await import('../lib/anilist');
+    expect(await getAnime(21)).toBeNull();
+    const pending = expect(getAnime(22)).resolves.toBeNull();
+    await vi.runAllTimersAsync();
+    await pending;
+  });
+
+  it.each(['403', '429', '500', '503', 'network', 'timeout', 'graphql', 'malformed', 'empty', 'bare404', 'mixed'] as const)('throws on a detail upstream failure (%s)', async failure => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      if (failure === 'network') throw new Error('offline');
+      if (failure === 'timeout') throw new DOMException('Timed out', 'TimeoutError');
+      if (failure === 'graphql') return Response.json({ data: { Media: null }, errors: [{ message: 'Rate limited', status: 429 }] });
+      if (failure === 'malformed') return new Response('invalid JSON');
+      if (failure === 'empty') return Response.json({ data: {} });
+      if (failure === 'bare404') return new Response(null, { status: 404 });
+      if (failure === 'mixed') return Response.json({ data: { Media: null }, errors: [{ message: 'Not Found', status: 404 }, { message: 'Unavailable', status: 500 }] });
+      // A null Media must never override an upstream HTTP failure.
+      return Response.json({ data: { Media: null } }, { status: Number(failure) });
+    }));
+    const { getAnime } = await import('../lib/anilist');
+    const pending = expect(getAnime(21)).rejects.toThrow();
+    await vi.runAllTimersAsync();
+    await pending;
   });
 
   it.each(['network', 'http', 'graphql', 'malformed'] as const)('returns empty results on %s errors', async failure => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn(async () => {
       if (failure === 'network') throw new Error('offline');
       if (failure === 'http') return new Response(null, { status: 503 });
       if (failure === 'graphql') return Response.json({ data: { Page: { media: [anime] }, Media: anime }, errors: [{ message: 'unavailable' }] });
       return new Response('invalid JSON');
     }));
-    const { getSeason, searchAnime, getAnime } = await import('../lib/anilist');
-    const pending = Promise.all([getSeason(2026, 'fall', 3), searchAnime('Example'), getAnime(21)]);
+    const { getSeason, searchAnime } = await import('../lib/anilist');
+    const pending = Promise.all([getSeason(2026, 'fall', 3), searchAnime('Example')]);
     await vi.runAllTimersAsync();
-    expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false }, unavailable: true }, [], null]);
-    expect(log).toHaveBeenCalledWith('[anilist] getAnime failed', { id: 21, message: 'Anime details unavailable' });
-    log.mockRestore();
+    expect(await pending).toEqual([{ media: [], pageInfo: { currentPage: 3, hasNextPage: false }, unavailable: true }, []]);
   });
 });
 
