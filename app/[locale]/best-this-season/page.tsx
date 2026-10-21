@@ -4,6 +4,8 @@ import { LandingCard } from '@/components/LandingCard';
 import { landingProvidersFromTitle } from '@/lib/landing-providers';
 import { getAnimePlatformMetadata } from '@/lib/platform-metadata';
 import { animeName, getSeason, type AniListAnime } from '@/lib/anilist';
+import { getGenreLists } from '@/lib/discovery-data';
+import { genrePath } from '@/lib/discovery';
 import { animePath } from '@/lib/anime-url';
 import { getDictionary } from '@/lib/i18n';
 import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
@@ -34,6 +36,7 @@ export default async function BestThisSeason({ params }: { params?: LocaleParams
     if (!data.pageInfo.hasNextPage || !data.media.length) break;
   }
   const ranked = rankSeason(media, cached);
+  const genreLists = await getGenreLists().catch(() => null);
   // The weekly snapshot only covers this week's TMDB titles (and is empty when cold), so
   // look up real TMDB watch providers per ranked AniList title; cached per title for 1h.
   const platforms = ranked.length ? await getAnimePlatformMetadata(ranked.map(({ anime }) => anime)) : { titles: {}, unavailable: false };
@@ -44,6 +47,7 @@ export default async function BestThisSeason({ params }: { params?: LocaleParams
     <JsonLd data={breadcrumbList([{ name: d.landings.home, path: '/' }, { name: heading, path: '/best-this-season' }], locale)} />
     <h1>{heading}</h1><p className="catalog-intro">{d.landings.bestDescription}</p><p className="notice">{d.landings.rankingRule}</p>
     <nav className="catalog-filters"><Link href={seasonPath(season)}>{d.catalog.seasonTitle}</Link><Link href="/">{d.landings.home}</Link><Link href="/this-week">{d.landings.weekNav}</Link></nav>
+    {genreLists && <nav className="catalog-filters" aria-label={d.catalog.genres}>{genreLists.lists.filter(list => list.items.length > 0).map(list => <Link key={list.genre} href={genrePath(list.genre)}>{list.genre} ({list.items.length})</Link>)}</nav>}
     {ranked.length ? <ol className="landing-list">{ranked.map(({ anime, score, sources }, index) => { const meta = platforms.titles[`anilist:${anime.id}`]; const { primary, others } = landingProvidersFromTitle(meta?.providersUnavailable ? undefined : (Object.keys(meta?.providers ?? {}).length ? meta?.providers : meta?.seriesWatch?.providers), locale); return <li key={anime.id}><LandingCard locale={locale} headingLevel={2} href={animePath(anime.id, animeName(anime))} name={animeName(anime)} poster={anime.coverImage?.large ?? null} badge={<span className="landing-rank">{index + 1}</span>} typeLabel={anime.format?.replaceAll('_', ' ')} ratings={sources.map(source => `${source.name} ${format.format(source.score)}/10`).join(' · ')} aside={<strong>{format.format(score)}/10</strong>} primary={primary} others={others} /></li>; })}</ol> : <div className="empty-state"><p>{d.landings.bestEmpty}</p></div>}
   </main>;
 }

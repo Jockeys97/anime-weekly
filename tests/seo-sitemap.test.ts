@@ -102,9 +102,10 @@ describe('SEO sitemap', () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://anime.example');
     vi.mocked(getSeason).mockResolvedValue({ media: [], pageInfo: { currentPage: 1, hasNextPage: false } });
-    expect(generateSitemaps()).toEqual(['pages', '2024', '2025', '2026'].map(id => ({ id })));
+    expect(generateSitemaps()).toEqual(['pages', 'discovery', '2024', '2025', '2026'].map(id => ({ id })));
     expect(sitemapUrls()).toEqual([
       'https://anime.example/sitemaps/sitemap/pages.xml',
+      'https://anime.example/sitemaps/sitemap/discovery.xml',
       'https://anime.example/sitemaps/sitemap/2024.xml',
       'https://anime.example/sitemaps/sitemap/2025.xml',
       'https://anime.example/sitemaps/sitemap/2026.xml',

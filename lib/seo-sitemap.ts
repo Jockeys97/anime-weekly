@@ -18,7 +18,7 @@ export function sitemapSeasons(date = new Date()) {
 }
 
 export function sitemapIds(date = new Date()): string[] {
-  return ['pages', ...new Set(sitemapSeasons(date).map(value => String(value.year)))];
+  return ['pages', 'discovery', ...new Set(sitemapSeasons(date).map(value => String(value.year)))];
 }
 
 export function sitemapUrls(date = new Date(), base = siteUrl()): string[] {

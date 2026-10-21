@@ -1,3 +1,4 @@
+import { episodeSegments, similarSegments } from '@/lib/discovery';
 import { isLocale, locales, type Locale } from '@/lib/locales';
 
 export const landingSlugs = {
@@ -21,7 +22,7 @@ export function localePath(path: string, locale: Locale): string {
   if (!path.startsWith('/') || path.startsWith('//') || /^\/(?:api|_next)(?:\/|$)/.test(path) || /\.[a-z0-9]+$/i.test(path.split(/[?#]/)[0])) return path;
   const imageSuffix = path.split(/[?#]/)[0].endsWith('/opengraph-image') ? '/opengraph-image' : '';
   const route = landingRoute(imageSuffix ? path.replace('/opengraph-image', '') : path);
-  const bare = route ? `/${landingSlugs[route][locale]}${imageSuffix}${path.match(/[?#].*$/)?.[0] ?? ''}` : stripLocale(path);
+  const bare = route ? `/${landingSlugs[route][locale]}${imageSuffix}${path.match(/[?#].*$/)?.[0] ?? ''}` : localizeDiscoveryPath(stripLocale(path), locale);
   return locale === 'it' ? bare : `/${locale}${bare === '/' ? '' : bare.startsWith('/?') || bare.startsWith('/#') ? bare.slice(1) : bare}`;
 }
 export function languageAlternates(path: string, base: URL): Record<string, string> {
@@ -31,4 +32,25 @@ export function languageAlternates(path: string, base: URL): Record<string, stri
 export function pathLocale(path: string): Locale {
   const first = path.split('/')[1];
   return isLocale(first) ? first : 'it';
+}
+
+/** Translate nested public routes while keeping one App Router implementation. */
+export function localizeDiscoveryPath(path: string, locale: Locale): string {
+  return path.replace(/^(\/anime\/[^/?#]+\/)([^/?#]+)(?=[?#]|$)/, (all, prefix: string, segment: string) => {
+    const episode = /^(?:episode|episodio|folge)-([1-9]\d*)$/.exec(segment);
+    if (episode) return `${prefix}${episodeSegments[locale]}-${episode[1]}`;
+    return Object.values(similarSegments).includes(segment) ? `${prefix}${similarSegments[locale]}` : all;
+  }).replace(/^\/([^/?#]+)(\/[^/?#]+)(?=[?#]|$)/, (all, prefix: string, suffix: string) =>
+    Object.values(landingSlugs['best-this-season']).includes(prefix) ? `/${landingSlugs['best-this-season'][locale]}${suffix}` : all);
+}
+export function discoveryInternalPath(path: string): string | null {
+  const bare = stripLocale(path);
+  const anime = /^(\/anime\/[^/]+\/)([^/]+)$/.exec(bare);
+  if (anime) {
+    const episode = /^(?:episode|episodio|folge)-([1-9]\d*)$/.exec(anime[2]);
+    if (episode) return `${anime[1]}episode-${episode[1]}`;
+    if (Object.values(similarSegments).includes(anime[2])) return `${anime[1]}similar`;
+  }
+  const genre = /^\/([^/]+)\/([^/]+)$/.exec(bare);
+  return genre && Object.values(landingSlugs['best-this-season']).includes(genre[1]) ? `/best-this-season/${genre[2]}` : null;
 }

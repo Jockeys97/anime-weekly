@@ -11,7 +11,8 @@ import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
 import type { AniListAnime } from '@/lib/anilist';
-import { animeHeading } from '@/lib/anime-seo';
+import { episodePath } from '@/lib/discovery';
+import { animeHeading, nextAnimeEpisode } from '@/lib/anime-seo';
 import { displayTitle } from '@/lib/title-text';
 import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
@@ -36,6 +37,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const season = anime.season?.toLowerCase();
   const seasonal = anime.seasonYear && season && isSeason(season) ? { year: anime.seasonYear, season } : null;
   const date = anime.startDate;
+  const next = nextAnimeEpisode(anime);
   const startDate = date?.year && date.month && date.day ? <VisitorDate value={`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`} /> : date?.year ?? c.unknown;
   return <main className="catalog-page" lang={locale}>
     <Link href="/season" prefetch={false} className="catalog-details">← {c.seasons}</Link>
@@ -61,6 +63,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
         <dl className="detail-facts">
           {anime.format && <div><dt>{c.format}</dt><dd>{format}</dd></div>}
           {anime.status && <div><dt>{c.status}</dt><dd>{status}</dd></div>}
+          {next && <div><dt>{d.discovery.next}</dt><dd><Link href={episodePath(anime.id, name, next.episode)}>{d.discovery.episode.replace('{n}', String(next.episode))}</Link> · <VisitorDate value={next.date.toISOString()} /></dd></div>}
           {anime.episodes != null && anime.episodes > 0 && <div><dt>{c.episodes}</dt><dd>{anime.episodes}</dd></div>}
           {date?.year && <div><dt>{c.startDate}</dt><dd>{startDate}</dd></div>}
           {Boolean(anime.studios?.nodes.length) && <div><dt>{c.studios}</dt><dd>{anime.studios!.nodes.map(studio => studio.name).join(', ')}</dd></div>}
