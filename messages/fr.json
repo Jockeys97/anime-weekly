@@ -530,6 +530,28 @@
     "platforms": "Plateformes par pays",
     "otherCountries": "Autres pays"
   },
+  "tierList": {
+    "nav": "Tier list",
+    "title": "Tier list anime",
+    "heading": "Tier list · {season} {year}",
+    "description": "Classez les anime de la saison dans une tier list, puis téléchargez l’image ou partagez-la.",
+    "intro": "Faites glisser les affiches dans les rangées. Sur écran tactile, vous pouvez aussi toucher une affiche puis une rangée. Votre classement est enregistré dans ce navigateur.",
+    "cta": "Créer votre tier list",
+    "unranked": "Non classés",
+    "reset": "Réinitialiser",
+    "download": "Télécharger l’image",
+    "exporting": "Préparation de l’image…",
+    "share": "Partager",
+    "shareX": "Partager sur X",
+    "shareReddit": "Partager sur Reddit",
+    "shareText": "Ma tier list anime {season} {year}",
+    "editLabel": "Modifier le libellé de la rangée",
+    "selected": "Sélectionné : {name}. Touchez une rangée pour le placer.",
+    "cancel": "Annuler",
+    "empty": "Aucun anime n’est encore disponible pour cette saison.",
+    "exportError": "Impossible de créer l’image. Veuillez réessayer.",
+    "count": "{count} anime à classer"
+  },
   "rankings": {
     "title": "Meilleurs animes en cours · semaine {week}",
     "description": "Les meilleurs animes en cours de la semaine {week}, classés par note IMDb et MyAnimeList avec nombre de votes.",

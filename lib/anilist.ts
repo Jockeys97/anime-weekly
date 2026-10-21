@@ -143,13 +143,27 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
 }
 
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
-  const data = await graphql<{ Media?: AniListAnime }>(`query ($id: Int!) {
+  const query = `query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }
-  }`, { id });
-  // Reject transient upstream failures so they never become cached empty details.
-  if (!data) throw new Error('Anime details unavailable');
-  return data.Media?.id === id ? data.Media : null;
-}, ['anime-detail-v7-discovery'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+  }`;
+  const response = await anilistFetch('https://graphql.anilist.co', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query, variables: { id } }), next: { revalidate: ANILIST_REVALIDATE },
+  });
+  // Only explicit AniList not-found responses may become cached empty details.
+  if (response.status !== 200 && response.status !== 404) throw new Error(`Anime details unavailable (HTTP ${response.status})`);
+  const result = await response.json() as {
+    data?: { Media?: AniListAnime | null };
+    errors?: { message?: string; status?: number }[];
+  };
+  if (result.errors?.length) {
+    if (result.errors.every(error => error.status === 404 && /^not found\.?$/i.test(error.message?.trim() || ''))) return null;
+    throw new Error('Anime details unavailable');
+  }
+  if (result.data?.Media === null) return null;
+  if (response.status !== 200 || result.data?.Media?.id !== id) throw new Error('Anime details unavailable');
+  return result.data.Media;
+}, ['anime-detail-v8-discovery-upstream'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
@@ -158,7 +172,7 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
   try { return await getCachedAnime(id); }
   catch (error) {
     console.error('[anilist] getAnime failed', { id, message: error instanceof Error ? error.message : 'Unknown error' });
-    return null;
+    throw error;
   }
 }
 
