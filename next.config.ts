@@ -7,10 +7,10 @@ const config: NextConfig = {
   })); },
   experimental: { globalNotFound: true },
   async redirects() { return [
-  ...['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({
+  ...(process.env.VERCEL_ENV === 'production' ? ['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({
     source: '/:path((?!api/).*)', has: [{ type: 'host' as const, value: host }],
     destination: 'https://weeklyanime.com/:path*', permanent: true,
-  })),
+  })) : []),
   { source: '/favicon.ico', destination: '/icon.svg', permanent: false },
 ]; }, staticPageGenerationTimeout: 300,
   // Local previews can reuse public catalog data without copying credentials.
