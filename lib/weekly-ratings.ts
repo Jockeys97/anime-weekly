@@ -39,7 +39,7 @@ import { readRatingsStore, type RatingsStore } from '@/lib/ratings-store';
 const providers = [
   { prefix: 'imdb', id: 'imdbId', score: 'imdbRating', fields: ['imdbRating', 'imdbVotes', 'imdbStatus'] },
   { prefix: 'anilist', id: 'anilistId', score: 'anilistScore', fields: ['anilistScore'] },
-  { prefix: 'mal', id: 'malId', score: 'malScore', fields: ['malScore', 'malMembers'] },
+  { prefix: 'mal', id: 'malId', score: 'malScore', fields: ['malScore', 'malMembers', 'malScoredBy'] },
 ] as const;
 
 function saveRatings(store: RatingsStore, key: string, ratings: Ratings, fetched: Ratings, now: number) {
@@ -259,7 +259,7 @@ export async function primeWeeklyRatings(slug: string, previous?: WeeklyRatings)
     const season = seasons.get(key);
     if (season && existing.anilistId !== season.anilistId) {
       // Another season: its AniList/MAL scores differ; the series-level IMDb score stays.
-      for (const field of ['anilistId', 'anilistScore', 'malId', 'malScore', 'malMembers'] as const) delete existing[field];
+      for (const field of ['anilistId', 'anilistScore', 'malId', 'malScore', 'malMembers', 'malScoredBy'] as const) delete existing[field];
       Object.assign(existing, { anilistId: season.anilistId, ...(season.malId ? { malId: season.malId } : {}) });
     }
     // Migrate a pre-store snapshot once. Never renew a stored score's timestamp

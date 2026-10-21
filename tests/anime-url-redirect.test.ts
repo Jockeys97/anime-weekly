@@ -1,3 +1,4 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getAnime: vi.fn() }));

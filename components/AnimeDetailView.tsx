@@ -17,14 +17,14 @@ import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 import { detailDesktopMedia, detailMobileMedia, emptyDetailImage, useDetailMobileViewport } from '@/lib/detail-viewport';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string;
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro, weekLinks, localizedNames }: {
+  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string; weekLinks?: ReactNode; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>;
 }) {
   const locale = useLocale();
   const mobile = useDetailMobileViewport();
   const d = getDictionary(locale);
   const c = d.catalog;
-  const name = displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
+  const name = localizedNames?.[locale] || displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
   // AniList large is ~230px wide; extraLarge is ~460px. Let DPR choose the
@@ -59,24 +59,25 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
         <dl className="ratings">{imdb}{ratings}</dl>
         <Suspense fallback={<DubbingStatus malId={anime.idMal} locale={locale} followLocale />}>{dubbing}</Suspense>
         <dl className="detail-facts">
-          <div><dt>{c.format}</dt><dd>{format}</dd></div>
-          <div><dt>{c.status}</dt><dd>{status}</dd></div>
-          <div><dt>{c.episodes}</dt><dd>{anime.episodes ?? c.unknown}</dd></div>
-          <div><dt>{c.startDate}</dt><dd>{startDate}</dd></div>
-          <div><dt>{c.studios}</dt><dd>{anime.studios?.nodes.map(studio => studio.name).join(', ') || c.unknown}</dd></div>
-          <div><dt>{c.genres}</dt><dd>{anime.genres?.join(', ') || c.unknown}</dd></div>
+          {anime.format && <div><dt>{c.format}</dt><dd>{format}</dd></div>}
+          {anime.status && <div><dt>{c.status}</dt><dd>{status}</dd></div>}
+          {anime.episodes != null && anime.episodes > 0 && <div><dt>{c.episodes}</dt><dd>{anime.episodes}</dd></div>}
+          {date?.year && <div><dt>{c.startDate}</dt><dd>{startDate}</dd></div>}
+          {Boolean(anime.studios?.nodes.length) && <div><dt>{c.studios}</dt><dd>{anime.studios!.nodes.map(studio => studio.name).join(', ')}</dd></div>}
+          {Boolean(anime.genres?.length) && <div><dt>{c.genres}</dt><dd>{anime.genres.join(', ')}</dd></div>}
           {seasonal && <div><dt>{c.season}</dt><dd><Link prefetch={false} href={seasonPath(seasonal)}>{c.seasonNames[seasonal.season]} {seasonal.year}</Link></dd></div>}
         </dl>
         <a className="catalog-details" href={`https://anilist.co/anime/${anime.id}`} target="_blank" rel="noopener noreferrer">{c.source} ↗</a>
       </div>
     </article>
+    {weekLinks}
     {episodes && <Suspense fallback={<EpisodeChartLoading />}>{episodes}</Suspense>}
     <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} mobileImage={anime.bannerImage ? cover || emptyDetailImage : undefined} locale={locale} />
-    <section className="detail-streaming" aria-labelledby="streaming-heading">
+    {availability && <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
       <StreamingCountrySelector locale={locale} />
       {availability}
       <p className="catalog-intro">{c.availabilityNote}</p>
-    </section>
+    </section>}
   </main>;
 }

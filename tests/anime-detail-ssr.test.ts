@@ -1,3 +1,5 @@
+vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
@@ -80,7 +82,7 @@ it('bounds stalled sources and renders settled fallbacks with a labelled origina
   const html = render();
   await vi.advanceTimersByTimeAsync(2600);
   const result = await html;
-  expect(result).toContain('n/d');
+  expect(result).not.toContain('n/d');
   expect(result).toContain('English original');
   expect(result).toContain('Traduzione non disponibile');
   expect(result).not.toContain('Caricamento');

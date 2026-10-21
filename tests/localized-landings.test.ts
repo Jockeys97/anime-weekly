@@ -30,3 +30,12 @@ it('rewrites every canonical slug and permanently redirects every legacy or wron
     }
   }
 });
+
+
+it('localizes and rewrites ranking OG paths using the same this-week alias', () => {
+  for (const locale of locales) {
+    const path = localePath('/rankings/this-week/opengraph-image', locale);
+    const response = proxy(new NextRequest(`https://weeklyanime.com${path}`));
+    expect(response.headers.get('x-middleware-rewrite')).toBe(`https://weeklyanime.com/${locale}/rankings/this-week/opengraph-image`);
+  }
+});

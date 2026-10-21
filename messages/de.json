@@ -551,5 +551,18 @@
     "empty": "Für diese Season sind noch keine Anime verfügbar.",
     "exportError": "Das Bild konnte nicht erstellt werden. Bitte versuche es erneut.",
     "count": "{count} Anime zum Einordnen"
+  },
+  "rankings": {
+    "title": "Beste laufende Anime · Woche {week}",
+    "description": "Die besten laufenden Anime in Woche {week}, nach IMDb- und MyAnimeList-Wertungen mit Stimmenzahlen sortiert.",
+    "nav": "Wöchentliche Ranglisten",
+    "thresholds": "Minimum: {imdb} IMDb-Stimmen und {mal} MyAnimeList-Bewertungen. Bei Gleichstand zählen die Stimmen, dann die AniList-ID.",
+    "votes": "{count} Stimmen",
+    "empty": "Kein Anime erreicht die Mindestzahl an Stimmen für diese Liste.",
+    "appearances": "Wochen und Ranglisten",
+    "animeTitle": "{name}: Sendeplan, Folgen und IMDb/MAL-Wertungen",
+    "animeDescription": "Sendeplan, Folgen, Streaming-Plattformen und IMDb/MAL-Wertungen für {name}.",
+    "currentTitle": "Beste Anime dieser Woche · {week}",
+    "currentDescription": "Ranglisten der laufenden Anime dieser Woche ({week}), mit IMDb- und MyAnimeList-Wertungen und Stimmenzahlen."
   }
 }
