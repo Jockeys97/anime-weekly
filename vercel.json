@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/anilist-snapshot",
-      "schedule": "30 5 * * *"
-    },
-    {
       "path": "/api/revalidate",
       "schedule": "0 6 * * *"
     }
