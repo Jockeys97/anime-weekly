@@ -11,7 +11,7 @@ import { primeWeeklyEpisodes } from '@/lib/weekly-episode-ratings';
 import { topWeeklyEpisodes, needsEpisodeRepair, japanDate, EPISODE_COLLECTOR_VERSION, type WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { getDictionary } from '@/lib/i18n';
 import { PROVIDER_MAX_AGE, validProviderSnapshot } from '@/lib/provider-snapshot';
-import { readImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { readImdbEpisodeChart, hasImdbEpisodeIndex, readImdbDiagnostics } from '@/lib/imdb-episode-index';
 import { validImdbId } from '@/lib/episode-chart';
 import { assessDailyHealth } from '@/lib/daily-health';
 export const maxDuration = 300;
@@ -123,7 +123,9 @@ export async function GET(request: Request) {
   // Public, read-only summary of today's cron output for the daily GitHub check.
   if (new URL(request.url).searchParams.has('health')) {
     const slug = formatWeek(isoWeek(new Date()));
-    const health = assessDailyHealth(slug, await readWeeklyRatingsSnapshot(slug));
+    const day = japanDate();
+    const [snapshot, chartIndex, diagnostics] = await Promise.all([readWeeklyRatingsSnapshot(slug), hasImdbEpisodeIndex(day), readImdbDiagnostics(day)]);
+    const health = assessDailyHealth(slug, snapshot, new Date(), { day, chartIndex, diagnostics });
     return Response.json(health, { headers: { 'cache-control': 'no-store' } });
   }
   const read = new URL(request.url).searchParams.get('ratings');

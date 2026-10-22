@@ -121,3 +121,23 @@ export function getImdbEpisodeChart(seriesId: string): Promise<EpisodeChartData>
   reads.set(seriesId, request);
   return request;
 }
+
+/** What the daily IMDb collection did, kept for the health check (no logs survive on Hobby). */
+export interface ImdbDailyDiagnostics {
+  day: string; startedAt: string; durationMs: number;
+  ratings: { ms?: number; error?: string };
+  episodes: { ms?: number; error?: string };
+  chart: 'stored' | 'failed' | 'skipped'; chartError?: string;
+}
+const describe = (error: unknown) => (error instanceof Error ? `${error.name}: ${error.message}` : String(error)).slice(0, 300);
+export function diagnosticError(error: unknown): string { return describe(error); }
+// Best effort: diagnostics must never fail the collector.
+export async function storeImdbDiagnostics(value: ImdbDailyDiagnostics): Promise<void> {
+  try { await withTimeout(cache.set(key(value.day, 'diagnostics'), value, options), 2000); } catch { /* ignore */ }
+}
+export async function readImdbDiagnostics(day: string): Promise<ImdbDailyDiagnostics | null> {
+  try {
+    const value = await withTimeout(cache.get(key(day, 'diagnostics')), 1000) as ImdbDailyDiagnostics | null;
+    return value && typeof value === 'object' && value.day === day ? value : null;
+  } catch { return null; }
+}
