@@ -18,6 +18,8 @@ it('requests only the actual episode and its two neighbours in one cached lookup
   expect(anilistFetch).toHaveBeenCalledOnce();
   const body = JSON.parse(vi.mocked(anilistFetch).mock.calls[0][1]!.body as string);
   expect(body.variables.episodes).toEqual([999, 1000, 1001]);
+  expect(body.variables).not.toHaveProperty('until');
+  expect(body.query).not.toContain('airingAt_lesser');
 });
 it('uses nextAiringEpisode on a schedule outage, without generating any dates', async () => {
   vi.mocked(anilistFetch).mockRejectedValue(new Error('offline'));
@@ -28,6 +30,10 @@ it('uses nextAiringEpisode on a schedule outage, without generating any dates', 
 it('filters the precise sitemap window and omits conflicting dates', async () => {
   vi.mocked(anilistFetch).mockResolvedValue(response([event(1, at - 86400), event(2, at + 14 * 86400), event(3, at + 14 * 86400 + 1), event(4, at), event(4, at + 1)]));
   expect((await getSitemapEpisodes([anime(1)], now)).map(e => e.episode)).toEqual([1, 2]);
+  const body = JSON.parse(vi.mocked(anilistFetch).mock.calls[0][1]!.body as string);
+  expect(body.variables.until).toBe(Math.floor(Date.UTC(2026, 10, 5) / 1000));
+  expect(body.variables).not.toHaveProperty('episodes');
+  expect(body.query).not.toContain('episode_in');
 });
 it('bounds global sitemap pagination even when the upstream always reports another page', async () => {
   vi.mocked(anilistFetch).mockImplementation(async () => response([], true));

@@ -11,13 +11,24 @@ import { episodeInSitemap } from '@/lib/discovery';
 // newest 2,000 real airings; long-running series remain accessible on demand.
 const readAirings = unstable_cache(async (ids: number[], until: number | null, episodes: number[] = []) => {
   const events: AiringEvent[] = [];
+  // AniList distinguishes omitted filters from explicit nulls. A detail lookup
+  // has no time bound; the sitemap has no episode-number filter.
+  const definitions = ['$ids: [Int]', '$page: Int!'];
+  const filters = ['mediaId_in: $ids'];
+  const variables: Record<string, number | number[]> = { ids };
+  if (until != null) {
+    definitions.push('$until: Int!'); filters.push('airingAt_lesser: $until'); variables.until = until;
+  }
+  if (episodes.length) {
+    definitions.push('$episodes: [Int]'); filters.push('episode_in: $episodes'); variables.episodes = episodes;
+  }
   for (let page = 1; page <= (episodes.length ? 1 : 40); page++) {
-    const query = `query ($ids: [Int], $until: Int, $page: Int!, $episodes: [Int]) { Page(page: $page, perPage: 50) {
-      pageInfo { hasNextPage } airingSchedules(mediaId_in: $ids, airingAt_lesser: $until, episode_in: $episodes, sort: TIME_DESC) { id mediaId episode airingAt }
+    const query = `query (${definitions.join(', ')}) { Page(page: $page, perPage: 50) {
+      pageInfo { hasNextPage } airingSchedules(${filters.join(', ')}, sort: TIME_DESC) { id mediaId episode airingAt }
     } }`;
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables: { ids, until, page, episodes: episodes.length ? episodes : null } }), next: { revalidate: 3600, tags: [CACHE_TAG] },
+      body: JSON.stringify({ query, variables: { ...variables, page } }), next: { revalidate: 3600, tags: [CACHE_TAG] },
     });
     if (!response.ok) throw new Error('Episode schedule unavailable');
     const result = await response.json() as { data?: { Page?: { pageInfo?: { hasNextPage?: boolean }; airingSchedules?: AiringEvent[] } }; errors?: unknown[] };
@@ -27,7 +38,7 @@ const readAirings = unstable_cache(async (ids: number[], until: number | null, e
     if (!data.pageInfo?.hasNextPage) break;
   }
   return events;
-}, ['discovery-airing-schedules-v1'], { revalidate: 3600, tags: [CACHE_TAG] });
+}, ['discovery-airing-schedules-v2'], { revalidate: 3600, tags: [CACHE_TAG] });
 
 export const getAnimeEpisodes = cache(async (anime: AniListAnime, episode: number) => {
   if (anime.format === 'MOVIE') return [];

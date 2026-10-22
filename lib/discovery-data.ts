@@ -43,7 +43,12 @@ export const getGenreLists = cache(async () => {
     const mapping = Object.values(store.sources).find(s => s.anilistId === anime.id && Date.now() - s.fetchedAt <= 120 * 86400000);
     for (const key of [mapping?.imdbId ? `imdb:${mapping.imdbId}` : '', `anilist:${anime.id}`, anime.idMal ? `mal:${anime.idMal}` : '']) {
       const entry = store.ratings[key];
-      if (entry && Date.now() - entry.fetchedAt <= 120 * 86400000) Object.assign(r, entry.values);
+      if (entry && Date.now() - entry.fetchedAt <= 120 * 86400000) {
+        Object.assign(r, entry.values);
+        // Stored provider values contain scores, not identity fields. The exact
+        // MAL cache key establishes the identity required by rankGenre.
+        if (key === `mal:${anime.idMal}`) r.malId = anime.idMal!;
+      }
     }
     ratings[anime.id] = r;
   }
