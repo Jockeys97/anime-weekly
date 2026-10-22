@@ -14,7 +14,7 @@ import { getAnime } from '@/lib/anilist';
 import { getSimilarAnime, getDiscoveryCatalog, getGenreLists } from '@/lib/discovery-data';
 import { getAnimeEpisodes, getSitemapEpisodes } from '@/lib/episode-data';
 import EpisodePage, { generateMetadata as episodeMetadata } from '@/app/[locale]/anime/[id]/[episode]/page';
-import SimilarPage, { generateMetadata as similarMetadata } from '@/app/[locale]/anime/[id]/similar/page';
+import SimilarPage, { generateMetadata as similarMetadata, dynamic as similarDynamic } from '@/app/[locale]/anime/[id]/similar/page';
 import GenrePage, { generateMetadata as genreMetadata } from '@/app/[locale]/best-this-season/[genre]/page';
 import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { getRankingsWeek } from '@/lib/rankings-seo-data';
@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.mocked(getAnimeEpisodes).mockResolvedValue([event]);
   vi.mocked(getSimilarAnime).mockResolvedValue(Array.from({ length: 5 }, (_, i) => row(i + 2)));
   vi.mocked(getDiscoveryCatalog).mockResolvedValue(Array.from({ length: 6 }, (_, i) => anime(i + 1)));
-  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, lists: [{ genre: 'Action', items: Array.from({ length: 5 }, (_, i) => row(i + 1)) }] });
+  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [{ genre: 'Action', items: Array.from({ length: 5 }, (_, i) => row(i + 1)) }] });
   vi.mocked(getSitemapEpisodes).mockResolvedValue([event]);
 });
 it('builds reciprocal episode canonical and hreflang URLs from published localized names', async () => {
@@ -65,7 +65,7 @@ it('applies list thresholds to actual metadata and 404 behavior', async () => {
   for (const count of [1, 4, 5]) {
     const items = Array.from({ length: count }, (_, i) => row(i + 2));
     vi.mocked(getSimilarAnime).mockResolvedValue(items);
-    vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, lists: [{ genre: 'Action', items }] });
+    vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [{ genre: 'Action', items }] });
     const similar = await similarMetadata(props());
     const genre = await genreMetadata({ params: Promise.resolve({ locale: 'en', genre: 'action' }) });
     expect(similar.robots).toEqual({ index: count >= 5, follow: true });
@@ -74,7 +74,7 @@ it('applies list thresholds to actual metadata and 404 behavior', async () => {
     expect(genre.title).toBe('Best Action anime of the season · Fall 2026');
   }
   vi.mocked(getSimilarAnime).mockResolvedValue([]);
-  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, lists: [] });
+  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [] });
   await expect(SimilarPage(props())).rejects.toThrow('404');
   await expect(GenrePage({ params: Promise.resolve({ locale: 'en', genre: 'action' }) })).rejects.toThrow('404');
 });
@@ -84,8 +84,20 @@ it('expands each qualifying sitemap group into six URLs and excludes short lists
   expect(new Set(entries.map(e => e.url)).size).toBe(entries.length);
   expect(entries.find(e => e.url === 'https://example.com/anime/1-titolo/episodio-2')?.alternates?.languages?.de).toBe('https://example.com/de/anime/1-titel/folge-2');
   vi.mocked(getDiscoveryCatalog).mockResolvedValue([anime(1), anime(2)]);
-  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, lists: [{ genre: 'Action', items: [row(1)] }] });
+  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [{ genre: 'Action', items: [row(1)] }] });
   expect(await getDiscoverySitemap()).toHaveLength(6); // only the dated episode
+});
+
+it('renders an uncached temporary state for similar pages during a catalog outage and recovers', async () => {
+  expect(similarDynamic).toBe('force-dynamic');
+  vi.mocked(getSimilarAnime).mockRejectedValue(new Error('Discovery catalog unavailable'));
+  expect((await similarMetadata(props())).robots).toEqual({ index: false, follow: true });
+  const html = renderToStaticMarkup(await SimilarPage(props()));
+  expect(html).toContain('Please try loading the guide again.');
+  expect(html).toContain('href="/en/anime/1-title/similar"');
+  vi.mocked(getSimilarAnime).mockResolvedValue(Array.from({ length: 5 }, (_, i) => row(i + 2)));
+  expect((await similarMetadata(props())).robots).toEqual({ index: true, follow: true });
+  expect(renderToStaticMarkup(await SimilarPage(props()))).toContain('Anime 2');
 });
 
 it('propagates genre failures so a partial discovery sitemap cannot be cached', async () => {

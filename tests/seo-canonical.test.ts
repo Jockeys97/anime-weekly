@@ -9,7 +9,7 @@ vi.mock('@vercel/blob', () => ({ get: vi.fn(), put: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 import config from '../next.config';
 import { siteUrl, pageMetadata } from '../lib/seo';
-import sitemap from '../app/sitemaps/sitemap';
+import sitemap from '../lib/sitemap-shards';
 import robots from '../app/robots';
 import { getSeason } from '../lib/anilist';
 afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks(); vi.useRealTimers(); });

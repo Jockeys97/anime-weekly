@@ -43,8 +43,9 @@ export function throttle(spacing: number, timeoutMs = 10000) {
 }
 
 // One process-wide AniList queue, shared by catalog and weekly rating lookups.
-// 800ms between attempts stays below 90/minute while fitting a 40-title cron.
-export const anilistFetch = throttle(800);
+// AniList's degraded service limit is 30/minute. Keep requests sequential and
+// below that limit, including retries, across catalog and rating lookups.
+export const anilistFetch = throttle(2100);
 // Share one conservative queue between cron enrichment and the MAL score tile.
 // Tenrai permits 120/minute and 4/second; keep 1100ms spacing below both limits.
 // Retain this internal name for existing cron callers.

@@ -4,10 +4,8 @@ import { getSitemapCatalog } from '@/lib/sitemap-catalog';
 import { getSeoWeeks } from '@/lib/weekly-seo-data';
 import { siteUrl } from '@/lib/seo';
 
-// Successful shards revalidate hourly. Discovery errors must propagate so ISR
-// retains a previous success and retries, rather than caching an empty urlset.
-export const revalidate = 3600;
-
+// The runtime sitemap handler caches successful shards and returns uncached
+// HTTP errors when a complete discovery shard cannot be produced.
 export function generateSitemaps() {
   return sitemapIds().map(id => ({ id }));
 }

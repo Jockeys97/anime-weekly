@@ -36,6 +36,30 @@ it('applies long Retry-After cooldowns to later lookups without extra upstream c
   expect((await request('https://example.com/second')).status).toBe(429);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+it('serializes concurrent calls and honors a short 429 Retry-After before recovering', async () => {
+  vi.useFakeTimers();
+  try {
+    const starts: number[] = [];
+    let active = 0;
+    const fetchMock = vi.fn(async () => {
+      expect(++active).toBe(1);
+      starts.push(Date.now());
+      await Promise.resolve();
+      active--;
+      return starts.length === 1
+        ? new Response(null, { status: 429, headers: { 'Retry-After': '3' } })
+        : Response.json({ ok: true });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const request = throttle(2100);
+    const pending = Promise.all([request('https://example.com/first', { cache: 'no-store' }), request('https://example.com/second', { cache: 'no-store' })]);
+    await vi.runAllTimersAsync();
+    expect((await pending).map(response => response.status)).toEqual([200, 200]);
+    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(3000);
+    expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(2100);
+  } finally { vi.useRealTimers(); }
+});
 it('retries transient cron responses with backoff without caching the error bodies', async () => {
   vi.useFakeTimers();
   try {
