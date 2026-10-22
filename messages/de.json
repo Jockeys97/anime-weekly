@@ -578,13 +578,13 @@
     "anime": "Anime-Seite",
     "similar": "Ähnliche Anime",
     "similarTitle": "Ähnliche Anime wie {title}",
-    "similarIntro": "{count} Anime aus {season} mit Genres, Tags oder AniList-Empfehlungen zu {title}. Erstes Ergebnis: {top}.",
+    "similarIntro": "{count} Anime ähnlich wie {title}, ausgewählt aus beliebten Titeln aller Zeiten, aktuellen Staffeln und Empfehlungen der AniList-Community. Erstes Ergebnis: {top}.",
     "allSimilar": "Alle ähnlichen Anime",
     "genreTitle": "Beste {genre}-Anime der Saison · {season}",
     "genreIntro": "{count} {genre}-Anime in {season}, geordnet nach IMDb-, MyAnimeList- oder AniList-Bewertungen. Führender Titel: {top}.",
     "ranking": "In der Rangliste dieser Woche",
     "position": "{source}: Platz {rank} · {week}",
-    "similarRule": "Genres und Tags, AniList-Empfehlungen und Bewertung bestimmen die Reihenfolge.",
+    "similarRule": "Die Reihenfolge bevorzugt hoch bewertete AniList-Empfehlungen und gemeinsame Tags, gewichtet nach Relevanz und Seltenheit. Genres, Beliebtheit und Bewertungen haben weniger Gewicht; jede Reihe erscheint höchstens zweimal.",
     "genreRule": "IMDb- und MyAnimeList-Bewertungen zählen ab {count} Stimmen pro Quelle; gültige Bewertungen werden gemittelt. Erfüllt keine diese Bedingung, wird die AniList-Durchschnittsbewertung auf eine Skala von 10 umgerechnet."
   }
 }

@@ -87,5 +87,5 @@ it('excludes missing or invalid AniList scores and uses real AniList vote counts
 it('ranks by real genre/tag overlap, recommendations and score, excluding self and unrelated titles', () => {
   const source = { ...anime(1), tags: [{ name: 'Ninja', rank: 90 }], recommendations: { nodes: [{ rating: 10, mediaRecommendation: { id: 3 } }] } };
   const candidates = [source, anime(2), anime(3, ['Drama']), anime(4, ['Romance']), { ...anime(5), tags: [{ name: 'Ninja', rank: 70 }] }];
-  expect(rankSimilar(source, candidates).map(row => row.anime.id)).toEqual([5, 2, 3]);
+  expect(rankSimilar(source, candidates).map(row => row.anime.id)).toEqual([3, 5, 2]);
 });

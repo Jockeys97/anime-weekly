@@ -4,11 +4,11 @@ import type { RatingsStore } from '@/lib/ratings-store';
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('@/lib/anilist', () => ({ getSeason: vi.fn() }));
+vi.mock('@/lib/anilist', () => ({ getSeason: vi.fn(), getPopularCatalogBatch: vi.fn() }));
 vi.mock('@/lib/ratings-store', () => ({ readRatingsStore: vi.fn() }));
 vi.mock('@/lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));
 
-import { getSeason } from '@/lib/anilist';
+import { getPopularCatalogBatch, getSeason } from '@/lib/anilist';
 import { readRatingsStore } from '@/lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { getDiscoveryCatalog, getGenreLists, getSimilarAnime } from '@/lib/discovery-data';
@@ -21,6 +21,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(now);
   vi.clearAllMocks();
+  vi.mocked(getPopularCatalogBatch).mockResolvedValue([{ media: [], pageInfo: { currentPage: 1, hasNextPage: false } }]);
   vi.mocked(getSeason).mockImplementation(async (_year, season, page = 1) => ({ media: season === 'fall' ? [anime] : [], pageInfo: { currentPage: page, hasNextPage: false } }));
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });

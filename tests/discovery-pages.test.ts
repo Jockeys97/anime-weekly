@@ -82,6 +82,18 @@ it('applies list thresholds to actual metadata and 404 behavior', async () => {
   await expect(SimilarPage(props())).rejects.toThrow('404');
   await expect(GenrePage({ params: Promise.resolve({ locale: 'en', genre: 'action' }) })).rejects.toThrow('404');
 });
+it.each(locales)('describes the wider similarity pool accurately in the page and metadata (%s)', async locale => {
+  const metadata = await similarMetadata(props(locale));
+  const d = getDictionary(locale).discovery;
+  expect(d.similarIntro).not.toContain('{season}');
+  expect(metadata.description).not.toMatch(/2026|\{\w+\}/);
+  expect(metadata.description).toContain('AniList');
+  expect(metadata.description).toContain('5');
+  const html = renderToStaticMarkup(await SimilarPage(props(locale)));
+  expect(html).toContain('Anime 2');
+  expect(html).toContain('AniList');
+  expect(html).not.toContain('2026');
+});
 it('expands each qualifying sitemap group into six URLs and excludes short lists', async () => {
   const entries = await getDiscoverySitemap(new Date('2026-10-21T12:00:00Z'), new URL('https://example.com'));
   expect(entries).toHaveLength((1 + 6 + 1) * 6); // episode + six similar lists + genre
