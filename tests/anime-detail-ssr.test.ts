@@ -21,7 +21,7 @@ import { getMyAnimeListScore } from '../lib/myanimelist';
 import { getCachedDetailAvailability } from '../lib/detail-availability';
 import { getSynopsis } from '../lib/synopsis';
 import { getAnimeDetailData } from '../lib/anime-detail-data';
-import AnimePage, { revalidate } from '../app/[locale]/anime/[id]/page';
+import AnimePage, { generateMetadata, revalidate } from '../app/[locale]/anime/[id]/page';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { LocaleProvider } from '../components/LanguageSelector';
 
@@ -45,6 +45,25 @@ it('renders all main data in server HTML without executing client effects', asyn
   for (const pending of ['Caricamento dei voti', 'Caricamento della disponibilità', 'Caricamento della trama tradotta']) expect(html).not.toContain(pending);
   expect(revalidate).toBe(86400);
   expect(getSynopsis).toHaveBeenCalledWith(['Example'], 2026, 'it', 'movie', 42);
+});
+
+it('reuses already loaded IMDb data in metadata without another upstream lookup', async () => {
+  const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'en' }) });
+  expect(metadata.title).toBe('Example – IMDb 8.4 & Where to Watch');
+  expect(metadata.description).toContain('IMDb 8.4 & Where to Watch');
+  expect(metadata.openGraph).toMatchObject({ title: metadata.title, description: metadata.description });
+  expect(metadata.twitter).toMatchObject({ title: metadata.title, description: metadata.description });
+  expect(getCachedDetailAvailability).toHaveBeenCalledTimes(1);
+  expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
+});
+
+it('includes an IMDb score from the weekly cache when availability has no score', async () => {
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'movie:10': { anilistId: 42, malId: 123, malScore: 8.3, imdbId: 'tt123', imdbRating: '8.6' } }, events: [] });
+  vi.mocked(getCachedDetailAvailability).mockResolvedValue(empty);
+  const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'it' }) });
+  expect(metadata.title).toBe('Example – IMDb 8.6 e dove vederlo');
+  expect(metadata.description).toContain('IMDb 8.6 e dove vederlo');
+  expect(getMyAnimeListScore).not.toHaveBeenCalled();
 });
 
 it('uses weekly MAL/IMDb precomputation without another MAL request', async () => {

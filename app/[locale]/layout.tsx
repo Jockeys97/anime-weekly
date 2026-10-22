@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { siteUrl } from '@/lib/seo';
+import { SITE_TITLE_SUFFIX, siteUrl } from '@/lib/seo';
 import { Suspense } from 'react';
 import FilteredAnalytics from '@/components/FilteredAnalytics';
 import { getDictionary } from '@/lib/i18n';
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: LocaleParams }): Pr
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale);
   return { ...pageMetadata(d.metadata.title, d.metadata.description, '/', undefined, locale),
-    metadataBase: siteUrl(), title: { default: d.metadata.title, template: '%s · Weekly Anime' },
+    metadataBase: siteUrl(), title: { default: d.metadata.title, template: `%s${SITE_TITLE_SUFFIX}` },
     icons: { icon: '/icon.svg' } };
 }
 export default async function RootLayout({ children, params }: Readonly<{ children: React.ReactNode; params: LocaleParams }>) {

@@ -2,6 +2,9 @@ import { getDictionary } from '@/lib/i18n';
 import type { Locale } from '@/lib/locales';
 import type { AniListAnime } from '@/lib/anilist';
 import type { DetailAvailability } from '@/lib/detail-availability';
+import type { Ratings } from '@/lib/ratings';
+import { animeAlternateNames } from '@/lib/anime-titles';
+import { SITE_TITLE_SUFFIX } from '@/lib/seo';
 
 const formats: Record<string, string> = {
   TV: 'Serie TV', TV_SHORT: 'Serie TV', MOVIE: 'Film', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Special',
@@ -13,6 +16,42 @@ function truncate(text: string, limit: number): string {
   const head = text.slice(0, limit - 1);
   const space = head.lastIndexOf(' ');
   return `${(space > limit / 2 ? head.slice(0, space) : head).trimEnd()}…`;
+}
+
+function namedPrefix(name: string, aliases: string[], limit: number): string {
+  if (name.length > limit) return truncate(name, limit);
+  const selected: string[] = [];
+  for (const alias of aliases) {
+    if (`${name} (${[...selected, alias].join(' / ')})`.length <= limit) selected.push(alias);
+  }
+  return selected.length ? `${name} (${selected.join(' / ')})` : name;
+}
+
+// Ratings are supplied by the detail's existing shared loader. This formatter
+// performs no I/O and never treats the AniList/MAL score as an IMDb rating.
+export function animeDetailSeo(
+  name: string,
+  anime: Parameters<typeof formatAnimeSeo>[1] & Pick<AniListAnime, 'title'>,
+  synopsis: string,
+  locale: Locale,
+  ratings: Ratings = {},
+): { title: string; description: string } {
+  name = compact(name);
+  const aliases = animeAlternateNames(name, anime.title);
+  const d = getDictionary(locale).seo;
+  const score = ratings.imdbRating?.trim() ? Number(ratings.imdbRating) : NaN;
+  const watch = Number.isFinite(score) && score > 0 && score <= 10
+    ? d.detailRatedWatchTitle.replace('{rating}', score.toFixed(1))
+    : d.detailWatchTitle;
+  const suffix = ` – ${watch}`;
+  // Next appends the existing site template to <title>; OG/Twitter receive the
+  // page title. Reserve its space without duplicating it in either output.
+  const title = namedPrefix(name, aliases, 65 - SITE_TITLE_SUFFIX.length - suffix.length) + suffix;
+  const lead = namedPrefix(name, aliases, 160 - suffix.length - 1) + suffix + '.';
+  const context = animeIntro(anime, { ...ratings, imdbRating: undefined }, locale);
+  const tail = [context, compact(synopsis), d.detailContext].filter(Boolean).join(' ');
+  const remaining = 160 - lead.length - 1;
+  return { title, description: remaining > 0 ? `${lead} ${truncate(tail, remaining)}` : lead };
 }
 
 // Inputs come from the detail's existing server loaders. Never infer offers from

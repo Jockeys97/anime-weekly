@@ -13,6 +13,7 @@ import { isSeason, seasonPath } from '@/lib/season';
 import type { AniListAnime } from '@/lib/anilist';
 import { episodePath } from '@/lib/discovery';
 import { animeHeading, nextAnimeEpisode } from '@/lib/anime-seo';
+import { animeAlternateNames } from '@/lib/anime-titles';
 import { displayTitle } from '@/lib/title-text';
 import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
@@ -27,6 +28,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const c = d.catalog;
   const name = localizedNames?.[locale] || displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
+  const alternateNames = animeAlternateNames(name, anime.title);
   const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
   // AniList large is ~230px wide; extraLarge is ~460px. Let DPR choose the
   // larger original only when needed, without creating Vercel transformations.
@@ -54,9 +56,9 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{animeHeading(name, anime, locale)}</h1>
+        {alternateNames.length > 0 && <p className="catalog-intro">{alternateNames.join(' · ')}</p>}
         {intro && <p className="catalog-intro">{intro}</p>}
         <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
-        {anime.title.romaji && anime.title.romaji !== name && !/[\u3040-\u30ff\u3400-\u9fff]/.test(anime.title.romaji) && <p className="catalog-intro">{anime.title.romaji}</p>}
         {synopsis}
         <dl className="ratings">{imdb}{ratings}</dl>
         <Suspense fallback={<DubbingStatus malId={anime.idMal} locale={locale} followLocale />}>{dubbing}</Suspense>

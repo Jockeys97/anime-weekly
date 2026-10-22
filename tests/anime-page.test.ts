@@ -79,8 +79,8 @@ describe('server-rendered anime details', () => {
 it('generates detail SEO with the existing cached availability loader', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(metadata.title).toBe('Example anime: calendario uscite, episodi e voti IMDb/MAL');
-  expect(metadata.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime.');
+  expect(metadata.title).toBe('Example anime – dove vederlo');
+  expect(metadata.description).toBe('Example anime – dove vederlo. Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL.');
   expect(metadata.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
   expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
@@ -104,9 +104,21 @@ it('limits metadata to a clean bounded synopsis', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: `<b>${'Trama italiana '.repeat(30)}</b>`, coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: `<b>${'Trama italiana '.repeat(30)}</b>`, language: 'it', source: 'tmdb' });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.description!.length).toBeLessThanOrEqual(300);
+  expect(meta.description!.length).toBeLessThanOrEqual(160);
   expect(meta.description).toMatch(/…$/);
   expect(meta.description).not.toContain('<');
+});
+
+it('renders all published titles below a localized H1 and deduplicates equal aliases', async () => {
+  vi.stubGlobal('React', React);
+  const anime = { id: 21, title: { english: 'English title', romaji: 'Romaji title', native: '日本語' }, genres: [], format: 'TV' } as unknown as NonNullable<Awaited<ReturnType<typeof getAnime>>>;
+  const props = { anime, localizedNames: { fr: 'Titre français' }, synopsis: null, imdb: null, ratings: null, availability: null };
+  const render = (titles: typeof anime.title) => renderToStaticMarkup(React.createElement(LocaleProvider, { locale: 'fr' } as React.ComponentProps<typeof LocaleProvider>, React.createElement(AnimeDetailView, { ...props, anime: { ...anime, title: titles } })));
+  const html = render(anime.title);
+  expect(html).toContain('<h1>Titre français</h1><p class="catalog-intro">English title · Romaji title · 日本語</p>');
+  const duplicate = render({ english: 'English title', romaji: ' english TITLE ', native: '日本語' });
+  expect(duplicate).toContain('<p class="catalog-intro">English title · 日本語</p>');
+  expect(duplicate).not.toContain('english TITLE');
 });
 
 it('shares factual Italian metadata with Open Graph and Twitter without changing the canonical', async () => {
@@ -117,8 +129,9 @@ it('shares factual Italian metadata with Open Graph and Twitter without changing
     providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
   });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.title).toBe('Example anime: calendario uscite, episodi e voti IMDb/MAL');
-  expect(meta.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. AniList 8,1/10. Una storia italiana.');
+  expect(meta.title).toBe('Example anime – dove vederlo');
+  expect(meta.description).toContain('Example anime – dove vederlo. AniList 8,1/10. Una storia italiana.');
+  expect(meta.description!.length).toBeLessThanOrEqual(160);
   expect(meta.openGraph).toMatchObject({ title: meta.title, description: meta.description });
   expect(meta.twitter).toMatchObject({ title: meta.title, description: meta.description });
   expect(meta.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
@@ -131,7 +144,8 @@ it('keeps metadata available on a provider failure and excludes the English syno
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'English story.', language: 'en', source: 'tmdb' });
   vi.mocked(getAnimeAvailability).mockRejectedValue(new Error('Provider unavailable'));
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.description).toBe('Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. AniList 7,5/10.');
+  expect(meta.description).toContain('Example anime – dove vederlo. AniList 7,5/10.');
+  expect(meta.description).not.toContain('English story.');
 });
 
 
@@ -181,7 +195,8 @@ it.each([true, false])('shares the Italian description between metadata and JSON
   const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
   const structured = page.props.children[0].props.data;
   expect(structured.description).toBe(meta.description);
-  expect(structured.description).toBe(localized ? 'Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime. Una trama italiana.' : 'Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL di Example anime.');
+  expect(structured.description).toContain(localized ? 'Example anime – dove vederlo. Una trama italiana.' : 'Example anime – dove vederlo.');
+  expect(structured.description).not.toContain('English synopsis');
 });
 
 it.each(['it', 'en', 'es', 'fr', 'de', 'pt'] as const)('loads %s synopsis and emits localized detail SEO without client effects', async locale => {
