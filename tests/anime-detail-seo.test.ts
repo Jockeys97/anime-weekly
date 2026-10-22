@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { animeDetailSeo } from '../lib/anime-seo';
 import { animeAlternateNames } from '../lib/anime-titles';
 import { locales } from '../lib/locales';
-import { SITE_TITLE_SUFFIX } from '../lib/seo';
 import { animeStructuredData } from '../lib/structured-data';
-import { animeSeoExamples } from './fixtures/anime-detail-seo';
+import { animeSeoExamples, animeSeoRegressionExamples } from './fixtures/anime-detail-seo';
 
 const watchCopy = {
   it: ['dove vederlo', 'IMDb 7.2 e dove vederlo'],
@@ -23,7 +22,7 @@ describe.each(locales)('anime detail SEO (%s)', locale => {
       const seo = animeDetailSeo('Example', anime, '', locale, ratings);
       expect(seo.title).toContain(` – ${watch}`);
       expect(seo.description).toContain(` – ${watch}.`);
-      expect((seo.title + SITE_TITLE_SUFFIX).length).toBeLessThanOrEqual(65);
+      expect(seo.title.length).toBeLessThanOrEqual(65);
       if (!('imdbRating' in ratings)) expect(seo.title).not.toContain('IMDb');
     }
   });
@@ -33,7 +32,7 @@ describe.each(locales)('anime detail SEO (%s)', locale => {
     expect(seo.title).toMatch(/… – /);
     expect(seo.title.endsWith(watchCopy[locale][1])).toBe(true);
     expect(seo.description).toContain(`${watchCopy[locale][1]}.`);
-    expect((seo.title + SITE_TITLE_SUFFIX).length).toBeLessThanOrEqual(65);
+    expect(seo.title.length).toBeLessThanOrEqual(65);
     expect(seo.description.length).toBeLessThanOrEqual(160);
   });
 
@@ -41,7 +40,7 @@ describe.each(locales)('anime detail SEO (%s)', locale => {
     const name = names[locale];
     const seo = animeDetailSeo(name, anime, '', locale, ratings);
     const alternateName = animeAlternateNames(name, anime.title);
-    expect((seo.title + SITE_TITLE_SUFFIX).length).toBeLessThanOrEqual(65);
+    expect(seo.title.length).toBeLessThanOrEqual(65);
     expect(seo.description.length).toBeLessThanOrEqual(160);
     alternateName.forEach(alias => expect(seo.description).toContain(alias));
     expect(animeStructuredData(anime, name, seo.description, locale).alternateName).toEqual(alternateName);
@@ -81,4 +80,68 @@ it('ignores absent aliases, preserves valid 10/10 scores, synopsis and real upco
   expect(seo.title).toBe('Example – IMDb 10.0 & Where to Watch');
   expect(seo.description).toContain('Next episode 3');
   expect(seo.description).toContain('A short synopsis.');
+});
+
+describe.each(locales)('detail SEO regressions (%s)', locale => {
+  const seriesLabel = { it: 'serie', en: 'series', es: 'serie', fr: 'série', de: 'Serie', pt: 'série' }[locale];
+
+  it.each(animeSeoRegressionExamples)('labels only PREQUEL-related ratings and bounds fixture $anime.id', ({ anime, name, ratings }) => {
+    const seo = animeDetailSeo(name, anime, '', locale, ratings);
+    expect(seo.title.length).toBeLessThanOrEqual(65);
+    expect(seo.description.length).toBeLessThanOrEqual(160);
+    expect(seo.title).not.toContain('Weekly Anime');
+    if (ratings.imdbRating) {
+      const rating = `IMDb ${ratings.imdbRating}` + (anime.relations?.edges.length ? ` (${seriesLabel})` : '');
+      expect(seo.title).toContain(rating);
+      expect(seo.description).toContain(rating);
+    }
+    if (anime.id === 1) {
+      expect(seo.title).not.toContain(`(${seriesLabel})`);
+      expect(seo.description).not.toContain(`(${seriesLabel})`);
+    }
+    if (anime.id === 21) {
+      expect(seo.title).toContain('One Piece (ワンピース)');
+      expect(seo.description).toContain('One Piece (ワンピース)');
+      expect(animeStructuredData(anime, name, seo.description, locale).alternateName).toEqual(['ワンピース']);
+    }
+  });
+
+  it.each(['Season 3', 'Part 2', 'Cour III', '2nd Season', 'Final Season', 'Final Season Part 2', 'Swordsmith Village Arc', 'IV', 'Season III', 'Part 2: The Calamity'])('keeps the end of long names with %s', ending => {
+    const { anime, ratings } = animeSeoRegressionExamples[2];
+    const name = `The Apothecary Diaries ${'A long published subtitle '.repeat(8)}${ending}`;
+    const seo = animeDetailSeo(name, anime, '', locale, ratings);
+    const titleName = seo.title.split(' – ')[0];
+    const descriptionName = seo.description.split(' – ')[0];
+    expect(titleName).toContain('… ');
+    expect(titleName.endsWith(ending)).toBe(true);
+    expect(descriptionName.endsWith(ending)).toBe(true);
+    expect(seo.title.length).toBeLessThanOrEqual(65);
+    expect(seo.description.length).toBeLessThanOrEqual(160);
+  });
+});
+
+it('uses PREQUEL relations rather than a title heuristic, and requires a valid rating', () => {
+  const { anime } = animeSeoRegressionExamples[2];
+  for (const relationType of ['SEQUEL', 'ADAPTATION', 'SIDE_STORY']) {
+    const unrelated = { ...anime, relations: { edges: anime.relations!.edges.map(edge => ({ ...edge, relationType })) } };
+    expect(animeDetailSeo('Final Season', unrelated, '', 'en', { imdbRating: '8.6' }).title).not.toContain('(series)');
+  }
+  const unrated = animeDetailSeo('Example', anime, '', 'en', { imdbRating: 'N/A' });
+  expect(unrated.title).toMatch(/ – Where to Watch$/);
+  expect(unrated.title).not.toContain('IMDb');
+  expect(unrated.description).not.toMatch(/IMDb \d/);
+});
+
+it.each([null, ' ', 'One Piece', 'ＯＮＥ ＰＩＥＣＥ'])('uses only the first kana synonym for an absent or duplicate native title (%s)', native => {
+  const { anime } = animeSeoRegressionExamples[0];
+  expect(animeAlternateNames('One Piece', { ...anime.title, native }, anime.synonyms)).toEqual(['ワンピース']);
+});
+
+it('handles native duplicates of other titles and keeps a distinct native title', () => {
+  const titles = { english: 'English Name', romaji: 'Romaji Name', native: 'Romaji Name' };
+  const synonyms = ['Unrelated English', '漢字', 'ひらがな', 'カタカナ'];
+  expect(animeAlternateNames('Local Name', titles, synonyms)).toEqual(['English Name', 'Romaji Name', 'ひらがな']);
+  expect(animeAlternateNames('Local Name', { ...titles, native: '日本語' }, synonyms)).toEqual(['English Name', 'Romaji Name', '日本語']);
+  expect(animeAlternateNames('English Name', { ...titles, native: null }, ['Other English', '漢字'])).toEqual(['Romaji Name']);
+  expect(animeAlternateNames('ひらがな', { english: null, romaji: null, native: null }, ['ひらがな', 'カタカナ'])).toEqual([]);
 });

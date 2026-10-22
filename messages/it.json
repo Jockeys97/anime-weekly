@@ -512,6 +512,7 @@
     "watchTitle": "dove vederlo in streaming",
     "detailWatchTitle": "dove vederlo",
     "detailRatedWatchTitle": "IMDb {rating} e dove vederlo",
+    "detailSeriesRatedWatchTitle": "IMDb {rating} (serie) e dove vederlo",
     "detailContext": "Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL.",
     "animeYear": "{format} anime del {year}.",
     "animeScore": "Voto {score}/10.",

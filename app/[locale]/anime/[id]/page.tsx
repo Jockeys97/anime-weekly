@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const name = names[locale] || animeName(anime);
   const seo = animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability?.ratings);
   const metadata = pageMetadata(seo.title, seo.description, animePath(anime.id, name), anime.coverImage?.extraLarge || anime.coverImage?.large, locale);
+  metadata.title = { absolute: seo.title };
   metadata.alternates!.languages = animeLanguageAlternates(anime.id, animeName(anime), names, siteUrl());
   return metadata;
 }

@@ -512,6 +512,7 @@
     "watchTitle": "wo du es streamen kannst",
     "detailWatchTitle": "wo streamen",
     "detailRatedWatchTitle": "IMDb {rating} und wo streamen",
+    "detailSeriesRatedWatchTitle": "IMDb {rating} (Serie) und wo streamen",
     "detailContext": "Veröffentlichungstermine, Folgen, Streamingplattformen und IMDb/MAL-Wertungen.",
     "animeYear": "{format}-Anime aus {year}.",
     "animeScore": "Bewertung {score}/10.",

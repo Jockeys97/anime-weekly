@@ -33,6 +33,7 @@ describe('AniList catalog (offline)', () => {
     expect(body.query).toContain('idMal');
     expect(body.query).toContain('updatedAt');
     expect(body.query).toContain('averageScore');
+    expect(body.query).toMatch(/\bsynonyms\b/);
   });
 
   it('searches a trimmed title and skips blank searches', async () => {
@@ -89,6 +90,8 @@ describe('AniList catalog (offline)', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.variables).toEqual({ id: 21 });
     expect(body.query).toContain('Media(id: $id, type: ANIME)');
+    expect(body.query).toMatch(/\bsynonyms\b/);
+    expect(body.query).toMatch(/relations\s*\{\s*edges\s*\{\s*relationType/);
     expect(body.query).toContain('nextAiringEpisode { episode airingAt }');
     expect(body.query).toContain('trailer { id site }');
     expect(await getAnime(-1)).toBeNull();

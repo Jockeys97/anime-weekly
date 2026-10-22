@@ -4,7 +4,6 @@ import type { AniListAnime } from '@/lib/anilist';
 import type { DetailAvailability } from '@/lib/detail-availability';
 import type { Ratings } from '@/lib/ratings';
 import { animeAlternateNames } from '@/lib/anime-titles';
-import { SITE_TITLE_SUFFIX } from '@/lib/seo';
 
 const formats: Record<string, string> = {
   TV: 'Serie TV', TV_SHORT: 'Serie TV', MOVIE: 'Film', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Special',
@@ -19,7 +18,7 @@ function truncate(text: string, limit: number): string {
 }
 
 function namedPrefix(name: string, aliases: string[], limit: number): string {
-  if (name.length > limit) return truncate(name, limit);
+  if (name.length > limit) return truncateAnimeName(name, limit);
   const selected: string[] = [];
   for (const alias of aliases) {
     if (`${name} (${[...selected, alias].join(' / ')})`.length <= limit) selected.push(alias);
@@ -27,26 +26,39 @@ function namedPrefix(name: string, aliases: string[], limit: number): string {
   return selected.length ? `${name} (${selected.join(' / ')})` : name;
 }
 
+function truncateAnimeName(name: string, limit: number): string {
+  // Keep the identifying season/part and the end of the published name. This
+  // applies only to detail names, not synopsis text or other page formatters.
+  const marker = /\b(?:(?:season|part|cour|stagione|parte|temporada|saison|partie|staffel|teil)\s+(?:\d+|[ivxlcdm]+)\b|(?:\d+(?:st|nd|rd|th)|[ivxlcdm]+)\s+(?:season|part|cour)\b|(?:final|last)\s+(?:season|part|cour)\b|(?:[^\s:–—]+\s+){0,2}arc\b|[ivxlcdm]+\s*$)/i.exec(name);
+  if (!marker) return truncate(name, limit);
+  let tail = name.slice(marker.index).trim();
+  if (tail.length > limit - 4) {
+    tail = tail.slice(-(limit - 4)).replace(/^\S*\s/, '');
+  }
+  return `${truncate(name, limit - tail.length - 1)} ${tail}`;
+}
+
 // Ratings are supplied by the detail's existing shared loader. This formatter
 // performs no I/O and never treats the AniList/MAL score as an IMDb rating.
 export function animeDetailSeo(
   name: string,
-  anime: Parameters<typeof formatAnimeSeo>[1] & Pick<AniListAnime, 'title'>,
+  anime: Parameters<typeof formatAnimeSeo>[1] & Pick<AniListAnime, 'title' | 'relations' | 'synonyms'>,
   synopsis: string,
   locale: Locale,
   ratings: Ratings = {},
 ): { title: string; description: string } {
   name = compact(name);
-  const aliases = animeAlternateNames(name, anime.title);
+  const aliases = animeAlternateNames(name, anime.title, anime.synonyms);
   const d = getDictionary(locale).seo;
   const score = ratings.imdbRating?.trim() ? Number(ratings.imdbRating) : NaN;
+  const ratedWatch = anime.relations?.edges.some(edge => edge.relationType === 'PREQUEL')
+    ? d.detailSeriesRatedWatchTitle : d.detailRatedWatchTitle;
   const watch = Number.isFinite(score) && score > 0 && score <= 10
-    ? d.detailRatedWatchTitle.replace('{rating}', score.toFixed(1))
+    ? ratedWatch.replace('{rating}', score.toFixed(1))
     : d.detailWatchTitle;
   const suffix = ` – ${watch}`;
-  // Next appends the existing site template to <title>; OG/Twitter receive the
-  // page title. Reserve its space without duplicating it in either output.
-  const title = namedPrefix(name, aliases, 65 - SITE_TITLE_SUFFIX.length - suffix.length) + suffix;
+  // The detail page uses an absolute title, shared with OG/Twitter.
+  const title = namedPrefix(name, aliases, 65 - suffix.length) + suffix;
   const lead = namedPrefix(name, aliases, 160 - suffix.length - 1) + suffix + '.';
   const context = animeIntro(anime, { ...ratings, imdbRating: undefined }, locale);
   const tail = [context, compact(synopsis), d.detailContext].filter(Boolean).join(' ');

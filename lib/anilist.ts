@@ -18,6 +18,7 @@ export interface AniListAnime {
   updatedAt?: number | null;
   idMal: number | null;
   title: { romaji: string | null; english: string | null; native: string | null };
+  synonyms?: string[] | null;
   coverImage: { large: string | null; extraLarge: string | null; color: string | null } | null;
   bannerImage: string | null;
   description: string | null;
@@ -37,7 +38,7 @@ export interface AniListPage {
   pageInfo: { currentPage: number; hasNextPage: boolean };
 }
 
-const fields = `id idMal updatedAt title { romaji english native }
+const fields = `id idMal updatedAt title { romaji english native } synonyms
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } nextAiringEpisode { episode airingAt } episodes format status genres averageScore
   tags { name rank isMediaSpoiler }
@@ -144,6 +145,7 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
   return { media: data.Page.media, pageInfo: { currentPage: filters.page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }
 
+// Versioned for synonyms in detail payloads; keep the existing TTL and tags.
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const query = `query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }
@@ -165,7 +167,7 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   if (result.data?.Media === null) return null;
   if (response.status !== 200 || result.data?.Media?.id !== id) throw new Error('Anime details unavailable');
   return result.data.Media;
-}, ['anime-detail-v8-discovery-upstream'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v9-seo-synonyms'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;
