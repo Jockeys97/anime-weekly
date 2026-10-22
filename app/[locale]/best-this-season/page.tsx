@@ -37,7 +37,8 @@ export default async function BestThisSeason({ params }: { params?: LocaleParams
     if (!data.pageInfo.hasNextPage || !data.media.length) break;
   }
   const ranked = rankSeason(media, cached);
-  const genreLists = await getGenreLists().catch(() => null);
+  // Propagate catalog failures so ISR cannot cache a page without genre links.
+  const genreLists = await getGenreLists();
   // The weekly snapshot only covers this week's TMDB titles (and is empty when cold), so
   // look up real TMDB watch providers per ranked AniList title; cached per title for 1h.
   const platforms = ranked.length ? await getAnimePlatformMetadata(ranked.map(({ anime }) => anime)) : { titles: {}, unavailable: false };

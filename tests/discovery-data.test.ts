@@ -35,10 +35,12 @@ it('qualifies MAL ratings by their exact store key even without a weekly snapsho
   expect(getSeason).toHaveBeenCalledTimes(2);
 });
 
-it('keeps cold, stale, low-vote and unrelated MAL scores out of genre lists', async () => {
+it('falls back to the catalog score for cold, stale, low-vote and unrelated MAL ratings', async () => {
   const stores: RatingsStore['ratings'][] = [{}, { 'mal:101': stored({ malScore: 9, malScoredBy: 1000 }, 121) }, { 'mal:101': stored({ malScore: 9, malScoredBy: 999 }) }, { 'mal:999': stored({ malScore: 9, malScoredBy: 1000 }) }];
   for (const ratings of stores) {
     vi.mocked(readRatingsStore).mockResolvedValue({ ratings, sources: {} });
-    expect((await getGenreLists()).lists[0].items).toEqual([]);
+    const items = (await getGenreLists()).lists[0].items;
+    expect(items.map(item => item.anime.id)).toEqual([1]);
+    expect(items[0].sources).toEqual([{ name: 'AniList', score: 8.5, votes: 0, minimum: 0 }]);
   }
 });

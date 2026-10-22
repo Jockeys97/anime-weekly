@@ -16,7 +16,7 @@ export function DiscoveryList({ title, intro, rule, path, items, locale }: {
     <ol className="landing-list">{items.map(({ anime, sources }) => <li key={anime.id}>
       <h2><Link href={localePath(animePath(anime.id, animeName(anime)), locale)}>{animeName(anime)}</Link></h2>
       {anime.genres.length > 0 && <p>{anime.genres.join(' · ')}</p>}
-      {sources?.length ? <p>{sources.map(source => `${source.name} ${number.format(source.score)}/10 (${number.format(source.votes)})`).join(' · ')}</p> : null}
+      {sources?.length ? <p>{sources.map(source => `${source.name} ${number.format(source.score)}/10${source.votes > 0 ? ` (${number.format(source.votes)})` : ''}`).join(' · ')}</p> : null}
     </li>)}</ol>
   </main>;
 }

@@ -88,6 +88,13 @@ it('expands each qualifying sitemap group into six URLs and excludes short lists
   expect(await getDiscoverySitemap()).toHaveLength(6); // only the dated episode
 });
 
+it('propagates genre failures so a partial discovery sitemap cannot be cached', async () => {
+  const error = new Error('genre catalog unavailable');
+  vi.mocked(getGenreLists).mockRejectedValueOnce(error);
+  await expect(getDiscoverySitemap()).rejects.toBe(error);
+  expect(await getDiscoverySitemap()).toHaveLength(48);
+});
+
 it('omits both detail blocks on upstream errors', async () => {
   vi.mocked(getSimilarAnime).mockRejectedValue(new Error('offline'));
   vi.mocked(getRankingsWeek).mockRejectedValue(new Error('offline'));

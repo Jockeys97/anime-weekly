@@ -48,6 +48,14 @@ export function rankGenre(catalog: readonly AniListAnime[], genre: string, ratin
       { name: 'IMDb', score: Number(r.imdbRating), votes: imdbVoteCount(r.imdbVotes), minimum: MIN_IMDB_VOTES },
       { name: 'MyAnimeList', score: r.malScore ?? NaN, votes: r.malId === anime.idMal ? r.malScoredBy ?? 0 : 0, minimum: MIN_MAL_SCORED_BY },
     ].filter(s => Number.isFinite(s.score) && s.score > 0 && s.score <= 10 && Number.isSafeInteger(s.votes) && s.votes >= s.minimum);
+    // A fresh deployment has no weekly/provider ratings yet. The catalog's
+    // AniList average is already available, so no per-title enrichment is needed.
+    // Keep it a fallback: never dilute qualifying IMDb/MAL scores with it.
+    const average = anime.averageScore;
+    if (!sources.length && typeof average === 'number' && Number.isFinite(average) && average > 0 && average <= 100) {
+      const votes = anime.stats?.scoreDistribution?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0;
+      sources.push({ name: 'AniList', score: average / 10, votes: Number.isSafeInteger(votes) && votes >= 0 ? votes : 0, minimum: 0 });
+    }
     if (!sources.length) return [];
     return [{ anime, sources, score: sources.reduce((sum, s) => sum + s.score, 0) / sources.length, votes: sources.reduce((sum, s) => sum + s.votes, 0) }];
   }).sort((a, b) => b.score - a.score || b.votes - a.votes || a.anime.id - b.anime.id);

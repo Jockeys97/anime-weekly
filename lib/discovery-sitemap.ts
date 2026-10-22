@@ -12,7 +12,9 @@ import { siteUrl } from '@/lib/seo';
 
 export async function getDiscoverySitemap(now = new Date(), base = siteUrl()): Promise<MetadataRoute.Sitemap> {
   const catalog = await getDiscoveryCatalog();
-  const [events, genres] = await Promise.all([getSitemapEpisodes(catalog, now).catch(() => []), getGenreLists().catch(() => null)]);
+  // Fail the regeneration on upstream errors: a partial success would remove
+  // previously published URLs from the cached discovery shard.
+  const [events, genres] = await Promise.all([getSitemapEpisodes(catalog, now), getGenreLists()]);
   const entries: MetadataRoute.Sitemap = [];
   const byId = new Map(catalog.map(anime => [anime.id, anime]));
   const suffixes = new Map<number, string[]>();
@@ -33,7 +35,7 @@ export async function getDiscoverySitemap(now = new Date(), base = siteUrl()): P
       for (const locale of locales) entries.push({ url: languages[locale], alternates: { languages }, changeFrequency: 'daily' });
     }
   }
-  for (const list of genres?.lists ?? []) if (listVisibility(list.items.length) === 'index') {
+  for (const list of genres.lists) if (listVisibility(list.items.length) === 'index') {
     const languages = languageAlternates(genrePath(list.genre), base);
     for (const locale of locales) entries.push({ url: languages[locale], alternates: { languages }, changeFrequency: 'daily' });
   }

@@ -577,10 +577,10 @@
     "similarIntro": "{count} anime de {season} con géneros, etiquetas o recomendaciones de AniList relacionados con {title}. Primer resultado: {top}.",
     "allSimilar": "Ver todos los anime similares",
     "genreTitle": "Mejores anime de {genre} de la temporada · {season}",
-    "genreIntro": "{count} anime de {genre} en {season} con puntuaciones válidas de IMDb o MyAnimeList. Primer título: {top}.",
+    "genreIntro": "{count} anime de {genre} en {season} ordenados por puntuaciones de IMDb, MyAnimeList o AniList. Primer título: {top}.",
     "ranking": "En el ranking de esta semana",
     "position": "{source}: n.º {rank} · {week}",
     "similarRule": "El orden considera géneros y etiquetas, recomendaciones de AniList y puntuación.",
-    "genreRule": "Solo puntuaciones de IMDb y MyAnimeList con al menos {count} votos por fuente. Se promedian las puntuaciones válidas disponibles."
+    "genreRule": "Las puntuaciones de IMDb y MyAnimeList requieren al menos {count} votos por fuente; se promedian las puntuaciones válidas. Si ninguna cumple el requisito, se usa la puntuación media de AniList convertida a una escala de 10."
   }
 }

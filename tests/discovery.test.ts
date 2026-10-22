@@ -54,8 +54,8 @@ it('composes metadata titles from translations and real values in every locale',
   }
   expect(episodeTitle('Frieren', 7, 'en')).toBe('Frieren episode 7: release date, time and where to watch');
 });
-it('requires source-specific actual vote thresholds and uses only IMDb/MAL for genres', () => {
-  const catalog = [anime(1), anime(2), anime(3), anime(4, ['Romance']), anime(5)];
+it('requires source-specific actual vote thresholds for IMDb/MAL genre scores', () => {
+  const catalog = [anime(1), anime(2), anime(3), anime(4, ['Romance']), anime(5)].map(a => ({ ...a, averageScore: null }));
   const ranked = rankGenre(catalog, 'Action', {
     1: { imdbRating: '9', imdbVotes: '999', malScore: 10, malId: 1, malScoredBy: 999 },
     2: { imdbRating: '8', imdbVotes: '1,000', malScore: 9, malId: 2, malScoredBy: 1000 },
@@ -65,6 +65,24 @@ it('requires source-specific actual vote thresholds and uses only IMDb/MAL for g
   });
   expect(ranked.map(row => row.anime.id)).toEqual([3, 2]);
   expect(ranked[1].score).toBe(8.5);
+});
+it('uses the catalog AniList average only when no IMDb/MAL score qualifies', () => {
+  const catalog = [anime(1, ['Action'], 85), anime(2, ['Action'], 100), anime(3, ['Action'], 90)];
+  const ranked = rankGenre(catalog, 'Action', {
+    1: { imdbRating: '10', imdbVotes: '999', malId: 1, malScore: 10, malScoredBy: 999 },
+    2: { imdbRating: '8', imdbVotes: '1,000', malId: 2, malScore: 9, malScoredBy: 1000 },
+    3: { malId: 999, malScore: 10, malScoredBy: 10000 },
+  });
+  expect(ranked.map(row => [row.anime.id, row.score])).toEqual([[3, 9], [2, 8.5], [1, 8.5]]);
+  expect(ranked[2].sources).toEqual([{ name: 'AniList', score: 8.5, votes: 0, minimum: 0 }]);
+  expect(ranked[1].sources.map(source => source.name)).toEqual(['IMDb', 'MyAnimeList']);
+});
+it('excludes missing or invalid AniList scores and uses real AniList vote counts to break ties', () => {
+  const invalid = [null, 0, -1, NaN, Infinity, 101].map((score, i) => ({ ...anime(i + 10), averageScore: score }));
+  const catalog = [...invalid, anime(1), { ...anime(2), stats: { scoreDistribution: [{ amount: 20 }, { amount: 5 }] } }, anime(3, ['Romance'])];
+  const ranked = rankGenre(catalog, 'Action', {});
+  expect(ranked.map(row => row.anime.id)).toEqual([2, 1]);
+  expect(ranked[0].votes).toBe(25);
 });
 it('ranks by real genre/tag overlap, recommendations and score, excluding self and unrelated titles', () => {
   const source = { ...anime(1), tags: [{ name: 'Ninja', rank: 90 }], recommendations: { nodes: [{ rating: 10, mediaRecommendation: { id: 3 } }] } };
