@@ -22,7 +22,9 @@ const { anime, snapshot, weekData } = vi.hoisted(() => ({
 // All data here are isolated fixtures; no production facts or network calls.
 vi.mock('server-only', () => ({}));
 vi.mock('next/server', () => ({ connection: async () => {} }));
-vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getAnime: async () => anime, getSeason: async () => ({ media: [anime], pageInfo: { currentPage: 1, hasNextPage: false } }) }));
+vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
+vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getAnime: async () => anime, getSeason: async (year: number, season: string, page = 1) => ({ media: [{ ...anime, seasonYear: year, season: season.toUpperCase() }], pageInfo: { currentPage: page, hasNextPage: false } }) }));
+vi.mock('../lib/platform-metadata', () => ({ getAnimePlatformMetadata: async () => ({ titles: {}, unavailable: false }) }));
 vi.mock('../lib/anime-detail-data', () => ({ getAnimeDetailData: async () => ({ ratings: {}, availability: { ratings: {}, providers: {} }, synopsis: {} }) }));
 vi.mock('../lib/weekly-ratings', () => ({ getWeeklyRatings: async () => snapshot, readWeeklyRatingsSnapshot: async () => snapshot, trackWeeklyPage: async () => {} }));
 vi.mock('../lib/tmdb', () => ({ getQuickWeekData: async () => weekData }));
