@@ -580,8 +580,6 @@
     "similarTitle": "Anime similaires à {title}",
     "similarIntro": "{count} anime de {season} avec des genres, tags ou recommandations AniList liés à {title}. Premier résultat : {top}.",
     "allSimilar": "Voir tous les anime similaires",
-    "airingThisWeek": "En diffusion cette semaine",
-    "allThisWeek": "Voir tous les anime de cette semaine",
     "genreTitle": "Meilleurs anime de genre {genre} de la saison · {season}",
     "genreIntro": "{count} anime de genre {genre} en {season} classés selon les notes IMDb, MyAnimeList ou AniList. Premier titre : {top}.",
     "ranking": "Dans le classement de cette semaine",

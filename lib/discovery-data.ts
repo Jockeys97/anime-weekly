@@ -7,7 +7,7 @@ import { CACHE_TAG } from '@/lib/config';
 import { rankGenre, rankSimilar } from '@/lib/discovery';
 import { readRatingsStore } from '@/lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
-import { formatWeek, isoWeek, weekRange } from '@/lib/week';
+import { formatWeek, isoWeek } from '@/lib/week';
 import type { Ratings } from '@/lib/ratings';
 
 // Cache only a successful crawl, never raw HTTP/GraphQL error responses. This
@@ -55,24 +55,6 @@ export const getDiscoveryCatalog = cache(async () => {
   return catalog(year, season);
 });
 export const getSimilarAnime = cache(async (anime: AniListAnime) => rankSimilar(anime, await getDiscoveryCatalog()));
-
-// Read the cron-populated schedule only: a cold snapshot must never trigger
-// schedule fetching or per-title enrichment from a detail-page request.
-export const getAiringThisWeekAnime = cache(async () => {
-  const week = isoWeek(new Date());
-  const snapshot = await readWeeklyRatingsSnapshot(formatWeek(week));
-  const start = weekRange(week).monday.getTime() / 1000;
-  const events = snapshot.events.filter(event => Number.isSafeInteger(event.airingAt)
-    && Number.isSafeInteger(event.episode) && event.episode > 0
-    && event.airingAt >= start && event.airingAt < start + 7 * 86400)
-    .sort((a, b) => a.airingAt - b.airingAt || a.mediaId - b.mediaId);
-  if (!events.length) return [];
-  const catalog = new Map((await getDiscoveryCatalog()).map(anime => [anime.id, anime]));
-  return [...new Set(events.map(event => event.mediaId))].flatMap(id => {
-    const anime = catalog.get(id);
-    return anime ? [anime] : [];
-  });
-});
 
 export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {
   const season = currentSeason();

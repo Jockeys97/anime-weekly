@@ -11,8 +11,7 @@ vi.mock('@/lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));
 import { getSeason } from '@/lib/anilist';
 import { readRatingsStore } from '@/lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
-import { getDiscoveryCatalog, getGenreLists, getAiringThisWeekAnime, getSimilarAnime } from '@/lib/discovery-data';
-import { formatWeek, isoWeek, weekRange } from '@/lib/week';
+import { getDiscoveryCatalog, getGenreLists, getSimilarAnime } from '@/lib/discovery-data';
 
 const now = new Date('2026-10-21T12:00:00Z');
 const anime = { id: 1, idMal: 101, season: 'FALL', seasonYear: 2026, genres: ['Action'], averageScore: 85 } as AniListAnime;
@@ -28,28 +27,15 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-it('reads this week from the saved schedule, deduplicates titles and reuses the similarity catalog', async () => {
-  const start = weekRange(isoWeek(now)).monday.getTime() / 1000;
-  const event = (id: number, mediaId: number, airingAt = start, episode = 1) => ({ id, mediaId, airingAt, episode });
-  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [
-    event(1, 2, start + 10), event(2, 1), event(3, 1, start + 20, 2),
-    event(4, 3, start - 1), event(5, 4, start + 7 * 86400),
-    event(6, 5, start, 0), event(7, 999), event(8, 6, NaN),
-  ] });
+it('ranks similar titles from the shared catalog without loading the weekly schedule', async () => {
   vi.mocked(getSeason).mockImplementation(async (_year, season, page = 1) => ({
     media: season === 'fall' ? Array.from({ length: 6 }, (_, i) => ({ ...anime, id: i + 1 })) : [],
     pageInfo: { currentPage: page, hasNextPage: false },
   }));
-  const [airing, similar] = await Promise.all([getAiringThisWeekAnime(), getSimilarAnime(anime)]);
-  expect(airing.map(item => item.id)).toEqual([1, 2]);
+  const similar = await getSimilarAnime(anime);
   expect(similar.map(item => item.anime.id)).toEqual([2, 3, 4, 5, 6]);
-  expect(readWeeklyRatingsSnapshot).toHaveBeenCalledWith(formatWeek(isoWeek(now)));
-  expect(getSeason).toHaveBeenCalledTimes(2); // One shared crawl, no per-title lookups.
-});
-
-it('does not load the catalog or fetch a schedule when the weekly snapshot is cold', async () => {
-  expect(await getAiringThisWeekAnime()).toEqual([]);
-  expect(getSeason).not.toHaveBeenCalled();
+  expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
+  expect(getSeason).toHaveBeenCalledTimes(2);
 });
 
 it('qualifies MAL ratings by their exact store key even without a weekly snapshot or identity in provider values', async () => {
