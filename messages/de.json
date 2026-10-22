@@ -510,6 +510,9 @@
     "platformEmpty": "Keine Anime für diese Plattform und dieses Land verfügbar.",
     "platformUnavailable": "Der Katalog ist derzeit nicht verfügbar. Versuche es später erneut.",
     "watchTitle": "wo du es streamen kannst",
+    "detailWatchTitle": "wo streamen",
+    "detailRatedWatchTitle": "IMDb {rating} und wo streamen",
+    "detailContext": "Veröffentlichungstermine, Folgen, Streamingplattformen und IMDb/MAL-Wertungen.",
     "animeYear": "{format}-Anime aus {year}.",
     "animeScore": "Bewertung {score}/10.",
     "animeFallback": "Handlung, Bewertungen und Streamingangebote für {name}."

@@ -510,6 +510,9 @@
     "platformEmpty": "Nenhum anime disponível nesta plataforma e país.",
     "platformUnavailable": "O catálogo está indisponível. Tenta mais tarde.",
     "watchTitle": "onde ver em streaming",
+    "detailWatchTitle": "onde assistir",
+    "detailRatedWatchTitle": "IMDb {rating} e onde assistir",
+    "detailContext": "Calendário de lançamentos, episódios, plataformas de streaming e notas IMDb/MAL.",
     "animeYear": "Anime {format} de {year}.",
     "animeScore": "Nota {score}/10.",
     "animeFallback": "Sinopse, avaliações e onde ver {name}."

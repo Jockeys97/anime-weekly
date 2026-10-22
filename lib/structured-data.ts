@@ -6,6 +6,7 @@ import type { Locale } from '@/lib/locales';
 import { getDictionary } from '@/lib/i18n';
 import { parseSeason, seasonPath, type AnimeSeason } from '@/lib/season';
 import { siteUrl } from '@/lib/seo';
+import { animeAlternateNames } from '@/lib/anime-titles';
 
 type Breadcrumb = { name: string; path: string };
 export const homeBreadcrumb: Breadcrumb = { name: 'Home', path: '/' };
@@ -64,11 +65,13 @@ export function animeStructuredData(anime: AniListAnime, name: string, descripti
   const url = new URL(localePath(animePath(anime.id, name), locale), siteUrl()).href;
   const start = animeStartDate(anime.startDate);
   const next = nextAnimeEpisode(anime);
+  const alternateName = animeAlternateNames(name, anime.title);
   const buckets = anime.stats?.scoreDistribution;
   const ratingCount = buckets?.length && buckets.every(bucket => Number.isSafeInteger(bucket.amount) && bucket.amount >= 0)
     ? buckets.reduce((sum, bucket) => sum + bucket.amount, 0) : undefined;
   return {
     '@context': 'https://schema.org', '@type': anime.format === 'MOVIE' ? 'Movie' : 'TVSeries', name, url, description,
+    ...(alternateName.length ? { alternateName } : {}),
     image: anime.coverImage?.extraLarge || anime.coverImage?.large || undefined, genre: anime.genres,
     ...(start ? { datePublished: start, ...(anime.format !== 'MOVIE' ? { startDate: start } : {}) } : {}),
     ...(Number.isSafeInteger(anime.episodes) && anime.episodes! > 0 && anime.format !== 'MOVIE' ? { numberOfEpisodes: anime.episodes } : {}),
