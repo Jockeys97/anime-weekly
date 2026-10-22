@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isLocale, negotiateLocale } from '@/lib/locales';
-import { landingRoute, localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
+import { discoveryInternalPath, landingRoute, localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
 
 const bots = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview/i;
 export function proxy(request: NextRequest) {
@@ -35,6 +35,13 @@ export function proxy(request: NextRequest) {
       return NextResponse.rewrite(destination);
     }
   }
+  const discovery = discoveryInternalPath(pathname);
+  if (discovery) {
+    const destination = request.nextUrl.clone();
+    const canonical = localePath(discovery, locale);
+    destination.pathname = pathname !== canonical ? canonical : `/${locale}${discovery}`;
+    return pathname !== canonical ? NextResponse.redirect(destination, 308) : NextResponse.rewrite(destination);
+  }
   const imageSuffix = pathname.endsWith('/opengraph-image') ? '/opengraph-image' : '';
   const landing = landingRoute(imageSuffix ? pathname.slice(0, -imageSuffix.length) : pathname);
   if (landing) {
@@ -60,5 +67,5 @@ export function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/rankings/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/tier-list', '/this-week', '/best-this-season', '/questa-settimana', '/migliori-della-stagione', '/esta-semana', '/mejores-de-la-temporada', '/cette-semaine', '/meilleurs-de-la-saison', '/diese-woche', '/beste-der-saison', '/melhores-da-temporada'],
+  matcher: ['/', '/(en|it|es|fr|de|pt)', '/(en|it|es|fr|de|pt)/:path*', '/rankings/:path*', '/week/:path*', '/season/:path*', '/anime/:path*', '/piattaforma/:path*', '/search', '/my-anime', '/tier-list', '/this-week', '/best-this-season/:path*', '/questa-settimana', '/migliori-della-stagione/:path*', '/esta-semana', '/mejores-de-la-temporada/:path*', '/cette-semaine', '/meilleurs-de-la-saison/:path*', '/diese-woche', '/beste-der-saison/:path*', '/melhores-da-temporada/:path*'],
 };

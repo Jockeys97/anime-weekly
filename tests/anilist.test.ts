@@ -46,6 +46,19 @@ describe('AniList catalog (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('bypasses raw fetch caching for discovery so HTTP 200 GraphQL failures can recover immediately', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ errors: [{ message: 'Temporarily unavailable' }] }))
+      .mockResolvedValueOnce(Response.json({ data: { Page: { media: [anime], pageInfo: { hasNextPage: false } } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getSeason } = await import('../lib/anilist');
+    expect((await getSeason(2026, 'fall', 1, { fresh: true })).unavailable).toBe(true);
+    const pending = getSeason(2026, 'fall', 1, { fresh: true });
+    await vi.runAllTimersAsync();
+    expect((await pending).media).toEqual([anime]);
+    expect(fetchMock.mock.calls.every(([, init]) => init.cache === 'no-store' && init.next === undefined)).toBe(true);
+  });
+
   it('loads bounded season-family results with prequel edges in one request', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: { media: [anime] } } }));
     vi.stubGlobal('fetch', fetchMock);

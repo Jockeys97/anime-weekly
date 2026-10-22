@@ -21,6 +21,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { AnimeWeekLinks } from '@/components/AnimeWeekLinks';
 import { animeIntro, animeScheduleSeo } from '@/lib/anime-seo';
 
@@ -67,7 +68,7 @@ export default async function AnimePage({ params }: Props) {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const structured = animeStructuredData(anime, name, animeScheduleSeo(name, anime, localizedSynopsis(synopsis, locale), locale).description, locale);
   return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name, locale)} />
-    <AnimeDetailView anime={anime} localizedNames={names} weekLinks={<Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
+    <AnimeDetailView anime={anime} localizedNames={names} weekLinks={<><Suspense fallback={null}><AnimeSimilarBlock anime={anime} name={name} locale={locale} /></Suspense><Suspense fallback={null}><AnimeCurrentRanking id={anime.id} locale={locale} /></Suspense><Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense></>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}

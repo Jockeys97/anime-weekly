@@ -9,6 +9,8 @@ import { isSeason, type Season } from '@/lib/season';
 
 export const ANILIST_REVALIDATE = 86400;
 export interface AniListAnime {
+  tags?: { name: string; rank: number; isMediaSpoiler?: boolean }[];
+  recommendations?: { nodes?: { rating?: number; mediaRecommendation?: { id: number } | null }[] };
   relations?: { edges: { relationType: string; node: { id: number; type: string; format: string | null; title: AniListAnime['title']; startDate: { year: number | null } | null } }[] };
   trailer?: AnimeTrailer | null;
   nextAiringEpisode?: { episode: number; airingAt: number } | null;
@@ -38,6 +40,8 @@ export interface AniListPage {
 const fields = `id idMal updatedAt title { romaji english native }
   coverImage { large extraLarge color } bannerImage description
   startDate { year month day } nextAiringEpisode { episode airingAt } episodes format status genres averageScore
+  tags { name rank isMediaSpoiler }
+  recommendations(perPage: 25, sort: RATING_DESC) { nodes { rating mediaRecommendation { id } } }
   stats { scoreDistribution { amount } }
   studios(isMain: true) { nodes { id name } } season seasonYear
   trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
@@ -57,7 +61,7 @@ async function graphql<T>(query: string, variables: Record<string, string | numb
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ query, variables }),
-      ...(options.fresh ? { cache: 'no-store' as const } : { next: { revalidate: ANILIST_REVALIDATE } }),
+      ...(options.fresh ? { cache: 'no-store' as const, next: undefined } : { next: { revalidate: ANILIST_REVALIDATE } }),
     }, options.maxWaitMs);
     if (!response.ok) return null;
     const result = await response.json() as { data?: T; errors?: unknown[] };
@@ -161,7 +165,7 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   if (result.data?.Media === null) return null;
   if (response.status !== 200 || result.data?.Media?.id !== id) throw new Error('Anime details unavailable');
   return result.data.Media;
-}, ['anime-detail-v6-next-airing'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v8-discovery-upstream'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;

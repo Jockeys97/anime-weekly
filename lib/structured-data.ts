@@ -86,3 +86,16 @@ export function animeStructuredData(anime: AniListAnime, name: string, descripti
 export function organization() {
   return { '@context': 'https://schema.org', '@type': 'Organization', name: 'Weekly Anime', url: siteUrl().href, logo: new URL('/icon.svg', siteUrl()).href };
 }
+
+export function episodeStructuredData(anime: AniListAnime, name: string, event: { episode: number; airingAt: number }, locale: Locale, score?: import('@/lib/episode-chart').ChartEpisode | null) {
+  const seriesUrl = new URL(localePath(animePath(anime.id, name), locale), siteUrl()).href;
+  return {
+    '@context': 'https://schema.org', '@type': 'TVEpisode',
+    name: `${name} · ${getDictionary(locale).discovery.episode.replace('{n}', String(event.episode))}`,
+    episodeNumber: event.episode,
+    url: new URL(localePath(`${animePath(anime.id, name)}/episode-${event.episode}`, locale), siteUrl()).href,
+    datePublished: new Date(event.airingAt * 1000).toISOString(),
+    partOfSeries: { '@type': 'TVSeries', name, url: seriesUrl, '@id': seriesUrl },
+    ...(score ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: score.score, bestRating: 10, worstRating: 1, ratingCount: score.votes } } : {}),
+  };
+}

@@ -570,5 +570,23 @@
     "animeDescription": "Release schedule, episodes, streaming platforms and IMDb/MAL scores for {name}.",
     "currentTitle": "Top airing anime this week · {week}",
     "currentDescription": "This week’s airing anime rankings ({week}), with IMDb and MyAnimeList scores and vote counts."
+  },
+  "discovery": {
+    "episodeTitle": "{title} episode {n}: release date, time and where to watch",
+    "episode": "Episode {n}",
+    "release": "Release date and time",
+    "previous": "Previous episode",
+    "next": "Next episode",
+    "anime": "Anime page",
+    "similar": "Similar anime",
+    "similarTitle": "Anime similar to {title}",
+    "similarIntro": "{count} anime from {season} with genres, tags or AniList recommendations related to {title}. Top result: {top}.",
+    "allSimilar": "See all similar anime",
+    "genreTitle": "Best {genre} anime of the season · {season}",
+    "genreIntro": "{count} {genre} anime in {season} ranked by IMDb, MyAnimeList or AniList scores. Top title: {top}.",
+    "ranking": "In this week’s ranking",
+    "position": "{source}: #{rank} · {week}",
+    "similarRule": "Genres and tags, AniList recommendations and score determine the order.",
+    "genreRule": "IMDb and MyAnimeList scores qualify with at least {count} votes per source; qualifying scores are averaged. When neither qualifies, the AniList average score is used, converted to /10."
   }
 }

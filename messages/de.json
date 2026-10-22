@@ -564,5 +564,23 @@
     "animeDescription": "Sendeplan, Folgen, Streaming-Plattformen und IMDb/MAL-Wertungen für {name}.",
     "currentTitle": "Beste Anime dieser Woche · {week}",
     "currentDescription": "Ranglisten der laufenden Anime dieser Woche ({week}), mit IMDb- und MyAnimeList-Wertungen und Stimmenzahlen."
+  },
+  "discovery": {
+    "episodeTitle": "{title} Folge {n}: Erscheinungsdatum, Uhrzeit und Streaming",
+    "episode": "Folge {n}",
+    "release": "Erscheinungsdatum und Uhrzeit",
+    "previous": "Vorherige Folge",
+    "next": "Nächste Folge",
+    "anime": "Anime-Seite",
+    "similar": "Ähnliche Anime",
+    "similarTitle": "Ähnliche Anime wie {title}",
+    "similarIntro": "{count} Anime aus {season} mit Genres, Tags oder AniList-Empfehlungen zu {title}. Erstes Ergebnis: {top}.",
+    "allSimilar": "Alle ähnlichen Anime",
+    "genreTitle": "Beste {genre}-Anime der Saison · {season}",
+    "genreIntro": "{count} {genre}-Anime in {season}, geordnet nach IMDb-, MyAnimeList- oder AniList-Bewertungen. Führender Titel: {top}.",
+    "ranking": "In der Rangliste dieser Woche",
+    "position": "{source}: Platz {rank} · {week}",
+    "similarRule": "Genres und Tags, AniList-Empfehlungen und Bewertung bestimmen die Reihenfolge.",
+    "genreRule": "IMDb- und MyAnimeList-Bewertungen zählen ab {count} Stimmen pro Quelle; gültige Bewertungen werden gemittelt. Erfüllt keine diese Bedingung, wird die AniList-Durchschnittsbewertung auf eine Skala von 10 umgerechnet."
   }
 }

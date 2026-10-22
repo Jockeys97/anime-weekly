@@ -8,12 +8,13 @@ vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), animeName: (item: { title
 vi.mock('@vercel/blob', () => ({ get: vi.fn(), put: vi.fn() }));
 import { getSeason } from '../lib/anilist';
 import { get, put } from '@vercel/blob';
-import sitemap, { generateSitemaps } from '../app/sitemaps/sitemap';
+import sitemap, { generateSitemaps } from '../lib/sitemap-shards';
 import { GET } from '../app/sitemap.xml/route';
 import { getSitemapCatalog } from '../lib/sitemap-catalog';
 import robots from '../app/robots';
 import { buildAnimeSitemap, buildSitemap, sitemapUrls } from '../lib/seo-sitemap';
 import { serializeJsonLd, siteUrl } from '../lib/seo';
+import { serializeSitemap } from '../lib/sitemap-xml';
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.resetAllMocks(); });
 describe('SEO sitemap', () => {
   it('includes weeks across year boundaries, three calendar years, platforms and valid unique anime', () => {
@@ -102,9 +103,10 @@ describe('SEO sitemap', () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://anime.example');
     vi.mocked(getSeason).mockResolvedValue({ media: [], pageInfo: { currentPage: 1, hasNextPage: false } });
-    expect(generateSitemaps()).toEqual(['pages', '2024', '2025', '2026'].map(id => ({ id })));
+    expect(generateSitemaps()).toEqual(['pages', 'discovery', '2024', '2025', '2026'].map(id => ({ id })));
     expect(sitemapUrls()).toEqual([
       'https://anime.example/sitemaps/sitemap/pages.xml',
+      'https://anime.example/sitemaps/sitemap/discovery.xml',
       'https://anime.example/sitemaps/sitemap/2024.xml',
       'https://anime.example/sitemaps/sitemap/2025.xml',
       'https://anime.example/sitemaps/sitemap/2026.xml',
@@ -148,6 +150,17 @@ describe('SEO sitemap', () => {
     const data = { name: '</script><script>alert(1)</script>' };
     expect(serializeJsonLd(data)).not.toContain('<');
     expect(JSON.parse(serializeJsonLd(data))).toEqual(data);
+  });
+  it('serializes sitemap URLs, dates and hreflang with XML escaping', () => {
+    const xml = serializeSitemap([{
+      url: 'https://example.com/?a=1&b=2',
+      alternates: { languages: { en: 'https://example.com/en?name="A&B"' } },
+      lastModified: new Date('2026-10-21T12:00:00Z'), changeFrequency: 'daily', priority: 0,
+    }]);
+    expect(xml).toContain('<loc>https://example.com/?a=1&amp;b=2</loc>');
+    expect(xml).toContain('href="https://example.com/en?name=&quot;A&amp;B&quot;"');
+    expect(xml).toContain('<lastmod>2026-10-21T12:00:00.000Z</lastmod>');
+    expect(xml).toContain('<changefreq>daily</changefreq><priority>0</priority>');
   });
 });
 
