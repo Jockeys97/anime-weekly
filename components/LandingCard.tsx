@@ -8,10 +8,12 @@ function Chip({ name, logo }: { name: string; logo: string | null }) {
   return <span className="landing-chip">{logo && <Image src={`https://image.tmdb.org/t/p/w92${logo}`} alt="" width={18} height={18} loading="lazy" />}<span>{name}</span></span>;
 }
 /** Server-rendered landing card sharing the homepage `.anime-card` poster/body layout. */
-export function LandingCard({ locale, href, name, poster, typeLabel, ratings, primary, others, badge, aside, headingLevel = 3 }: { locale: Locale; href: string; name: string; poster: string | null; typeLabel?: string; ratings: string; primary: LandingCountry | null; others: LandingCountry[]; badge?: ReactNode; aside?: ReactNode; headingLevel?: 2 | 3 }) {
+export function LandingCard({ locale, href, name, poster, typeLabel, ratings, primary, others, badge, aside, headingLevel = 3, compact = false }: { locale: Locale; href: string; name: string; poster: string | null; typeLabel?: string; ratings: string; primary: LandingCountry | null; others: LandingCountry[]; badge?: ReactNode; aside?: ReactNode; headingLevel?: 2 | 3; compact?: boolean }) {
   const d = getDictionary(locale); const Heading = headingLevel === 2 ? 'h2' : 'h3';
-  return <article className="anime-card landing-anime-card">
-    <Link href={href} prefetch={false} className="poster" aria-label={name}>{poster ? <Image src={poster} alt={name} fill loading="lazy" sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}</Link>
+  return <article className={`anime-card landing-anime-card${compact ? ' landing-anime-card-compact' : ''}`}>
+    <Link href={href} prefetch={false} className="poster" aria-label={name}>{poster ? compact
+      ? <Image src={poster} alt="" width={72} height={108} unoptimized loading="lazy" />
+      : <Image src={poster} alt={name} fill loading="lazy" sizes="(max-width: 600px) 95px, 135px" /> : <span>{d.state.noPoster}</span>}</Link>
     <div className="card-body">
       {(badge || typeLabel) && <span className="type-label">{badge}{typeLabel}</span>}
       <Heading><Link href={href} prefetch={false}>{name}</Link></Heading>
