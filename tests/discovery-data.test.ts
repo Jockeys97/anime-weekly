@@ -56,7 +56,7 @@ it('shares simultaneous cold crawls across requests and locales, with one upstre
   const results = await Promise.all(Array.from({ length: 20 }, () => getDiscoveryCatalog()));
   expect(results.every(result => result[0].id === anime.id)).toBe(true);
   expect(getSeason).toHaveBeenCalledTimes(2);
-  expect(vi.mocked(getSeason).mock.calls.every(call => call[3]?.cache === 'no-store')).toBe(true);
+  expect(vi.mocked(getSeason).mock.calls.every(call => call[3]?.fresh === true)).toBe(true);
 });
 
 it('accepts a real season extending beyond ten pages without dropping previously collected titles', async () => {

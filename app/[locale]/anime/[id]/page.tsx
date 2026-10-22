@@ -9,7 +9,8 @@ import { LocalizedSynopsis } from '@/components/LocalizedSynopsis';
 import { AnimeRatingTile, ImdbRatingTile, MyAnimeListRatingTile } from '@/components/RatingSummary';
 import { StreamingAvailability } from '@/components/StreamingAvailability';
 import type { SynopsisResult } from '@/lib/synopsis-client';
-import { animeDescription, animeName, getAnime } from '@/lib/anilist';
+import { animeDescription, animeName } from '@/lib/anilist';
+import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
 import { getAnimeDetailData } from '@/lib/anime-detail-data';
 import type { Locale } from '@/lib/i18n';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
@@ -33,7 +34,9 @@ export function generateStaticParams() { return []; }
 const loadAnime = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (numericId === null) notFound();
-  const anime = await getAnime(numericId);
+  // Snapshot reads lower ISR to five minutes when live details fail or return
+  // not-found. A failure without a saved copy still throws a transient error.
+  const anime = await getAnimeWithSnapshot(numericId);
   if (!anime) notFound();
   return anime;
 });

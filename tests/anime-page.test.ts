@@ -1,6 +1,7 @@
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
 vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: vi.fn().mockResolvedValue([]) }));
 vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
+vi.mock('../lib/anilist-snapshot', () => ({ findSnapshotAnime: vi.fn().mockResolvedValue(null) }));
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
@@ -12,8 +13,10 @@ vi.mock('../lib/ratings-store', () => ({ readRatingsStore: async () => ({ rating
 vi.mock('../lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: async () => ({ titles: {}, events: [] }) }));
 vi.mock('../lib/tmdb', () => ({ getAnimeAvailability: vi.fn() }));
 import { getAnime } from '../lib/anilist';
+import { findSnapshotAnime } from '../lib/anilist-snapshot';
 import { getSynopsis } from '../lib/synopsis';
 beforeEach(() => {
+  vi.mocked(findSnapshotAnime).mockResolvedValue(null);
   vi.mocked(getSynopsis).mockResolvedValue({ synopsis: null, language: null, source: null });
   vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
 });
@@ -153,6 +156,19 @@ it('propagates AniList failures in metadata and page instead of returning not-fo
   await expect(AnimePage(props)).rejects.toBe(error);
   expect(getSynopsis).not.toHaveBeenCalled();
   expect(getAnimeAvailability).not.toHaveBeenCalled();
+});
+
+it.each(['outage', 'not-found'])('renders saved anime in metadata and page on live %s', async failure => {
+  vi.stubGlobal('React', React);
+  if (failure === 'outage') vi.mocked(getAnime).mockRejectedValue(new Error('Anime details unavailable'));
+  else vi.mocked(getAnime).mockResolvedValue(null);
+  const { anime } = await import('./fixtures/anilist-snapshot');
+  vi.mocked(findSnapshotAnime).mockResolvedValue(anime);
+  const props = { params: Promise.resolve({ id: '21-example-anime' }) };
+  const metadata = await generateMetadata(props);
+  expect(metadata.title).toContain('Example anime');
+  const page = await AnimePage(props);
+  expect(page.props.children[2].props.anime).toEqual(anime);
 });
 
 it.each([true, false])('shares the Italian description between metadata and JSON-LD (localized: %s)', async localized => {

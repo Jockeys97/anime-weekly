@@ -37,6 +37,7 @@ function canShareFiles() {
 }
 
 const POOL = 'pool';
+const FIRST_ROW = 4; // posters that fit the first pool row on a phone load eagerly; the rest are lazy
 const cx = (...names: (string | false)[]) => names.filter(Boolean).join(' ');
 const itemKey = (id: number) => `item:${id}`;
 const beforeKey = (id: number) => `before:${id}`;
@@ -122,10 +123,11 @@ export function TierListMaker({ locale, season, seasonName, items, shareUrl }: {
   const reset = () => { setSelected(null); save(emptyBoard()); };
 
   const renderPng = async (): Promise<Blob> => {
-    const urls = [...new Set(Object.values(board.rows).flat().map(id => byId.get(id)?.poster).filter((url): url is string => Boolean(url)))];
+    const exportUrl = (id: number) => { const item = byId.get(id); return item?.exportPoster ?? item?.poster; };
+    const urls = [...new Set(Object.values(board.rows).flat().map(exportUrl).filter((url): url is string => Boolean(url)))];
     const sources = new Map<number, string | null>();
     const data = new Map(await Promise.all(urls.map(async url => [url, await toDataUrl(url)] as const)));
-    for (const id of placed) { const poster = byId.get(id)?.poster; sources.set(id, poster ? data.get(poster) ?? null : null); }
+    for (const id of placed) { const poster = exportUrl(id); sources.set(id, poster ? data.get(poster) ?? null : null); }
     setExporting(sources);
     try {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -183,7 +185,7 @@ export function TierListMaker({ locale, season, seasonName, items, shareUrl }: {
         <Watermark className={styles.screenWatermark} />
       </div>
       <Pool label={`${t.unranked} · ${t.count.replace('{count}', String(pool.length))}`} picking={selected !== null} onTap={() => tapTarget(null)}>
-        {pool.map(item => <DraggablePoster key={item.id} item={item} selected={selected === item.id} dragging={active === item.id} onTap={() => tap(item.id)} />)}
+        {pool.map((item, index) => <DraggablePoster key={item.id} eager={index < FIRST_ROW} item={item} selected={selected === item.id} dragging={active === item.id} onTap={() => tap(item.id)} />)}
       </Pool>
       <DragOverlay dropAnimation={null}>{activeItem ? <div className={`${styles.poster} ${styles.overlay}`}><PosterImage item={activeItem} /></div> : null}</DragOverlay>
     </DndContext>
@@ -227,7 +229,7 @@ function Pool({ label, picking, onTap, children }: { label: string; picking: boo
   </div>;
 }
 
-function DraggablePoster({ item, selected, dragging, onTap }: { item: TierItem; selected: boolean; dragging: boolean; onTap: () => void }) {
+function DraggablePoster({ item, selected, dragging, eager = false, onTap }: { item: TierItem; selected: boolean; dragging: boolean; eager?: boolean; onTap: () => void }) {
   const drag = useDraggable({ id: itemKey(item.id) });
   const drop = useDroppable({ id: beforeKey(item.id) });
   const { setNodeRef: setDragRef } = drag; const { setNodeRef: setDropRef } = drop;
@@ -235,7 +237,7 @@ function DraggablePoster({ item, selected, dragging, onTap }: { item: TierItem; 
   return <button type="button" ref={ref} {...drag.listeners} {...drag.attributes} aria-pressed={selected} title={item.name}
     className={cx(styles.poster, selected && styles.selected, dragging && styles.dragging, drop.isOver && !dragging && styles.insert)} data-id={item.id}
     onClick={event => { event.stopPropagation(); onTap(); }}>
-    <PosterImage item={item} />
+    <PosterImage item={item} eager={eager} />
   </button>;
 }
 
@@ -244,5 +246,5 @@ function PosterImage({ item, src = item.poster, eager = false }: { item: TierIte
   if (!src || failed === src) return <span className={styles.missing}>{item.name}</span>;
   // Posters load straight from TMDB/AniList: no image optimizer involved.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={item.name} draggable={false} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(src)} />;
+  return <img src={src} alt={item.name} width={120} height={180} draggable={false} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(src)} />;
 }

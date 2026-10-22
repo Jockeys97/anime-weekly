@@ -11,7 +11,7 @@ import { pageMetadata, siteUrl } from '@/lib/seo';
 import { localePath } from '@/lib/locale-routing';
 import { snapshotCatalog } from '@/lib/snapshot-catalog';
 import { getTmdbTitleCard } from '@/lib/tmdb';
-import { tierListPath, tierSeasonFromQuery, type TierItem } from '@/lib/tier-list';
+import { tierListPath, tierSeasonFromQuery, tmdbPosterSize, type TierItem } from '@/lib/tier-list';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 
@@ -54,10 +54,11 @@ export default async function TierListPage({ params, searchParams }: { params?: 
   }
   const posters = await tmdbPosters(media);
   const seen = new Set<number>();
-  const items: TierItem[] = media.filter(anime => !seen.has(anime.id) && Boolean(seen.add(anime.id))).map(anime => ({
-    id: anime.id, name: animeName(anime),
-    poster: posters.get(anime.id) ?? anime.coverImage?.extraLarge ?? anime.coverImage?.large ?? null,
-  }));
+  // On-screen posters stay small (TMDB w185 / AniList large); the export gets TMDB w342.
+  const items: TierItem[] = media.filter(anime => !seen.has(anime.id) && Boolean(seen.add(anime.id))).map(anime => {
+    const tmdb = posters.get(anime.id); const cover = anime.coverImage?.large ?? null;
+    return { id: anime.id, name: animeName(anime), poster: tmdb ? tmdbPosterSize(tmdb, 'w185') : cover, exportPoster: tmdb ? tmdbPosterSize(tmdb, 'w342') : cover };
+  });
   const seasonName = d.catalog.seasonNames[season.season];
   const previous = shiftSeason(season, -1); const next = shiftSeason(season, 1);
   return <main id="main" className="catalog-page tier-page" lang={locale}>

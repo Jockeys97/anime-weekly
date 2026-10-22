@@ -52,8 +52,8 @@ describe('AniList catalog (offline)', () => {
       .mockResolvedValueOnce(Response.json({ data: { Page: { media: [anime], pageInfo: { hasNextPage: false } } } }));
     vi.stubGlobal('fetch', fetchMock);
     const { getSeason } = await import('../lib/anilist');
-    expect((await getSeason(2026, 'fall', 1, { cache: 'no-store' })).unavailable).toBe(true);
-    const pending = getSeason(2026, 'fall', 1, { cache: 'no-store' });
+    expect((await getSeason(2026, 'fall', 1, { fresh: true })).unavailable).toBe(true);
+    const pending = getSeason(2026, 'fall', 1, { fresh: true });
     await vi.runAllTimersAsync();
     expect((await pending).media).toEqual([anime]);
     expect(fetchMock.mock.calls.every(([, init]) => init.cache === 'no-store' && init.next === undefined)).toBe(true);

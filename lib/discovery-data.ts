@@ -19,7 +19,7 @@ async function crawlCatalog(year: number, season: ReturnType<typeof currentSeaso
   for (const selected of seasons) {
     const seen = new Set<number>();
     for (let page = 1; page <= MAX_CATALOG_PAGES; page++) {
-      const result = await getSeason(selected.year, selected.season, page, { cache: 'no-store' });
+      const result = await getSeason(selected.year, selected.season, page, { fresh: true });
       if (result.unavailable) throw new Error('Discovery catalog unavailable');
       const previousSize = seen.size;
       for (const anime of result.media) {

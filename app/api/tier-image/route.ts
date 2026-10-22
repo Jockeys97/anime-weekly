@@ -18,6 +18,6 @@ export async function GET(request: Request) {
   const body = await upstream.arrayBuffer();
   if (body.byteLength > MAX_BYTES) return new Response('Bad gateway', { status: 502, headers: { 'Cache-Control': 'no-store' } });
   return new Response(body, { headers: {
-    'Content-Type': type, 'Cache-Control': 'public, max-age=86400, s-maxage=604800, immutable', 'X-Content-Type-Options': 'nosniff',
+    'Content-Type': type, 'Cache-Control': 'public, s-maxage=86400, max-age=86400, immutable', 'X-Content-Type-Options': 'nosniff',
   } });
 }
