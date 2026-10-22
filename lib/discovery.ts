@@ -27,19 +27,7 @@ export function fill(template: string, values: Record<string, string | number>):
 export function episodeTitle(name: string, episode: number, locale: Locale): string {
   return fill(getDictionary(locale).discovery.episodeTitle, { title: name, n: episode });
 }
-export function rankSimilar(source: AniListAnime, catalog: readonly AniListAnime[]) {
-  const tags = new Set(source.tags?.filter(tag => !tag.isMediaSpoiler).map(tag => tag.name) ?? []);
-  const recommended = new Set(source.recommendations?.nodes?.filter(node => (node.rating ?? 0) > 0).map(node => node.mediaRecommendation?.id));
-  return [...new Map(catalog.map(anime => [anime.id, anime])).values()].flatMap(anime => {
-    if (anime.id === source.id) return [];
-    const genres = anime.genres.filter(genre => source.genres.includes(genre));
-    const sharedTags = anime.tags?.filter(tag => !tag.isMediaSpoiler && tags.has(tag.name)) ?? [];
-    const recommendation = recommended.has(anime.id);
-    if (!genres.length && !sharedTags.length && !recommendation) return [];
-    const score = genres.length * 3 + sharedTags.length + (recommendation ? 3 : 0) + (anime.averageScore ?? 0) / 100;
-    return [{ anime, score, genres }];
-  }).sort((a, b) => b.score - a.score || a.anime.id - b.anime.id);
-}
+export { rankSimilar } from '@/lib/discovery-similarity';
 export function rankGenre(catalog: readonly AniListAnime[], genre: string, ratings: Record<number, Ratings>) {
   return [...new Map(catalog.map(anime => [anime.id, anime])).values()].flatMap(anime => {
     if (!anime.genres.includes(genre)) return [];

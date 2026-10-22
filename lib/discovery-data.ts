@@ -1,7 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
-import { getSeason, type AniListAnime } from '@/lib/anilist';
+import { getPopularCatalogBatch, getSeason, type AniListAnime } from '@/lib/anilist';
+import { POPULAR_CATALOG_PAGES, POPULAR_PAGES_PER_BATCH } from '@/lib/anilist-discovery-query';
 import { currentSeason, shiftSeason } from '@/lib/season';
 import { CACHE_TAG } from '@/lib/config';
 import { rankGenre, rankSimilar } from '@/lib/discovery';
@@ -49,12 +50,32 @@ const catalog = unstable_cache((year: number, season: ReturnType<typeof currentS
     pendingCatalogs.set(key, pending);
   }
   return pending;
-}, ['discovery-catalog-v2'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['discovery-catalog-v3-tag-safety-popularity'], { revalidate: 86400, tags: [CACHE_TAG] });
 export const getDiscoveryCatalog = cache(async () => {
   const { year, season } = currentSeason();
   return catalog(year, season);
 });
-export const getSimilarAnime = cache(async (anime: AniListAnime) => rankSimilar(anime, await getDiscoveryCatalog()));
+// Independent of year, locale and source anime: one all-time crawl per week.
+let pendingPopular: Promise<AniListAnime[]> | undefined;
+const popularCatalog = unstable_cache(() => {
+  if (!pendingPopular) pendingPopular = (async () => {
+    const media = new Map<number, AniListAnime>();
+    for (let page = 1; page <= POPULAR_CATALOG_PAGES; page += POPULAR_PAGES_PER_BATCH) {
+      const batch = await getPopularCatalogBatch(page);
+      for (const result of batch) for (const anime of result.media) media.set(anime.id, anime);
+      if (batch.some(result => !result.pageInfo.hasNextPage)) break;
+    }
+    return [...media.values()];
+  })().finally(() => { pendingPopular = undefined; });
+  return pendingPopular;
+}, ['discovery-popular-catalog-v1-top500'], { revalidate: 604800, tags: [CACHE_TAG] });
+export const getSimilarCatalog = cache(async () => {
+  // Sequential crawls keep the shared AniList queue bounded on a cold build.
+  const seasonal = await getDiscoveryCatalog();
+  const popular = await popularCatalog();
+  return [...new Map([...popular, ...seasonal].map(anime => [anime.id, anime])).values()];
+});
+export const getSimilarAnime = cache(async (anime: AniListAnime) => rankSimilar(anime, await getSimilarCatalog()));
 
 // Read the cron-populated schedule only: a cold snapshot must never trigger
 // schedule fetching or per-title enrichment from a detail-page request.

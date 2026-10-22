@@ -6,11 +6,14 @@ import { CACHE_TAG } from '@/lib/config';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
 import type { AnimeTrailer } from '@/lib/trailer';
 import { isSeason, type Season } from '@/lib/season';
+import { discoveryCandidate, DISCOVERY_DETAIL_FIELDS, DISCOVERY_MEDIA_FIELDS, popularCatalogQuery, POPULAR_PAGES_PER_BATCH } from '@/lib/anilist-discovery-query';
 
 export const ANILIST_REVALIDATE = 86400;
 export interface AniListAnime {
-  tags?: { name: string; rank: number; isMediaSpoiler?: boolean }[];
-  recommendations?: { nodes?: { rating?: number; mediaRecommendation?: { id: number } | null }[] };
+  popularity?: number | null;
+  isAdult?: boolean;
+  tags?: { name: string; rank: number; isMediaSpoiler?: boolean; isGeneralSpoiler?: boolean; isAdult?: boolean }[];
+  recommendations?: { nodes?: { rating?: number; mediaRecommendation?: (Partial<AniListAnime> & { id: number }) | null }[] };
   relations?: { edges: { relationType: string; node: { id: number; type: string; format: string | null; title: AniListAnime['title']; startDate: { year: number | null } | null } }[] };
   trailer?: AnimeTrailer | null;
   nextAiringEpisode?: { episode: number; airingAt: number } | null;
@@ -38,18 +41,15 @@ export interface AniListPage {
   pageInfo: { currentPage: number; hasNextPage: boolean };
 }
 
-const fields = `id idMal updatedAt title { romaji english native } synonyms
-  coverImage { large extraLarge color } bannerImage description
-  startDate { year month day } nextAiringEpisode { episode airingAt } episodes format status genres averageScore
-  tags { name rank isMediaSpoiler }
-  recommendations(perPage: 25, sort: RATING_DESC) { nodes { rating mediaRecommendation { id } } }
-  stats { scoreDistribution { amount } }
-  studios(isMain: true) { nodes { id name } } season seasonYear
-  trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } }`;
+const fields = `${DISCOVERY_MEDIA_FIELDS}
+  recommendations(perPage: 25, sort: RATING_DESC) { nodes { rating mediaRecommendation { id } } }`;
 const catalogAnime = new Map<number, { expires: number; anime: AniListAnime }>();
 function rememberCatalog(media: AniListAnime[]): void {
   for (const anime of media) {
-    if (!Number.isSafeInteger(anime.id) || !anime.relations?.edges || !anime.title || !anime.format) continue;
+    // Sparse list recommendations must never replace the richer detail query.
+    if (!Number.isSafeInteger(anime.id) || !anime.relations?.edges || !anime.title || !anime.format
+      || !anime.recommendations?.nodes || anime.recommendations.nodes.some(node => node.mediaRecommendation
+        && (!node.mediaRecommendation.title || !Array.isArray(node.mediaRecommendation.genres)))) continue;
     if (catalogAnime.size >= 500) catalogAnime.delete(catalogAnime.keys().next().value!);
     catalogAnime.set(anime.id, { anime, expires: Date.now() + 3600000 });
   }
@@ -83,6 +83,18 @@ export async function getSeason(year: number, season: Season, page = 1, options:
   if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(page), unavailable: true };
   rememberCatalog(data.Page.media);
   return { media: data.Page.media, pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
+}
+
+// Called only by the shared weekly catalog loader, through the same AniList
+// rate limiter as detail and season requests. Never cache raw error responses.
+export async function getPopularCatalogBatch(firstPage: number): Promise<AniListPage[]> {
+  if (!Number.isSafeInteger(firstPage) || firstPage < 1) throw new RangeError('Invalid catalog page');
+  const data = await graphql<Record<string, AniListPage>>(popularCatalogQuery(firstPage), {}, { fresh: true });
+  return Array.from({ length: POPULAR_PAGES_PER_BATCH }, (_, offset) => {
+    const page = data?.[`page${firstPage + offset}`];
+    if (!Array.isArray(page?.media)) throw new Error('Popular discovery catalog unavailable');
+    return { ...page, media: page.media.map(discoveryCandidate) };
+  });
 }
 
 export async function searchAnime(query: string): Promise<AniListAnime[]> {
@@ -145,10 +157,10 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
   return { media: data.Page.media, pageInfo: { currentPage: filters.page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }
 
-// Versioned for synonyms in detail payloads; keep the existing TTL and tags.
+// Rich recommendations and safety/popularity metadata invalidate old details.
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const query = `query ($id: Int!) {
-    Media(id: $id, type: ANIME) { ${fields} trailer { id site } relations { edges { relationType node { id type format title { english romaji native } startDate { year } } } } }
+    Media(id: $id, type: ANIME) { ${DISCOVERY_DETAIL_FIELDS} }
   }`;
   const response = await anilistFetch('https://graphql.anilist.co', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -167,7 +179,7 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   if (result.data?.Media === null) return null;
   if (response.status !== 200 || result.data?.Media?.id !== id) throw new Error('Anime details unavailable');
   return result.data.Media;
-}, ['anime-detail-v9-seo-synonyms'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
+}, ['anime-detail-v10-similar-recommendations'], { revalidate: ANILIST_REVALIDATE, tags: [CACHE_TAG] });
 
 export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) return null;

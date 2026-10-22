@@ -73,7 +73,7 @@ describe('AniList catalog (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it('reuses canonical catalog metadata for detail lookups without losing the trailer', async () => {
-    const full = { ...anime, format:'TV', relations:{ edges:[] }, trailer:{ id:'official-trailer', site:'youtube' } };
+    const full = { ...anime, format:'TV', relations:{ edges:[] }, recommendations:{ nodes:[] }, trailer:{ id:'official-trailer', site:'youtube' } };
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data:{ Page:{ media:[full], pageInfo:{ hasNextPage:false } } } }));
     vi.stubGlobal('fetch', fetchMock);
     const { getSeason, getAnime } = await import('../lib/anilist');
@@ -94,8 +94,63 @@ describe('AniList catalog (offline)', () => {
     expect(body.query).toMatch(/relations\s*\{\s*edges\s*\{\s*relationType/);
     expect(body.query).toContain('nextAiringEpisode { episode airingAt }');
     expect(body.query).toContain('trailer { id site }');
+    expect(body.query).toContain('recommendations(perPage: 25, sort: RATING_DESC)');
+    expect(body.query).toMatch(/rating mediaRecommendation \{[\s\S]*coverImage/);
+    expect(body.query).toContain('popularity isAdult');
+    expect(body.query).toContain('isGeneralSpoiler isAdult');
     expect(await getAnime(-1)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not use sparse season recommendations in place of rich detail data', async () => {
+    const sparse = { ...anime, format: 'TV', relations: { edges: [] },
+      recommendations: { nodes: [{ rating: 20, mediaRecommendation: { id: 1 } }] } };
+    const detailed = { ...sparse, recommendations: { nodes: [{ rating: 20,
+      mediaRecommendation: { ...anime, id: 1, genres: ['Action'], coverImage: null } }] } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ data: { Page: { media: [sparse], pageInfo: { hasNextPage: false } } } }))
+      .mockResolvedValueOnce(Response.json({ data: { Media: detailed } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getSeason, getAnime } = await import('../lib/anilist');
+    await getSeason(2026, 'fall');
+    const pending = getAnime(21);
+    await vi.runAllTimersAsync();
+    expect(await pending).toEqual(detailed);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // Existing detail query only.
+  });
+
+  it('batches two popular pages through the rate limiter without caching raw responses', async () => {
+    const candidate = { ...anime, genres: ['Action'], tags: [
+      { name: 'Safe', rank: 90, isMediaSpoiler: false, isGeneralSpoiler: false, isAdult: false },
+      { name: 'Reveal', rank: 99, isMediaSpoiler: true },
+    ] };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {
+      page3: { media: [candidate], pageInfo: { currentPage: 3, hasNextPage: true } },
+      page4: { media: [], pageInfo: { currentPage: 4, hasNextPage: false } },
+    } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getPopularCatalogBatch } = await import('../lib/anilist');
+    const pages = await getPopularCatalogBatch(3);
+    expect(pages[0].media[0].tags).toEqual([{ name: 'Safe', rank: 90 }]);
+    expect(pages[0].media[0].description).toBeNull();
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.cache).toBe('no-store');
+    expect(init.next).toBeUndefined();
+    const { query } = JSON.parse(init.body);
+    expect(query).toContain('page3: Page(page: 3, perPage: 50)');
+    expect(query).toContain('page4: Page(page: 4, perPage: 50)');
+    expect(query).toContain('sort: [POPULARITY_DESC, ID]');
+    expect(query).not.toContain('recommendations');
+    expect(query).not.toContain('description');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects partial or failed popular batches instead of persisting an incomplete catalog', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: {
+      page1: { media: [anime], pageInfo: { hasNextPage: true } },
+    }, errors: [{ message: 'Query unavailable' }] })));
+    const { getPopularCatalogBatch } = await import('../lib/anilist');
+    await expect(getPopularCatalogBatch(1)).rejects.toThrow('Popular discovery catalog unavailable');
   });
 
   it('rejects an anime with a different ID', async () => {
@@ -152,7 +207,7 @@ describe('AniList catalog (offline)', () => {
 
 it('reuses trusted catalog entries with prequel edges when loading a visible card', async () => {
   vi.useRealTimers();
-  const entry = { ...anime, format: 'TV', relations: { edges: [] } };
+  const entry = { ...anime, format: 'TV', relations: { edges: [] }, recommendations: { nodes: [] } };
   const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: { media: [entry], pageInfo: { currentPage: 1, hasNextPage: false } } } }));
   vi.stubGlobal('fetch', fetchMock);
   const { getSeason, getAnime } = await import('../lib/anilist');

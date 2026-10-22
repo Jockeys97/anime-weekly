@@ -31,9 +31,8 @@ async function content(params: Props['params']) {
   if (!data) return null;
   const name = data.names[locale] || animeName(data.anime);
   const d = getDictionary(locale);
-  const seasons = [...new Set(data.items.map(({ anime }) => anime.season && anime.seasonYear ? `${d.catalog.seasonNames[anime.season.toLowerCase() as keyof typeof d.catalog.seasonNames]} ${anime.seasonYear}` : '').filter(Boolean))].join(' · ');
   return { ...data, locale, path: similarPath(data.anime.id, name), title: fill(d.discovery.similarTitle, { title: name }),
-    intro: fill(d.discovery.similarIntro, { count: data.items.length, season: seasons, title: name, top: animeName(data.items[0].anime) }) };
+    intro: fill(d.discovery.similarIntro, { count: data.items.length, title: name, top: animeName(data.items[0].anime) }) };
 }
 export async function generateMetadata({ params }: Props) {
   const data = await content(params);
