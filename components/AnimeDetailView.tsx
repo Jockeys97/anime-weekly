@@ -28,7 +28,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
   const c = d.catalog;
   const name = localizedNames?.[locale] || displayTitle([anime.title.english, anime.title.romaji].find(title => title?.trim() && !/[\u3040-\u30ff\u3400-\u9fff]/.test(title)) || `Anime #${anime.id}`);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
-  const alternateNames = animeAlternateNames(name, anime.title);
+  const alternateNames = animeAlternateNames(name, anime.title, anime.synonyms);
   const cover = anime.coverImage?.large || anime.coverImage?.extraLarge;
   // AniList large is ~230px wide; extraLarge is ~460px. Let DPR choose the
   // larger original only when needed, without creating Vercel transformations.

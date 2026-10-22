@@ -24,11 +24,12 @@ import { getAnimeDetailData } from '../lib/anime-detail-data';
 import AnimePage, { generateMetadata, revalidate } from '../app/[locale]/anime/[id]/page';
 import { StreamingCountryProvider } from '../components/StreamingCountry';
 import { LocaleProvider } from '../components/LanguageSelector';
+import { animeSeoRegressionExamples } from './fixtures/anime-detail-seo';
 
 const anime = { id: 42, idMal: 123, title: { english: 'Example', romaji: null, native: null }, format: 'MOVIE', startDate: { year: 2026, month: null, day: null }, seasonYear: 2026, description: 'English original', averageScore: 81, genres: [] } as unknown as AniListAnime;
 const empty = { match: null, ratings: {}, providers: {}, providersUnavailable: true };
 const stored = (values: object) => ({ values, fetchedAt: Date.now(), lastSeenAt: Date.now() });
-const render = async () => renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, await AnimePage({ params: Promise.resolve({ id: '42-example' }) })));
+const render = async (id = '42-example') => renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, await AnimePage({ params: Promise.resolve({ id }) })));
 beforeEach(() => {
   vi.mocked(getAnime).mockResolvedValue(anime);
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
@@ -49,10 +50,11 @@ it('renders all main data in server HTML without executing client effects', asyn
 
 it('reuses already loaded IMDb data in metadata without another upstream lookup', async () => {
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'en' }) });
-  expect(metadata.title).toBe('Example – IMDb 8.4 & Where to Watch');
+  const title = 'Example – IMDb 8.4 & Where to Watch';
+  expect(metadata.title).toEqual({ absolute: title });
   expect(metadata.description).toContain('IMDb 8.4 & Where to Watch');
-  expect(metadata.openGraph).toMatchObject({ title: metadata.title, description: metadata.description });
-  expect(metadata.twitter).toMatchObject({ title: metadata.title, description: metadata.description });
+  expect(metadata.openGraph).toMatchObject({ title, description: metadata.description });
+  expect(metadata.twitter).toMatchObject({ title, description: metadata.description });
   expect(getCachedDetailAvailability).toHaveBeenCalledTimes(1);
   expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
 });
@@ -61,9 +63,33 @@ it('includes an IMDb score from the weekly cache when availability has no score'
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'movie:10': { anilistId: 42, malId: 123, malScore: 8.3, imdbId: 'tt123', imdbRating: '8.6' } }, events: [] });
   vi.mocked(getCachedDetailAvailability).mockResolvedValue(empty);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'it' }) });
-  expect(metadata.title).toBe('Example – IMDb 8.6 e dove vederlo');
+  expect(metadata.title).toEqual({ absolute: 'Example – IMDb 8.6 e dove vederlo' });
   expect(metadata.description).toContain('IMDb 8.6 e dove vederlo');
   expect(getMyAnimeListScore).not.toHaveBeenCalled();
+});
+
+it('shares the first kana fallback between the visible subtitle, metadata and JSON-LD', async () => {
+  const fixture = animeSeoRegressionExamples[0];
+  vi.mocked(getAnime).mockResolvedValue(fixture.anime);
+  const html = await render('21-one-piece');
+  expect(html).toContain('<p class="catalog-intro">ワンピース</p>');
+  const nodes = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(match => JSON.parse(match[1]));
+  expect(nodes[0].alternateName).toEqual(['ワンピース']);
+  const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-one-piece', locale: 'en' }) });
+  expect(metadata.title).toEqual({ absolute: 'One Piece (ワンピース) – IMDb 8.4 & Where to Watch' });
+  expect(metadata.description).toContain('One Piece (ワンピース)');
+});
+
+it('uses the localized series rating in absolute metadata titles for sequels', async () => {
+  vi.mocked(getAnime).mockResolvedValue(animeSeoRegressionExamples[2].anime);
+  const metadata = await generateMetadata({ params: Promise.resolve({ id: '195516', locale: 'it' }) });
+  const title = (metadata.title as { absolute: string }).absolute;
+  expect(title).toContain('IMDb 8.4 (serie)');
+  expect(title).toContain('Season 3');
+  expect(title).not.toContain('Weekly Anime');
+  expect(metadata.description).toContain('IMDb 8.4 (serie)');
+  expect(metadata.openGraph).toMatchObject({ title });
+  expect(metadata.twitter).toMatchObject({ title });
 });
 
 it('uses weekly MAL/IMDb precomputation without another MAL request', async () => {

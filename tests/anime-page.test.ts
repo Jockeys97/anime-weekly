@@ -79,7 +79,7 @@ describe('server-rendered anime details', () => {
 it('generates detail SEO with the existing cached availability loader', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } } as Awaited<ReturnType<typeof getAnime>>);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(metadata.title).toBe('Example anime – dove vederlo');
+  expect(metadata.title).toEqual({ absolute: 'Example anime – dove vederlo' });
   expect(metadata.description).toBe('Example anime – dove vederlo. Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL.');
   expect(metadata.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(metadata.openGraph).toMatchObject({ images: [{ url: 'https://s4.anilist.co/cover.jpg' }] });
@@ -129,11 +129,12 @@ it('shares factual Italian metadata with Open Graph and Twitter without changing
     providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } },
   });
   const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime' }) });
-  expect(meta.title).toBe('Example anime – dove vederlo');
+  const title = 'Example anime – dove vederlo';
+  expect(meta.title).toEqual({ absolute: title });
   expect(meta.description).toContain('Example anime – dove vederlo. AniList 8,1/10. Una storia italiana.');
   expect(meta.description!.length).toBeLessThanOrEqual(160);
-  expect(meta.openGraph).toMatchObject({ title: meta.title, description: meta.description });
-  expect(meta.twitter).toMatchObject({ title: meta.title, description: meta.description });
+  expect(meta.openGraph).toMatchObject({ title, description: meta.description });
+  expect(meta.twitter).toMatchObject({ title, description: meta.description });
   expect(meta.alternates?.canonical).toMatch(/\/anime\/21-example-anime$/);
   expect(getMyAnimeListScore).not.toHaveBeenCalled();
   expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
@@ -180,7 +181,7 @@ it.each(['outage', 'not-found'])('renders saved anime in metadata and page on li
   vi.mocked(findSnapshotAnime).mockResolvedValue(anime);
   const props = { params: Promise.resolve({ id: '21-example-anime' }) };
   const metadata = await generateMetadata(props);
-  expect(metadata.title).toContain('Example anime');
+  expect(metadata.title).toMatchObject({ absolute: expect.stringContaining('Example anime') });
   const page = await AnimePage(props);
   expect(page.props.children[2].props.anime).toEqual(anime);
 });
