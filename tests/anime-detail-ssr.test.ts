@@ -1,4 +1,5 @@
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/discovery-data', () => ({ getSimilarAnime: vi.fn(async () => []), getAiringThisWeekAnime: vi.fn(async () => []) }));
 vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -15,6 +16,7 @@ vi.mock('../lib/detail-availability', () => ({ getCachedDetailAvailability: vi.f
 vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
 vi.mock('../components/DubbingSummary', () => ({ DubbingSummary: () => null }));
 import { getAnime, type AniListAnime } from '../lib/anilist';
+import { getSimilarAnime, getAiringThisWeekAnime } from '../lib/discovery-data';
 import { readRatingsStore } from '../lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '../lib/weekly-ratings';
 import { getMyAnimeListScore } from '../lib/myanimelist';
@@ -31,6 +33,8 @@ const empty = { match: null, ratings: {}, providers: {}, providersUnavailable: t
 const stored = (values: object) => ({ values, fetchedAt: Date.now(), lastSeenAt: Date.now() });
 const render = async (id = '42-example') => renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, await AnimePage({ params: Promise.resolve({ id }) })));
 beforeEach(() => {
+  vi.mocked(getSimilarAnime).mockResolvedValue([]);
+  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([]);
   vi.mocked(getAnime).mockResolvedValue(anime);
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: {} });
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
@@ -46,6 +50,35 @@ it('renders all main data in server HTML without executing client effects', asyn
   for (const pending of ['Caricamento dei voti', 'Caricamento della disponibilità', 'Caricamento della trama tradotta']) expect(html).not.toContain(pending);
   expect(revalidate).toBe(86400);
   expect(getSynopsis).toHaveBeenCalledWith(['Example'], 2026, 'it', 'movie', 42);
+});
+
+it('includes both discovery sections in the initial detail HTML before streaming availability', async () => {
+  const candidates = Array.from({ length: 6 }, (_, i) => ({ ...anime, id: i + 100, title: { english: `Other anime ${i}`, romaji: null, native: null }, genres: ['Action'] }));
+  vi.mocked(getSimilarAnime).mockResolvedValue(candidates.map(anime => ({ anime, score: 8, genres: ['Action'] })));
+  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([anime, ...candidates]);
+  const html = await render();
+  expect(html).toContain('Anime simili');
+  expect(html).toContain('In onda questa settimana');
+  expect(html).toContain('href="/anime/42-example/simili"');
+  expect(html).toContain('href="/questa-settimana"');
+  expect(html.match(/landing-anime-card-compact/g)).toHaveLength(10);
+  expect(html.indexOf('airing-this-week-heading')).toBeLessThan(html.indexOf('streaming-heading'));
+  expect(html).toContain('Una trama italiana.');
+  expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
+  expect(getCachedDetailAvailability).toHaveBeenCalledTimes(1);
+});
+
+it('still renders the detail page when both discovery lookups stall', async () => {
+  vi.useFakeTimers();
+  const never = new Promise<never>(() => {});
+  vi.mocked(getSimilarAnime).mockReturnValue(never);
+  vi.mocked(getAiringThisWeekAnime).mockReturnValue(never);
+  const html = render();
+  await vi.advanceTimersByTimeAsync(5000);
+  const result = await html;
+  expect(result).toContain('Una trama italiana.');
+  expect(result).not.toContain('similar-anime-heading');
+  expect(result).not.toContain('airing-this-week-heading');
 });
 
 it('reuses already loaded IMDb data in metadata without another upstream lookup', async () => {

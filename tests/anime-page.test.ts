@@ -1,4 +1,5 @@
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
+vi.mock('../lib/discovery-data', () => ({ getSimilarAnime: vi.fn(async () => []), getAiringThisWeekAnime: vi.fn(async () => []) }));
 vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: vi.fn().mockResolvedValue([]) }));
 vi.mock('../lib/synopsis', () => ({ getSynopsis: vi.fn() }));
 vi.mock('../lib/anilist-snapshot', () => ({ findSnapshotAnime: vi.fn().mockResolvedValue(null) }));

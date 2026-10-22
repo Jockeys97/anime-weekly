@@ -21,7 +21,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
 import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
-import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
+import { AnimeSimilarBlock, AnimeAiringThisWeekBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { AnimeWeekLinks } from '@/components/AnimeWeekLinks';
 import { animeDetailSeo, animeIntro } from '@/lib/anime-seo';
 
@@ -61,7 +61,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AnimePage({ params }: Props) {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
-  const [names, { ratings: animeRatings, availability, synopsis }] = await Promise.all([getAnimeLocalizedTitles(anime.id, animeName(anime)), getAnimeDetailData(anime, locale)]);
+  const namesPromise = getAnimeLocalizedTitles(anime.id, animeName(anime));
+  // Resolve optional cards with the core data so streamed sections cannot push
+  // the episode chart or streaming information down after the initial paint.
+  const [names, { ratings: animeRatings, availability, synopsis }, similar, airing] = await Promise.all([
+    namesPromise, getAnimeDetailData(anime, locale),
+    namesPromise.then(names => AnimeSimilarBlock({ anime, name: names[locale] || animeName(anime), locale })),
+    AnimeAiringThisWeekBlock({ id: anime.id, locale }),
+  ]);
   const name = names[locale] || animeName(anime);
   // Other slugs and bare IDs render the same page with a canonical anime URL.
   // A redirect here would need searchParams (dynamic) inside an ISR, streamed route.
@@ -69,7 +76,7 @@ export default async function AnimePage({ params }: Props) {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const structured = animeStructuredData(anime, name, animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability.ratings).description, locale);
   return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name, locale)} />
-    <AnimeDetailView anime={anime} localizedNames={names} weekLinks={<><Suspense fallback={null}><AnimeSimilarBlock anime={anime} name={name} locale={locale} /></Suspense><Suspense fallback={null}><AnimeCurrentRanking id={anime.id} locale={locale} /></Suspense><Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense></>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
+    <AnimeDetailView anime={anime} localizedNames={names} weekLinks={<>{similar}{airing}<Suspense fallback={null}><AnimeCurrentRanking id={anime.id} locale={locale} /></Suspense><Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense></>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
