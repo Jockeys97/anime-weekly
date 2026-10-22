@@ -24,6 +24,7 @@ import { locales, type Locale } from '@/lib/locales';
 import { localePath } from '@/lib/locale-routing';
 import { getDictionary } from '@/lib/i18n';
 import { LocaleProvider } from '@/components/LanguageSelector';
+import { fill } from '@/lib/discovery';
 
 const anime = (id = 1) => ({ id, idMal: id, title: { english: `Anime ${id}`, romaji: null, native: null }, genres: ['Action'], tags: [], averageScore: 80, season: 'FALL', seasonYear: 2026, format: 'TV', coverImage: null, bannerImage: null, description: null, startDate: null, episodes: null, status: null, studios: null }) as AniListAnime;
 const row = (id: number) => ({ anime: anime(id), score: 8, genres: ['Action'], votes: 1000, sources: [{ name: 'IMDb', score: 8, votes: 1000, minimum: 1000 }] });
@@ -118,6 +119,44 @@ it('omits optional detail blocks on upstream errors', async () => {
 });
 
 const localizedHtml = (children: ReactNode, locale: Locale) => renderToStaticMarkup(createElement(LocaleProvider, { locale, children }));
+
+it.each(locales)('renders the full similar page as localized cover cards with the original intro and ItemList order (%s)', async locale => {
+  const ids = [9, 2, 8, 3, 7, 4, 6, 5, 10];
+  const items = ids.map((id, index) => ({ ...row(id), anime: { ...anime(id), coverImage: index === ids.length - 1 ? null : {
+    large: index === 0 ? null : `https://s4.anilist.co/${id}.jpg`, extraLarge: `https://s4.anilist.co/${id}-large.jpg`, color: null,
+  } } }));
+  vi.mocked(getSimilarAnime).mockResolvedValue(items);
+  const html = localizedHtml(await SimilarPage(props(locale)), locale);
+  const metadata = await similarMetadata(props(locale));
+  const d = getDictionary(locale);
+  const names = { it: 'Titolo', en: 'Title', de: 'Titel' };
+  const name = names[locale as keyof typeof names] || 'Anime 1';
+  const intro = fill(d.discovery.similarIntro, { count: ids.length, season: `${d.catalog.seasonNames.fall} 2026`, title: name, top: 'Anime 9' });
+  expect(html).toContain(`<p class="catalog-intro">${intro}</p>`);
+  expect(metadata.description).toBe(intro);
+  expect(html).toContain('<ol class="landing-list detail-discovery-cards">');
+  expect(html.match(/<article class="anime-card landing-anime-card landing-anime-card-compact">/g)).toHaveLength(ids.length);
+  expect([...html.matchAll(/<h2><a[^>]*>([^<]+)<\/a><\/h2>/g)].map(match => match[1])).toEqual(ids.map(id => `Anime ${id}`));
+  const hrefs = [...html.matchAll(/<a[^>]*href="([^"]+)"/g)].map(match => match[1]);
+  expect(hrefs).toEqual(ids.flatMap(id => Array(2).fill(localePath(`/anime/${id}-anime-${id}`, locale))));
+  const posters = html.match(/<img[^>]+>/g) ?? [];
+  expect(posters).toHaveLength(ids.length - 1);
+  expect(posters[0]).toContain('src="https://s4.anilist.co/9-large.jpg"');
+  for (const img of posters) {
+    expect(img).toContain('width="72"');
+    expect(img).toContain('height="108"');
+    expect(img).toContain('loading="lazy"');
+  }
+  expect(html).toContain(`<span>${d.state.noPoster}</span>`);
+  const jsonLd = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);
+  expect(jsonLd).toEqual({
+    '@context': 'https://schema.org', '@type': 'ItemList', name: metadata.title, url: metadata.alternates?.canonical,
+    itemListElement: ids.map((id, index) => ({
+      '@type': 'ListItem', position: index + 1, name: `Anime ${id}`,
+      url: new URL(localePath(`/anime/${id}-anime-${id}`, locale), metadata.alternates?.canonical as string).href,
+    })),
+  });
+});
 
 it.each(locales)('renders bounded discovery cards and only internal localized links (%s)', async locale => {
   const candidates = Array.from({ length: 9 }, (_, i) => ({ ...anime(i + 2), coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } }));

@@ -45,5 +45,5 @@ export async function generateMetadata({ params }: Props) {
 export default async function SimilarPage({ params }: Props) {
   const data = await content(params);
   if (!data) return <DiscoveryUnavailable locale={await getRequestLocale(params)} path={`/anime/${(await params).id}/similar`} />;
-  return <DiscoveryList {...data} rule={getDictionary(data.locale).discovery.similarRule} />;
+  return <DiscoveryList {...data} rule={getDictionary(data.locale).discovery.similarRule} cards />;
 }
