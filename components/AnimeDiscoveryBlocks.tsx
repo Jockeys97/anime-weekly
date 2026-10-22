@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { animeName, type AniListAnime } from '@/lib/anilist';
 import { animePath } from '@/lib/anime-url';
-import { getSimilarAnime, getAiringThisWeekAnime } from '@/lib/discovery-data';
+import { getSimilarAnime } from '@/lib/discovery-data';
 import { LandingCard } from '@/components/LandingCard';
 import { getRankingsWeek } from '@/lib/rankings-seo-data';
 import { fill, similarPath } from '@/lib/discovery';
@@ -17,16 +17,6 @@ export async function AnimeSimilarBlock({ anime, name, locale }: { anime: AniLis
   return <section className="landing-day detail-discovery" aria-labelledby="similar-anime-heading"><h2 id="similar-anime-heading">{d.similar}</h2>
     <DiscoveryCards items={items.slice(0, 6).map(item => item.anime)} locale={locale} />
     <Link prefetch={false} href={localePath(similarPath(anime.id, name), locale)}>{d.allSimilar} →</Link></section>;
-}
-
-export async function AnimeAiringThisWeekBlock({ id, locale }: { id: number; locale: Locale }) {
-  const items = await withTimeout(getAiringThisWeekAnime(), 5000).catch(() => []);
-  const others = items.filter(anime => anime.id !== id).slice(0, 4);
-  if (!others.length) return null;
-  const d = getDictionary(locale).discovery;
-  return <section className="landing-day detail-discovery" aria-labelledby="airing-this-week-heading"><h2 id="airing-this-week-heading">{d.airingThisWeek}</h2>
-    <DiscoveryCards items={others} locale={locale} />
-    <Link prefetch={false} href={localePath('/this-week', locale)}>{d.allThisWeek} →</Link></section>;
 }
 
 function DiscoveryCards({ items, locale }: { items: AniListAnime[]; locale: Locale }) {

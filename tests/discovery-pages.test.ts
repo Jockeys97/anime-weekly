@@ -6,18 +6,18 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('404'); } }));
 vi.mock('@/lib/anilist', () => ({ getAnime: vi.fn(), animeName: (anime: AniListAnime) => anime.title.english }));
 vi.mock('@/lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({ it: 'Titolo', en: 'Title', de: 'Titel' }) }));
-vi.mock('@/lib/discovery-data', () => ({ getSimilarAnime: vi.fn(), getAiringThisWeekAnime: vi.fn(), getDiscoveryCatalog: vi.fn(), getGenreLists: vi.fn() }));
+vi.mock('@/lib/discovery-data', () => ({ getSimilarAnime: vi.fn(), getDiscoveryCatalog: vi.fn(), getGenreLists: vi.fn() }));
 vi.mock('@/lib/episode-data', () => ({ getAnimeEpisodes: vi.fn(), getSitemapEpisodes: vi.fn() }));
 vi.mock('@/lib/rankings-seo-data', () => ({ getRankingsWeek: vi.fn() }));
 vi.mock('@/lib/episode-score', () => ({ getEpisodeIndexedScore: async () => null }));
 vi.mock('@/lib/anime-detail-data', () => ({ getAnimeDetailData: async () => ({ availability: { match: null, ratings: {}, providers: {}, providersUnavailable: false } }) }));
 import { getAnime } from '@/lib/anilist';
-import { getSimilarAnime, getAiringThisWeekAnime, getDiscoveryCatalog, getGenreLists } from '@/lib/discovery-data';
+import { getSimilarAnime, getDiscoveryCatalog, getGenreLists } from '@/lib/discovery-data';
 import { getAnimeEpisodes, getSitemapEpisodes } from '@/lib/episode-data';
 import EpisodePage, { generateMetadata as episodeMetadata } from '@/app/[locale]/anime/[id]/[episode]/page';
 import SimilarPage, { generateMetadata as similarMetadata, dynamic as similarDynamic } from '@/app/[locale]/anime/[id]/similar/page';
 import GenrePage, { generateMetadata as genreMetadata } from '@/app/[locale]/best-this-season/[genre]/page';
-import { AnimeSimilarBlock, AnimeAiringThisWeekBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
+import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { getRankingsWeek } from '@/lib/rankings-seo-data';
 import { getDiscoverySitemap } from '@/lib/discovery-sitemap';
 import { locales, type Locale } from '@/lib/locales';
@@ -34,7 +34,6 @@ beforeEach(() => {
   vi.mocked(getAnime).mockResolvedValue(anime());
   vi.mocked(getAnimeEpisodes).mockResolvedValue([event]);
   vi.mocked(getSimilarAnime).mockResolvedValue(Array.from({ length: 5 }, (_, i) => row(i + 2)));
-  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([]);
   vi.mocked(getDiscoveryCatalog).mockResolvedValue(Array.from({ length: 6 }, (_, i) => anime(i + 1)));
   vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [{ genre: 'Action', items: Array.from({ length: 5 }, (_, i) => row(i + 1)) }] });
   vi.mocked(getSitemapEpisodes).mockResolvedValue([event]);
@@ -113,10 +112,8 @@ it('propagates genre failures so a partial discovery sitemap cannot be cached', 
 
 it('omits optional detail blocks on upstream errors', async () => {
   vi.mocked(getSimilarAnime).mockRejectedValue(new Error('offline'));
-  vi.mocked(getAiringThisWeekAnime).mockRejectedValue(new Error('offline'));
   vi.mocked(getRankingsWeek).mockRejectedValue(new Error('offline'));
   expect(await AnimeSimilarBlock({ anime: anime(), name: 'Title', locale: 'en' })).toBeNull();
-  expect(await AnimeAiringThisWeekBlock({ id: 1, locale: 'en' })).toBeNull();
   expect(await AnimeCurrentRanking({ id: 1, locale: 'en' })).toBeNull();
 });
 
@@ -125,34 +122,26 @@ const localizedHtml = (children: ReactNode, locale: Locale) => renderToStaticMar
 it.each(locales)('renders bounded discovery cards and only internal localized links (%s)', async locale => {
   const candidates = Array.from({ length: 9 }, (_, i) => ({ ...anime(i + 2), coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } }));
   vi.mocked(getSimilarAnime).mockResolvedValue(candidates.map(anime => ({ anime, score: 8, genres: ['Action'] })));
-  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([anime(), ...candidates]);
   const similar = localizedHtml(await AnimeSimilarBlock({ anime: anime(), name: 'Title', locale }), locale);
-  const airing = localizedHtml(await AnimeAiringThisWeekBlock({ id: 1, locale }), locale);
   const d = getDictionary(locale).discovery;
   expect(similar).toContain(d.similar);
   expect(similar).toContain(d.allSimilar);
-  expect(airing).toContain(d.airingThisWeek);
-  expect(airing).toContain(d.allThisWeek);
   expect(similar.match(/<article /g)).toHaveLength(6);
-  expect(airing.match(/<article /g)).toHaveLength(4);
   expect(similar).toContain(`href="${localePath('/anime/1-title/similar', locale)}"`);
-  expect(airing).toContain(`href="${localePath('/this-week', locale)}"`);
-  for (const html of [similar, airing]) {
-    const hrefs = [...html.matchAll(/<a[^>]*href="([^"]+)"/g)].map(match => match[1]);
-    expect(hrefs.every(href => href.startsWith(locale === 'it' ? '/' : `/${locale}/`))).toBe(true);
-    expect(hrefs).toContain(localePath('/anime/2-anime-2', locale));
-    expect(hrefs).not.toContain(localePath('/anime/1-anime-1', locale));
-    const posters = html.match(/<img[^>]+>/g) ?? [];
-    expect(posters.length).toBeGreaterThan(0);
-    for (const img of posters) {
-      expect(img).toContain('width="72"');
-      expect(img).toContain('height="108"');
-      expect(img).toContain('loading="lazy"');
-    }
+  const hrefs = [...similar.matchAll(/<a[^>]*href="([^"]+)"/g)].map(match => match[1]);
+  expect(hrefs.every(href => href.startsWith(locale === 'it' ? '/' : `/${locale}/`))).toBe(true);
+  expect(hrefs).toContain(localePath('/anime/2-anime-2', locale));
+  expect(hrefs).not.toContain(localePath('/anime/1-anime-1', locale));
+  const posters = similar.match(/<img[^>]+>/g) ?? [];
+  expect(posters.length).toBeGreaterThan(0);
+  for (const img of posters) {
+    expect(img).toContain('width="72"');
+    expect(img).toContain('height="108"');
+    expect(img).toContain('loading="lazy"');
   }
 });
 
-it('omits empty or insufficient suggestions and a weekly strip containing only the current title', async () => {
+it('omits empty or insufficient suggestions', async () => {
   for (const count of [0, 3, 4]) {
     vi.mocked(getSimilarAnime).mockResolvedValue(Array.from({ length: count }, (_, i) => row(i + 2)));
     const block = await AnimeSimilarBlock({ anime: anime(), name: 'Title', locale: 'en' });
@@ -165,10 +154,6 @@ it('omits empty or insufficient suggestions and a weekly strip containing only t
       expect(html).not.toContain('<img');
     }
   }
-  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([anime()]);
-  expect(await AnimeAiringThisWeekBlock({ id: 1, locale: 'en' })).toBeNull();
-  vi.mocked(getAiringThisWeekAnime).mockResolvedValue([]);
-  expect(await AnimeAiringThisWeekBlock({ id: 1, locale: 'en' })).toBeNull();
 });
 it('links only actual membership in the resolved current ranking', async () => {
   vi.mocked(getRankingsWeek).mockResolvedValue({ week: '2026-42', savedAt: undefined, titles: [], rankings: { imdb: [{ anime: {} as never, anilistId: 1, score: 8, votes: 1000 }], mal: [] } });

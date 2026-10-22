@@ -19,8 +19,8 @@ import { DubbingStatus } from '@/components/DubbingStatus';
 import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 import { detailDesktopMedia, detailMobileMedia, emptyDetailImage, useDetailMobileViewport } from '@/lib/detail-viewport';
 
-export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro, weekLinks, localizedNames }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string; weekLinks?: ReactNode; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>;
+export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro, weekLinks, similar, localizedNames }: {
+  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string; weekLinks?: ReactNode; similar?: ReactNode; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>;
 }) {
   const locale = useLocale();
   const mobile = useDetailMobileViewport();
@@ -78,6 +78,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
     {weekLinks}
     {episodes && <Suspense fallback={<EpisodeChartLoading />}>{episodes}</Suspense>}
     <AnimeTrailer trailer={anime.trailer} title={name} image={anime.bannerImage || cover} mobileImage={anime.bannerImage ? cover || emptyDetailImage : undefined} locale={locale} />
+    {similar}
     {availability && <section className="detail-streaming" aria-labelledby="streaming-heading">
       <h2 id="streaming-heading">{d.title.streaming}</h2>
       <StreamingCountrySelector locale={locale} />
