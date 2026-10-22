@@ -6,7 +6,7 @@ import { createGunzip } from 'node:zlib';
 import { unstable_cache } from 'next/cache';
 import { storeImdbRatingIndex, hasImdbRatingIndex, migrateLegacyImdbIndex, ratingBucket, RATING_SHARDS, readImdbRatingShards, type RatingShard } from '@/lib/imdb-rating-index';
 import { japanDate } from '@/lib/weekly-episodes';
-import { storeImdbEpisodeIndex, hasImdbEpisodeIndex, type EpisodeShard } from '@/lib/imdb-episode-index';
+import { storeImdbEpisodeIndex, hasImdbEpisodeIndex, storeImdbDiagnostics, diagnosticError, type EpisodeShard, type ImdbDailyDiagnostics } from '@/lib/imdb-episode-index';
 
 export interface ImdbEpisodeTarget { imdbId: string; seriesImdbId: string }
 /** season/episode are IMDb's numbering; absent when only TMDB vouched for the episode ID. */
@@ -147,6 +147,11 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
   if (!targets) throw new Error('Cold IMDb daily dataset cache');
   const task = (async (): Promise<DailyDatasetEpisodes> => {
     const updatedAt = new Date().toISOString();
+    const started = Date.now();
+    const diagnostics: ImdbDailyDiagnostics = { day, startedAt: updatedAt, durationMs: 0, ratings: {}, episodes: {}, chart: 'skipped' };
+    const timed = <T,>(promise: Promise<T>, slot: { ms?: number; error?: string }) => promise.then(
+      value => { slot.ms = Date.now() - started; return value; },
+      error => { slot.ms = Date.now() - started; slot.error = diagnosticError(error); throw error; });
 
     const controller = new AbortController();
     const episodeController = new AbortController();
@@ -156,9 +161,9 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
       const wanted = new Set(targets.map(target => target.imdbId));
       const shards: RatingShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
       const chartShards: EpisodeShard[] = Array.from({ length: RATING_SHARDS }, () => ({}));
-      const ratingTask = matchingRows('ratings', wanted, controller.signal, shards);
+      const ratingTask = timed(matchingRows('ratings', wanted, controller.signal, shards), diagnostics.ratings);
       const [ratingResult, episodeResult] = await Promise.allSettled([
-        ratingTask, matchingRows('episodes', wanted, AbortSignal.any([controller.signal, episodeController.signal]), undefined, { shards: chartShards, ratings: ratingTask.then(() => shards) }),
+        ratingTask, timed(matchingRows('episodes', wanted, AbortSignal.any([controller.signal, episodeController.signal]), undefined, { shards: chartShards, ratings: ratingTask.then(() => shards) }), diagnostics.episodes),
       ]);
       if (ratingResult.status === 'rejected') throw ratingResult.reason;
       const ratings = ratingResult.value;
@@ -197,15 +202,21 @@ const dailyLoader = async (day: string): Promise<DailyDatasetEpisodes> => {
       }
       // Chart storage is optional: a failed partition must not remove a valid
       // title-score index or the weekly Top 5 result. Readers retain yesterday.
-      const chartReady = await storeImdbEpisodeIndex(day, chartShards, updatedAt, ratings.modified).then(() => true).catch(() => {
+      const chartReady = await storeImdbEpisodeIndex(day, chartShards, updatedAt, ratings.modified).then(() => true).catch(error => {
+        diagnostics.chartError = diagnosticError(error);
         console.warn('[episode-chart] daily cache write unavailable'); return false;
       });
+      diagnostics.chart = chartReady ? 'stored' : 'failed';
       return { status: 'ready', indexVersion: 2, chartStatus: chartReady ? 'ready' : 'unavailable', ratings: result, parents, updatedAt, ...(ratings.modified ? { dataUpdatedAt: ratings.modified } : {}) };
     } catch {
       controller.abort();
       // Cache the failed daily attempt too; tomorrow has a different key.
       return { status: 'unavailable', chartStatus: 'unavailable', ratings: {}, parents: {}, updatedAt };
-    } finally { clearTimeout(timeout); clearTimeout(episodeTimeout); }
+    } finally {
+      clearTimeout(timeout); clearTimeout(episodeTimeout);
+      diagnostics.durationMs = Date.now() - started;
+      await storeImdbDiagnostics(diagnostics);
+    }
   })();
   inFlight.set(key, task);
   try { return await task; }

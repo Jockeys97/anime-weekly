@@ -19,3 +19,13 @@ it('flags an unavailable or stale Top 5, missing providers and an empty snapshot
   expect(broken.problems.join(' ')).toMatch(/Piattaforme aggiornate solo per 0 titoli su 2/);
   expect(assessDailyHealth('2026-43', { titles: {}, events: [] }, now).problems[0]).toMatch(/Nessun titolo/);
 });
+it('reports why the episode charts were not rebuilt today', () => {
+  const base = { day: '2026-10-22', startedAt: '2026-10-22T06:01:00Z', durationMs: 121000, ratings: { ms: 20000 }, chart: 'skipped' as const };
+  const timedOut = assessDailyHealth('2026-43', snapshot(), now, { day: '2026-10-22', chartIndex: false, diagnostics: { ...base, episodes: { ms: 120000, error: 'AbortError: This operation was aborted' } } });
+  expect(timedOut.ok).toBe(false);
+  expect(timedOut.problems.at(-1)).toMatch(/file episodi: AbortError: This operation was aborted dopo 120 s/);
+  const writeFailed = assessDailyHealth('2026-43', snapshot(), now, { day: '2026-10-22', chartIndex: false, diagnostics: { ...base, episodes: { ms: 60000 }, chart: 'failed', chartError: 'Error: Episode chart cache limit reached' } });
+  expect(writeFailed.problems.at(-1)).toMatch(/salvataggio grafici: Error: Episode chart cache limit reached/);
+  expect(assessDailyHealth('2026-43', snapshot(), now, { day: '2026-10-22', chartIndex: false, diagnostics: null }).problems.at(-1)).toMatch(/nessuna diagnosi/);
+  expect(assessDailyHealth('2026-43', snapshot(), now, { day: '2026-10-22', chartIndex: true, diagnostics: null }).ok).toBe(true);
+});

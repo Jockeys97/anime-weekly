@@ -191,3 +191,11 @@ it('collects a cold new day once and skips subsequent chart checks without extra
   expect(await ensureImdbEpisodeIndex('2026-10-15')).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(2);
 });
+it('records timings, the episode stream error and the chart outcome for the health check', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url.includes('title.ratings') ? response(ratings) : new Response(null, { status: 503 })));
+  await primeImdbDatasetEpisodes([target], '2026-10-14');
+  const { readImdbDiagnostics } = await import('../lib/imdb-episode-index');
+  const diagnostics = await readImdbDiagnostics('2026-10-14');
+  expect(diagnostics).toMatchObject({ day: '2026-10-14', chart: 'skipped', ratings: { ms: expect.any(Number) }, episodes: { error: 'Error: IMDb dataset unavailable' } });
+  expect(diagnostics!.ratings.error).toBeUndefined();
+});
