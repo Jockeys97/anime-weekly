@@ -1,18 +1,23 @@
 'use client';
 
 import Link from '@/components/LocaleLink';
-import { stripLocale } from '@/lib/locale-routing';
+import { discoveryInternalPath, landingRoute, stripLocale } from '@/lib/locale-routing';
 import { usePathname } from 'next/navigation';
 import { getDictionary, type Locale } from '@/lib/i18n';
 
 export function HeaderNavigation({ locale, myAnimeEnabled = false }: { locale: Locale; myAnimeEnabled?: boolean }) {
-  const pathname = stripLocale(usePathname());
+  const publicPath = stripLocale(usePathname());
+  // Rewrites expose internal slugs during SSR and translated slugs in the
+  // browser. Compare the same route in both renders so hydration cannot leave
+  // an old aria-current attribute behind after client navigation.
+  const landing = landingRoute(publicPath);
+  const pathname = discoveryInternalPath(publicPath) ?? (landing ? `/${landing}` : publicPath);
   const d = getDictionary(locale).catalog;
-  const landing = getDictionary(locale).landings;
+  const landingLabels = getDictionary(locale).landings;
   const items = [
     { href: '/', label: d.weekly, active: pathname === '/' || pathname.startsWith('/week/'), icon: 'week' },
     { href: '/season', label: d.seasons, active: pathname.startsWith('/season') || pathname.startsWith('/anime/'), icon: 'season' },
-    { href: '/best-this-season', label: landing.bestNav, active: pathname === '/best-this-season', icon: 'season' },
+    { href: '/best-this-season', label: landingLabels.bestNav, active: pathname === '/best-this-season' || pathname.startsWith('/best-this-season/'), icon: 'season' },
     { href: '/search', label: d.search, active: pathname.startsWith('/search'), icon: 'search' },
     ...(myAnimeEnabled ? [{ href: '/my-anime', label: getDictionary(locale).myAnime.title, active: pathname.startsWith('/my-anime'), icon: 'personal' }] : []),
     { href: '/tier-list', label: getDictionary(locale).tierList.nav, active: pathname.startsWith('/tier-list'), icon: 'tier' },
