@@ -41,6 +41,17 @@ it('keeps preview catalog reads on the preview deployment', async () => {
   expect(String(fetcher.mock.calls[0][0])).toBe('https://preview.example.test/api/similar-catalog?catalog=full&cache=v3');
 });
 
+it('reads its Railway app rather than the canonical site or an old Vercel host', async () => {
+  vi.stubEnv('VERCEL_ENV', '');
+  vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'old.vercel.app');
+  vi.stubEnv('APP_URL', 'https://app.up.railway.app');
+  vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://weeklyanime.com');
+  const fetcher = vi.fn<typeof fetch>(async () => Response.json({ media: [] }));
+  vi.stubGlobal('fetch', fetcher);
+  await readSharedSimilarCatalog('full');
+  expect(String(fetcher.mock.calls[0][0])).toBe('https://app.up.railway.app/api/similar-catalog?catalog=full&cache=v3');
+});
+
 it('rejects failed and malformed reads instead of ranking an error payload', async () => {
   const fetcher = vi.fn().mockResolvedValueOnce(new Response(null, { status: 503 })).mockResolvedValueOnce(Response.json({ error: 'bad data' }));
   vi.stubGlobal('fetch', fetcher);

@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
+  output: 'standalone',
   // Public files are not fingerprinted: cache with a bounded TTL, not immutable.
   // Next already serves fingerprinted /_next/static assets as immutable.
   async headers() { return ['/logos/:path*', '/icon.svg'].map(source => ({

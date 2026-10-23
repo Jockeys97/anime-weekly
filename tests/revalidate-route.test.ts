@@ -407,3 +407,11 @@ it('warms the similar catalog from the authorized daily run', async () => {
   expect(await (await GET(request)).json()).toMatchObject({ similarCatalogReady: true });
   expect(warmDailySimilarCatalog).toHaveBeenCalledExactlyOnceWith(request);
 });
+
+it('rejects a Vercel cron header without Bearer credentials', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  const response = await GET(new Request('https://example.test/api/revalidate', { headers: { 'x-vercel-cron': '1' } }));
+  expect(response.status).toBe(401);
+  expect(warmDailySimilarCatalog).not.toHaveBeenCalled();
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+});

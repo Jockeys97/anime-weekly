@@ -1,4 +1,5 @@
 import 'server-only';
+import { sharedCacheOrigin } from '@/lib/internal-origin';
 import { unstable_cache } from 'next/cache';
 import { readImdbDatasetRating } from '@/lib/imdb-rating-index';
 import { readRatingsStore } from '@/lib/ratings-store';
@@ -110,12 +111,12 @@ export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
     if (hasImdbScore(local)) return local;
     // Read through the collector's bundle as well: deployments can isolate
     // Data Cache entries by route. This endpoint is strictly cache-only.
-    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-    if (host && process.env.VERCEL_ENV === 'production') {
+    const origin = sharedCacheOrigin();
+    if (origin) {
       try {
         // Revalidating (not no-store): no-store inside an ISR render throws static-to-dynamic,
         // which the catch below swallowed, so cold pages showed IMDb n/d.
-        const response = await fetch(`https://${host}/api/revalidate?imdb=${id}`, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
+        const response = await fetch(new URL(`/api/revalidate?imdb=${id}`, origin).href, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
         if (response.ok) {
           const result = await response.json() as Ratings;
           if (result.imdbId === id && hasImdbScore(result)) return { ...result, imdbStatus: 'ready' as const };

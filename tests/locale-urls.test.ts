@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); }, useRouter: () => ({}), usePathname: () => '/en' }));
-vi.mock('@vercel/analytics/next', () => ({ Analytics: () => null }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 import { locales } from '../lib/locales';
 import { getDictionary } from '../lib/i18n';

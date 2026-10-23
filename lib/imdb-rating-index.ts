@@ -1,6 +1,6 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { getCache } from '@vercel/functions';
+import { getRuntimeCache } from '@/lib/runtime-cache';
 import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { japanDate } from '@/lib/weekly-episodes';
@@ -13,7 +13,7 @@ export const IMDB_DATASET_RATINGS_TAG = 'imdb-dataset-ratings';
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 // Runtime Cache reads also work inside Next's nested unstable_cache callbacks.
 // Explicit, awaited writes avoid publishing a marker while writes are pending.
-const cache = getCache({ namespace: 'anime-weekly-imdb-v2', keyHashFunction: digest });
+const cache = getRuntimeCache({ namespace: 'anime-weekly-imdb-v2', keyHashFunction: digest });
 const options = { ttl: 8 * 86400, tags: [IMDB_DATASET_RATINGS_TAG] };
 export function ratingBucket(id: string): number {
   let hash = 2166136261;

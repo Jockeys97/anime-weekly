@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.vercel
+.railway
+.env*
+**/.env*
+*.tsbuildinfo
+coverage
+tests
+.github
+.agents
+.codex
+.aws
+*.log
+npm-debug.log*
