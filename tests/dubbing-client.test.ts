@@ -23,8 +23,8 @@ it('limits lookup concurrency and starts timeouts at dispatch', async () => {
   vi.useFakeTimers(); let active=0, maximum=0;
   vi.stubGlobal('fetch',vi.fn(async (url:string)=>{ maximum=Math.max(maximum,++active); await new Promise(resolve=>setTimeout(resolve,10000)); active--; return Response.json(result('it',Number(new URL('https://test'+url).searchParams.get('mal')))); }));
   const { loadDubbing } = await import('../lib/dubbing-client');
-  const all=Promise.all([1,2,3,4,5,6].map(id=>loadDubbing(`mal=${id}`,'it',id))); await vi.runAllTimersAsync();
-  expect(await all).toHaveLength(6); expect(maximum).toBe(2);
+  const all=Promise.all([1,2,3,4,5,6,7,8].map(id=>loadDubbing(`mal=${id}`,'it',id))); await vi.runAllTimersAsync();
+  expect(await all).toHaveLength(8); expect(maximum).toBe(6); // Edge-cached responses: six at a time.
 });
 it('expires successful client lookups after one day', async () => {
   vi.useFakeTimers(); const fetch=vi.fn(async()=>Response.json(result())); vi.stubGlobal('fetch',fetch);

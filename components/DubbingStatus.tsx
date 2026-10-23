@@ -17,7 +17,9 @@ export function DubbingStatus({ malId, anilistId, locale = 'en', initial, follow
   const query = validMalId(malId) ? `mal=${malId}` : validMalId(anilistId) ? `anilist=${anilistId}` : '';
   const [loaded, setLoaded] = useState<{ key: string; result: DubbingResult } | null>(null);
   const key = `${language}:${query}`;
-  const known = initial?.language === language && initial.malId === malId ? initial : undefined;
+  // A prefetched result fits when it is for this language and the exact entry: same MAL ID, or the
+  // calendar's AniList season it was looked up for (the caller keys it by that season).
+  const known = initial?.language === language && (validMalId(malId) ? initial.malId === malId : validMalId(anilistId)) ? initial : undefined;
   const result = loaded?.key === key ? loaded.result : known;
   const pending = Boolean(query && !result);
   useEffect(() => {

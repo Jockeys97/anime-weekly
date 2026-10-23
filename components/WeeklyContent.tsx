@@ -1,4 +1,5 @@
 'use client';
+import type { DubbingResult } from '@/lib/dubbing';
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WeeklyEpisodes } from '@/lib/weekly-episodes';
 import { WeeklyHeadingContent, WeeklyScopeContent } from '@/components/WeeklyIntro';
@@ -36,6 +37,7 @@ export function WeeklyContent({ initial, week, initialEvents = emptyEvents, init
   const [cards, setCards] = useState<Record<string, CardState>>({});
   const [calendar, setCalendar] = useState<WeeklyCalendarSchedule | null>(initialCalendar ?? null);
   const [calendarAttempt, retryCalendar] = useState(0);
+  const [weeklyDubbing, setWeeklyDubbing] = useState<{ key: string; statuses: Record<string, DubbingResult> } | null>(null);
   const [calendarPending, setCalendarPending] = useState(!frozen);
   const [today, setToday] = useState<string | null>(null);
   const slug = formatWeek(week);
@@ -79,6 +81,19 @@ export function WeeklyContent({ initial, week, initialEvents = emptyEvents, init
       .finally(() => { if (!controller.signal.aborted) setCalendarPending(false); });
     return () => controller.abort();
   }, [slug, initial.status, initial.titles.length, calendarAttempt, frozen]);
+  // Every card's dub status in one cached response, in parallel with the
+  // calendar. On failure the cards keep their own lookups, as before.
+  useEffect(() => {
+    if (frozen || initial.status !== 'ready' || !initial.titles.length) return;
+    const controller = new AbortController();
+    const key = `${slug}:${locale}`;
+    void fetch(`/api/weekly-dubbing?${new URLSearchParams({ week: slug, locale })}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
+      .then(async response => response.ok ? await response.json() as { statuses?: Record<string, DubbingResult> } : null)
+      .then(data => { if (!controller.signal.aborted && data?.statuses) setWeeklyDubbing({ key, statuses: data.statuses }); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [slug, locale, initial.status, initial.titles.length, frozen]);
+  const dubbingFor = (anilistId?: number) => anilistId && weeklyDubbing?.key === `${slug}:${locale}` ? weeklyDubbing.statuses[anilistId] : undefined;
   useEffect(() => {
     // Browser time is read after hydration, so the cached markup stays stable.
     const timer = setTimeout(() => setToday(formatWeek(isoWeek(new Date()))), 0);
@@ -115,7 +130,7 @@ export function WeeklyContent({ initial, week, initialEvents = emptyEvents, init
   const options = useMemo(() => filterOptions(filterable, region, platform), [filterable, region, platform]);
   const visible = useMemo(() => filterTitles(filterable, { genre, platform, region, onlyWatchlist, watchlist }), [filterable, genre, platform, region, onlyWatchlist, watchlist]);
   const events = useMemo(() => [...initialEvents, ...calendar?.events ?? []], [initialEvents, calendar?.events]);
-  const renderCard = (anime: AnimeTitle, dubbingAnilistId?: number) => <AnimeCard anime={anime} locale={locale} frozen={frozen} dubbingAnilistId={dubbingAnilistId} enrichmentFailed={cards[titleKey(anime)]?.status === 'error'} onRetry={() => load(anime, true)} />;
+  const renderCard = (anime: AnimeTitle, dubbingAnilistId?: number) => <AnimeCard anime={anime} locale={locale} frozen={frozen} dubbingAnilistId={dubbingAnilistId} initialDubbing={dubbingFor(dubbingAnilistId)} enrichmentFailed={cards[titleKey(anime)]?.status === 'error'} onRetry={() => load(anime, true)} />;
   return <div ref={container}>
     <WeeklyTopFive slug={slug} initialEpisodes={initialEpisodes} frozen={frozen} />
     <div className="week-toolbar"><div><div className="week-kicker"><span>{d.week.label} {String(week.week).padStart(2, '0')} / {week.year}</span>{today === slug && <span className="current-badge">{d.week.currentBadge}</span>}</div><h2 id="releases-heading">{d.week.releases}</h2><p><VisitorDate value={range.start} options={{ month: 'short', day: 'numeric' }} /> – <VisitorDate value={range.end} options={{ month: 'short', day: 'numeric' }} />, {week.year}<span className="date-divider"> / </span>{d.week.subtitle}</p></div><nav className="week-nav" aria-label={d.nav.label}><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, -1))}`} aria-label={d.nav.previous}>←</Link><Link prefetch={false} href="/">{d.nav.current}</Link><Link prefetch={false} href={`/week/${formatWeek(shiftWeek(week, 1))}`} aria-label={d.nav.next}>→</Link></nav></div>
