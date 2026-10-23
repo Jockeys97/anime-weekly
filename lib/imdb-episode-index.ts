@@ -1,5 +1,6 @@
 import 'server-only';
-import { getCache } from '@vercel/functions';
+import { getRuntimeCache } from '@/lib/runtime-cache';
+import { sharedCacheOrigin } from '@/lib/internal-origin';
 import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { japanDate } from '@/lib/weekly-episodes';
@@ -10,7 +11,7 @@ import { withTimeout } from '@/lib/async-timeout';
 export type EpisodeTuple = [id: string, season: number, episode: number, score: number, votes: number];
 export type EpisodeShard = Record<string, EpisodeTuple[]>;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
-const cache = getCache({ namespace: 'anime-weekly-episode-chart-v1', keyHashFunction: digest });
+const cache = getRuntimeCache({ namespace: 'anime-weekly-episode-chart-v1', keyHashFunction: digest });
 const options = { ttl: 8 * 86400, tags: ['imdb-episode-chart'] };
 const key = (day: string, part: string | number) => `episode-chart:${day}:${part}`;
 interface Manifest { hashes: string[]; updatedAt: string; dataUpdatedAt?: string }
@@ -101,13 +102,13 @@ export function getImdbEpisodeChart(seriesId: string): Promise<EpisodeChartData>
   const request = (async () => {
     const local = await readImdbEpisodeChart(seriesId);
     if (local.status === 'ready') return local;
-    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-    if (host && process.env.VERCEL_ENV === 'production') {
+    const origin = sharedCacheOrigin();
+    if (origin) {
       try {
         return await withTimeout((async () => {
           // A short revalidating fetch, not no-store: this runs inside ISR detail renders,
           // where no-store throws static-to-dynamic (500s, or a swallowed miss shown as n/d).
-          const response = await fetch(`https://${host}/api/revalidate?episodeChart=${seriesId}`, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) });
+          const response = await fetch(new URL(`/api/revalidate?episodeChart=${seriesId}`, origin).href, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) });
           if (!response.ok) throw new Error('Shared episode cache unavailable');
           const result = await response.json() as EpisodeChartData & { seriesId?: string };
           if (result.seriesId !== seriesId || !['ready', 'unavailable'].includes(result.status) || !Array.isArray(result.episodes) || result.episodes.length > 10000 || !result.episodes.every(validChartEpisode)) throw new Error('Invalid shared episode cache');

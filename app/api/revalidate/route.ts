@@ -15,6 +15,7 @@ import { readImdbEpisodeChart, hasImdbEpisodeIndex, readImdbDiagnostics } from '
 import { validImdbId } from '@/lib/episode-chart';
 import { assessDailyHealth } from '@/lib/daily-health';
 import { warmDailySimilarCatalog } from '@/lib/daily-similar-warm';
+import { internalOrigin } from '@/lib/internal-origin';
 export const maxDuration = 300;
 // Runtime Cache is regional: collector and shared read endpoints use one region.
 export const preferredRegion = 'iad1';
@@ -79,7 +80,7 @@ function validStore(store: RatingsStore): boolean {
 // the full 300-second budget. No Blob token means no additional request.
 async function archiveLastClosedWeek(request: Request, closedWeek: ISOWeek, capturedRatings: WeeklyRatings) {
   if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) return;
-  const url = new URL(request.url);
+  const url = new URL('/api/revalidate', internalOrigin(request.url));
   url.search = new URLSearchParams({ archive: formatWeek(closedWeek), background: '1' }).toString();
   try {
     const response = await fetch(url, {
@@ -184,7 +185,7 @@ export async function GET(request: Request) {
     void _total;
     storeHits = hits;
     revalidateTag(WEEKLY_RATINGS_TAG, { expire: 0 });
-    const origin = new URL(request.url).origin;
+    const origin = internalOrigin(request.url).origin;
     after(async () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
       await fetch(`${origin}/api/revalidate?store=${encodeURIComponent(slug)}`, {

@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import type { AniListAnime } from '@/lib/anilist';
-import { siteUrl } from '@/lib/seo';
+import { internalOrigin } from '@/lib/internal-origin';
 
 export const SIMILAR_CATALOG_TAG = 'similar-catalog';
 export const SIMILAR_CATALOG_RESPONSE_TAG = 'similar-catalog-response-v3';
@@ -12,8 +12,7 @@ export const SIMILAR_CATALOG_RESPONSE_TAG = 'similar-catalog-response-v3';
 export const readSharedSimilarCatalog = cache(async (catalog: 'full' | 'seasonal'): Promise<AniListAnime[]> => {
   const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) throw new Error('CRON_SECRET is required to read the shared similar catalog');
-  const origin = process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}` : siteUrl();
+  const origin = internalOrigin();
   // Version the URL too: Next's fetch key excludes next.tags, and an existing
   // entry can retain its old tags even after a caller stops supplying them.
   const response = await fetch(new URL(`/api/similar-catalog?catalog=${catalog}&cache=v3`, origin), {
