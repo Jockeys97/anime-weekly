@@ -553,6 +553,8 @@
     "selected": "Ausgewählt: {name}. Tippe auf eine Reihe, um es einzuordnen.",
     "cancel": "Abbrechen",
     "empty": "Für diese Season sind noch keine Anime verfügbar.",
+    "loading": "Anime für deine Tier-Liste werden geladen…",
+    "unavailable": "Der Katalog antwortet nicht. Deine gespeicherte Rangliste bleibt unverändert. Bitte versuche es gleich erneut.",
     "exportError": "Das Bild konnte nicht erstellt werden. Bitte versuche es erneut.",
     "count": "{count} Anime zum Einordnen"
   },

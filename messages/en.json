@@ -559,6 +559,8 @@
     "selected": "Selected: {name}. Tap a row to place it.",
     "cancel": "Cancel",
     "empty": "No anime are available for this season yet.",
+    "loading": "Loading anime for your tier list…",
+    "unavailable": "The catalog is not responding. Your saved ranking has not been changed. Please try again shortly.",
     "exportError": "The image could not be created. Please try again.",
     "count": "{count} anime to rank"
   },

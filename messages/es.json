@@ -553,6 +553,8 @@
     "selected": "Seleccionado: {name}. Toca una fila para colocarlo.",
     "cancel": "Cancelar",
     "empty": "Todavía no hay anime disponibles para esta temporada.",
+    "loading": "Cargando anime para tu tier list…",
+    "unavailable": "El catálogo no responde. Tu clasificación guardada no se ha modificado. Inténtalo de nuevo en breve.",
     "exportError": "No se pudo crear la imagen. Inténtalo de nuevo.",
     "count": "{count} anime por clasificar"
   },

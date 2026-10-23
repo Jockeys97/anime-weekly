@@ -553,6 +553,8 @@
     "selected": "Selezionato: {name}. Tocca una riga per posizionarlo.",
     "cancel": "Annulla",
     "empty": "Non ci sono ancora anime disponibili per questa stagione.",
+    "loading": "Caricamento degli anime per la tier list…",
+    "unavailable": "Il catalogo non risponde. La tua classifica salvata non è stata modificata. Riprova tra poco.",
     "exportError": "Non è stato possibile creare l’immagine. Riprova.",
     "count": "{count} anime da classificare"
   },
