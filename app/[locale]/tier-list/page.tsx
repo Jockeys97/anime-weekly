@@ -18,6 +18,9 @@ import { formatWeek, isoWeek } from '@/lib/week';
 type Query = Promise<{ season?: string | string[]; year?: string | string[] }>;
 const MAX_PAGES = 4;
 
+// Request-time season/query selection; upstream data keeps its own cache.
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: { params?: LocaleParams }): Promise<Metadata> {
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale).tierList;

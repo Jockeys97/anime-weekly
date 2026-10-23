@@ -21,7 +21,9 @@ export async function generateMetadata({ searchParams, params }: { params?: Loca
     ...(Object.keys(query).length ? { robots: { index: false, follow: true } } : {}),
   };
 }
-export const revalidate = 86400;
+// Query-dependent HTML must not become an on-demand static locale page.
+// Unlike force-dynamic, revalidate=0 preserves explicitly cached API fetches.
+export const revalidate = 0;
 export default async function SearchPage({ searchParams, params }: { params?: LocaleParams; searchParams: Promise<SearchParams> }) {
   await connection();
   const filters = parseAnimeFilters(await searchParams);

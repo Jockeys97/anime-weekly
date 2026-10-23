@@ -5,6 +5,9 @@ import { pageMetadata } from '@/lib/seo';
 import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
 import { getDictionary } from '@/lib/i18n';
 import { localePath } from '@/lib/locale-routing';
+// Request-time season/query selection; upstream data keeps its own cache.
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: { params?: LocaleParams }) {
   const locale = await getRequestLocale(params); const d = getDictionary(locale).catalog;
   return pageMetadata(d.seasonTitle, d.seasonDescription, '/season', undefined, locale);
