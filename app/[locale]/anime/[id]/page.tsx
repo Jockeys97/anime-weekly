@@ -67,7 +67,7 @@ export default async function AnimePage({ params }: Props) {
   // the episode chart or streaming information down after the initial paint.
   const [names, { ratings: animeRatings, availability, synopsis }, similar] = await Promise.all([
     namesPromise, getAnimeDetailData(anime, locale),
-    namesPromise.then(names => AnimeSimilarBlock({ anime, name: names[locale] || animeName(anime), locale })),
+    AnimeSimilarBlock({ anime, name: animeName(anime), locale }),
   ]);
   const name = names[locale] || animeName(anime);
   // Other slugs and bare IDs render the same page with a canonical anime URL.

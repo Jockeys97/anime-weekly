@@ -7,7 +7,7 @@ import { readRatingsStore } from '../lib/ratings-store';
 import { getTMDBTextTranslations } from '../lib/tmdb';
 import { animeLanguageAlternates } from '../lib/anime-url';
 import { buildAnimeSitemap } from '../lib/seo-sitemap';
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { vi.resetAllMocks(); vi.useRealTimers(); });
 it('uses real published translations for reciprocal slugs and falls back only when absent', async () => {
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: { 'tv:10': { anilistId: 21, fetchedAt: 1, lastSeenAt: 1 } } });
   vi.mocked(getTMDBTextTranslations).mockResolvedValue([{ iso_639_1: 'en', name: 'Real Title' }, { iso_639_1: 'it', name: 'Titolo reale' }, { iso_639_1: 'fr', name: 'Titre réel' }]);
@@ -33,4 +33,17 @@ it('falls back to the default title when the store or translations fail', async 
   vi.mocked(readRatingsStore).mockResolvedValue({ ratings: {}, sources: { 'tv:10': { anilistId: 21, fetchedAt: 1, lastSeenAt: 1 } } });
   vi.mocked(getTMDBTextTranslations).mockRejectedValue(new Error('TMDB not configured'));
   expect(await getAnimeLocalizedTitles(21, 'Real Title')).toEqual({});
+});
+
+
+it('bounds the complete title lookup when cache and translation waits are sequential', async () => {
+  vi.useFakeTimers();
+  vi.mocked(readRatingsStore).mockImplementation(() => new Promise(resolve => {
+    setTimeout(() => resolve({ ratings: {}, sources: { 'tv:10': { anilistId: 21, fetchedAt: 1, lastSeenAt: 1 } } }), 2000);
+  }));
+  vi.mocked(getTMDBTextTranslations).mockReturnValue(new Promise(() => {}));
+  const pending = getAnimeLocalizedTitles(21, 'Real Title');
+  await vi.advanceTimersByTimeAsync(2500);
+  expect(await pending).toEqual({});
+  expect(getTMDBTextTranslations).toHaveBeenCalledTimes(1);
 });

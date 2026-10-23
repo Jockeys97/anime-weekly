@@ -10,5 +10,9 @@ export async function generateMetadata({ params }: { params?: LocaleParams }) {
   return pageMetadata(d.metadata.title, d.metadata.description, '/', undefined, locale);
 }
 export const dynamic = 'error';
+// Do not freeze a build-time empty weekly snapshot into all six homepages.
+// First request generates the page; subsequent visits share the same ISR entry.
+export const dynamicParams = true;
+export function generateStaticParams() { return []; }
 export const revalidate = 21600; // live weekly output: refresh at most every six hours
 export default async function Home({ params }: { params?: LocaleParams }) { const locale = await getRequestLocale(params); return <><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /></>; }

@@ -10,13 +10,14 @@ import { SiteHeader, SiteFooter } from '@/components/SiteChrome';
 import { myAnimeConfig } from '@/lib/my-anime-config';
 import '../globals.css';
 import '../header-navigation.css';
-import { locales } from '@/lib/locales';
 import { getRequestLocale, type LocaleParams } from '@/lib/request-locale';
 import { pageMetadata } from '@/lib/seo';
 
-// Only six lightweight roots are built. Detail/week/provider routes keep their
-// empty generateStaticParams lists and are generated on demand.
-export function generateStaticParams() { return locales.map(locale => ({ locale })); }
+// Enumerating locale roots here also forces their homepages to be built, even
+// when the child returns no static params. Keep locale pages on-demand ISR so
+// a deploy cannot cache a homepage generated against an empty weekly snapshot.
+export const dynamicParams = true;
+export function generateStaticParams() { return []; }
 export async function generateMetadata({ params }: { params: LocaleParams }): Promise<Metadata> {
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale);
