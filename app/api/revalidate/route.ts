@@ -155,6 +155,8 @@ export async function GET(request: Request) {
     if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) after(() => archiveLastClosedWeek(request, shiftWeek(week, -1), closedRatings));
     return Response.json({ revalidated: true, cached: true, indexReady, episodeIndexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
   }
+  // Similar-page HTTP snapshots deliberately use an independent tag: expiring
+  // those here would make the first visitor wait for the catalog API again.
   revalidateTag(CACHE_TAG, { expire: 0 });
   let total = 0;
   let complete = false;
