@@ -3,6 +3,7 @@ import { authorizedCron } from '@/lib/cron-auth';
 import { getDiscoveryCatalog, getSimilarCatalog, warmSimilarCatalogs, SIMILAR_CATALOG_TAG } from '@/lib/discovery-data';
 import type { AniListAnime } from '@/lib/anilist';
 import { discoveryCandidate } from '@/lib/anilist-discovery-query';
+import { readSharedSimilarCatalog } from '@/lib/similar-catalog-client';
 
 // Daily Vercel cron (see vercel.json), after the 06:00 UTC /api/revalidate run
 // that expires the seasonal catalog. Pages read through this same API bundle,
@@ -43,6 +44,12 @@ export async function GET(request: Request) {
     // only replaced by a successful crawl (failed loaders are never cached).
     revalidateTag(SIMILAR_CATALOG_TAG, 'max');
     const counts = await warmSimilarCatalogs();
+    // Prime the exact authenticated HTTP entries used by pages as well as the
+    // API's unstable_cache entries. Existing responses remain available during
+    // the crawl; fresh ones can live for up to 24h, stale ones refresh via SWR.
+    // Their separate tag also avoids a same-request pending invalidation miss.
+    await readSharedSimilarCatalog('full');
+    await readSharedSimilarCatalog('seasonal');
     return Response.json({ status: 'ok', ...counts, ms: Date.now() - started }, { headers: { 'cache-control': 'no-store' } });
   } catch (error) {
     console.error('[similar-catalog] refresh failed', error);
