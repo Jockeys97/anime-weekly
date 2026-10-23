@@ -551,6 +551,7 @@
     "shareText": "Meine Anime-Tier-Liste {season} {year}",
     "editLabel": "Reihenbeschriftung bearbeiten",
     "selected": "Ausgewählt: {name}. Tippe auf eine Reihe, um es einzuordnen.",
+    "chooseTier": "Wähle eine Reihe, ohne ganz nach oben zu ziehen.",
     "cancel": "Abbrechen",
     "empty": "Für diese Season sind noch keine Anime verfügbar.",
     "loading": "Anime für deine Tier-Liste werden geladen…",
