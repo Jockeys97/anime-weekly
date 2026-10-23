@@ -1,6 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
+import { after } from 'next/server';
+import { readSharedSimilarCatalog, SIMILAR_CATALOG_TAG } from '@/lib/similar-catalog-client';
 import { getPopularCatalogBatch, getSeason, type AniListAnime } from '@/lib/anilist';
 import { POPULAR_CATALOG_PAGES, POPULAR_PAGES_PER_BATCH } from '@/lib/anilist-discovery-query';
 import { currentSeason, shiftSeason } from '@/lib/season';
@@ -58,7 +60,7 @@ export const getDiscoveryCatalog = cache(async () => {
 // Own tag: the daily CACHE_TAG expiry in /api/revalidate must not wipe this
 // weekly catalog (a cold read crawls AniList for minutes). The daily
 // /api/similar-catalog cron refreshes it with stale-while-revalidate instead.
-export const SIMILAR_CATALOG_TAG = 'similar-catalog';
+export { SIMILAR_CATALOG_TAG };
 // Independent of year, locale and source anime: one all-time crawl per week.
 let pendingPopular: Promise<AniListAnime[]> | undefined;
 const popularCatalog = unstable_cache(() => {
@@ -79,33 +81,46 @@ export const getSimilarCatalog = cache(async () => {
   const popular = await popularCatalog();
   return [...new Map([...popular, ...seasonal].map(anime => [anime.id, anime])).values()];
 });
-const getSimilarAnimeFull = cache(async (anime: AniListAnime) => rankSimilar(anime, await getSimilarCatalog()));
+const getSimilarAnimeFull = cache(async (anime: AniListAnime) => rankSimilar(anime, await readSharedSimilarCatalog('full')));
 
-// Page path: never wait minutes for a cold all-time catalog. After maxWaitMs,
-// rank against the seasonal catalog only (kept warm daily); the full crawl
-// keeps running and the daily cron populates it for later requests.
+// Bound both reads and keep the same in-flight crawl alive after responding.
 export const SIMILAR_PAGE_WAIT_MS = 4000;
+export const SIMILAR_FALLBACK_WAIT_MS = 250;
+async function bounded<T>(pending: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([pending, new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), ms); })]);
+  } finally { clearTimeout(timer); }
+}
 export async function getSimilarAnime(anime: AniListAnime, maxWaitMs = SIMILAR_PAGE_WAIT_MS) {
   const full = getSimilarAnimeFull(anime);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), maxWaitMs); });
+  const result = await bounded(full, maxWaitMs);
+  if (result) return result;
+  const completion = full.catch(error => { console.error('[discovery] Background similar crawl failed', error); });
   try {
-    const result = await Promise.race([full, timeout]);
-    if (result) return result;
-  } finally { clearTimeout(timer); }
-  full.catch(() => undefined);
+    after(() => completion);
+  } catch (error) {
+    // Offline scripts/tests can call this helper without a Next request store.
+    if (!(error instanceof Error && error.message.includes('outside a request scope'))) throw error;
+  }
   console.warn('[discovery] Similar catalog cold; using seasonal fallback', { id: anime.id });
-  return rankSimilar(anime, await getDiscoveryCatalog());
+  const seasonal = await bounded(readSharedSimilarCatalog('seasonal').catch(() => []), SIMILAR_FALLBACK_WAIT_MS);
+  return rankSimilar(anime, seasonal ?? []);
 }
 
-// Daily cron: mark the all-time catalog stale (old entry keeps serving and is
-// kept if the refresh fails), trigger its background refresh, and warm the
-// seasonal catalog. Nothing is persisted outside the Next data cache.
-export async function refreshSimilarCatalogs(revalidate: (tag: string) => void) {
-  revalidate(SIMILAR_CATALOG_TAG);
-  const seasonal = await getDiscoveryCatalog();
-  const popular = await popularCatalog();
-  return { seasonal: seasonal.length, popular: popular.length };
+// Called only by the authorized cron in the API bundle, which also owns public
+// catalog reads. A stale unstable_cache read starts the loader before returning
+// its old value: also await that loader so counts describe the completed crawl.
+// Failed refreshes leave the previous successful Next data cache entry intact.
+export async function warmSimilarCatalogs() {
+  const started = Date.now();
+  const { year, season } = currentSeason();
+  const cachedSeasonal = await getDiscoveryCatalog();
+  const seasonal = await (pendingCatalogs.get(`${year}-${season}`) ?? cachedSeasonal);
+  const seasonalMs = Date.now() - started;
+  const cachedPopular = await popularCatalog();
+  const popular = await (pendingPopular ?? cachedPopular);
+  return { seasonal: seasonal.length, popular: popular.length, seasonalMs, popularMs: Date.now() - started - seasonalMs };
 }
 
 export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {

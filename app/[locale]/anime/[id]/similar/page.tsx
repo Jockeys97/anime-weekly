@@ -15,6 +15,8 @@ type Props = { params: Promise<{ locale?: string; id: string }> };
 const SIMILAR_PAGE_LIMIT = 24;
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
+export const maxDuration = 300;
+export const preferredRegion = 'iad1';
 export function generateStaticParams() { return []; }
 const load = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
@@ -22,8 +24,7 @@ const load = cache(async (id: string) => {
   const anime = await getAnime(numericId);
   if (!anime) notFound();
   const [items, names] = await Promise.all([getSimilarAnime(anime).catch(() => null), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
-  if (!items) return null;
-  if (!items.length) notFound();
+  if (!items?.length) return null;
   return { anime, items: items.slice(0, SIMILAR_PAGE_LIMIT), names };
 });
 async function content(params: Props['params']) {
