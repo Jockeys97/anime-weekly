@@ -131,7 +131,7 @@ it('omits optional detail blocks on upstream errors', async () => {
   expect(await AnimeCurrentRanking({ id: 1, locale: 'en' })).toBeNull();
 });
 
-const localizedHtml = (children: ReactNode, locale: Locale) => renderToStaticMarkup(createElement(LocaleProvider, { locale, children }));
+const localizedHtml = (children: ReactNode, locale: Locale) => renderToStaticMarkup(createElement(LocaleProvider, { locale } as Parameters<typeof LocaleProvider>[0], children));
 
 it.each(locales)('renders the full similar page as localized cover cards with the original intro and ItemList order (%s)', async locale => {
   const ids = [9, 2, 8, 3, 7, 4, 6, 5, 10];
@@ -239,4 +239,26 @@ it('links only actual membership in the resolved current ranking', async () => {
   expect(html).toContain('2026-42');
   expect(html).toContain('/en/rankings/this-week#ranking-imdb');
   expect(await AnimeCurrentRanking({ id: 99, locale: 'en' })).toBeNull();
+});
+
+
+it.each(locales)('renders genre rankings as linked cover cards without changing ranking order (%s)', async locale => {
+  const items = [row(9), row(2), row(7)].map((item, i) => ({ ...item, score: 8.5 - i / 10,
+    anime: { ...item.anime, coverImage: i === 2 ? null : { large: `https://s4.anilist.co/${item.anime.id}.jpg`, extraLarge: null, color: null } },
+  }));
+  vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: items.map(item => item.anime), lists: [{ genre: 'Action', items }] });
+  const html = localizedHtml(await GenrePage({ params: Promise.resolve({ locale, genre: 'action' }) }), locale);
+  expect(html).toContain('landing-list genre-ranking-list');
+  expect(html.match(/<article class="anime-card landing-anime-card">/g)).toHaveLength(3);
+  expect(html.match(/class="poster"/g)).toHaveLength(3);
+  expect(html.match(/<img /g)).toHaveLength(2);
+  expect(html).toContain(getDictionary(locale).state.noPoster);
+  expect(html).toContain(getDictionary(locale).explore.allGenres);
+  expect(html).toContain(`href="${localePath('/best-this-season', locale)}"`);
+  expect([...html.matchAll(/<h2><a[^>]*>([^<]+)<\/a><\/h2>/g)].map(match => match[1])).toEqual(['Anime 9', 'Anime 2', 'Anime 7']);
+  for (const rank of ['01', '02', '03']) expect(html).toContain(`class="landing-rank">${rank}</span>`);
+  expect(html).toContain('IMDb');
+  expect(html).toContain(new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(8.5));
+  const jsonLd = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);
+  expect(jsonLd.itemListElement.map((entry: {position: number}) => entry.position)).toEqual([1, 2, 3]);
 });

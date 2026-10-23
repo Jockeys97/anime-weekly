@@ -64,7 +64,7 @@ it.each(locales)('keeps query searches noindex for %s', async locale => {
 });
 it('rejects unsupported route locales without inspecting cookies or headers', async () => {
   await expect(getRequestLocale(Promise.resolve({ locale: 'ja' }))).rejects.toThrow('not-found');
-  expect(generateStaticParams()).toEqual(locales.map(locale => ({ locale })));
+  expect(generateStaticParams()).toEqual([]); // Locale pages are generated on demand.
 });
 it.each([
   ['/en/anime/21', 'fr', '/fr/anime/21'], ['/it/anime/21', 'en', '/en/anime/21'],

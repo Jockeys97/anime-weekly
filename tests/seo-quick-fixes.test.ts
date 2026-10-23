@@ -9,7 +9,9 @@ vi.mock('next/server', () => ({ connection: vi.fn() }));
 vi.mock('../lib/anilist', () => ({ getSeason: vi.fn(), discoverAnime: vi.fn() }));
 vi.mock('../components/WeeklyGuide', () => ({ WeeklyGuide: () => null }));
 
-import { generateMetadata as searchMetadata } from '../app/[locale]/search/page';
+import { revalidate as seasonIndexRevalidate } from '../app/[locale]/season/page';
+import { revalidate as tierListRevalidate } from '../app/[locale]/tier-list/page';
+import { generateMetadata as searchMetadata, revalidate as searchRevalidate } from '../app/[locale]/search/page';
 import WeekPage, { generateMetadata as weekMetadata } from '../app/[locale]/week/[week]/page';
 import SeasonPage, { generateMetadata as seasonMetadata } from '../app/[locale]/season/[year]/[season]/page';
 import { WeeklyHeading } from '../components/WeeklyContent';
@@ -57,4 +59,11 @@ it('gives archive headings dates in the selected language and preserves the home
 it('formats week ranges crossing month and year boundaries', () => {
   expect(weekDateRange({ year: 2026, week: 44 })).toMatch(/^26 ottobre\s–\s0?1 novembre 2026$/);
   expect(weekDateRange({ year: 2020, week: 53 })).toMatch(/^28 dicembre 2020\s–\s0?3 gennaio 2021$/);
+});
+
+
+it('keeps request-dependent locale entries out of on-demand static generation', () => {
+  expect(searchRevalidate).toBe(0);
+  expect(seasonIndexRevalidate).toBe(0);
+  expect(tierListRevalidate).toBe(0);
 });
