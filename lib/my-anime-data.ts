@@ -132,7 +132,7 @@ export async function getPersonalWeek(tokens: { trakt?: AuthToken | null; mal?: 
   const key = ['my-anime-week-v3-retryable', formatWeek(week),
     tokens.trakt ? tokenHash(tokens.trakt.accessToken) : '-', tokens.mal ? tokenHash(tokens.mal.accessToken) : '-'];
   const tags = [tokens.trakt?.accessToken, tokens.mal?.accessToken].filter((token): token is string => Boolean(token)).map(personalCacheTag);
-  try { return await unstable_cache(() => loadPersonalWeek(tokens, week), key, { revalidate: 600, tags })(); }
+  try { return await unstable_cache(() => loadPersonalWeek(tokens, week), key, { revalidate: 21600, tags })(); }
   catch (error) { if (error instanceof IncompletePersonalWeek) return error.data;
     return { releases: [], followed: 0, unmatched: 0, unavailable: [
     ...(tokens.trakt ? ['trakt' as const] : []), ...(tokens.mal ? ['mal' as const] : []),

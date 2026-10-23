@@ -28,7 +28,7 @@ const cachedEpisodes = unstable_cache(async (week: string, id: number) => {
   const result = { events: [], episodeDates: tmdb.episodes, unavailable: tmdb.unavailable };
   if (result.unavailable) throw new PartialSchedule(result);
   return result;
-}, ['weekly-title-episodes-v2'], { revalidate: 3600, tags: [CACHE_TAG] });
+}, ['weekly-title-episodes-v2'], { revalidate: 21600, tags: [CACHE_TAG] });
 export async function getWeeklyTitleSchedule(week: string, kind: 'tv' | 'movie', id: number): Promise<WeeklySchedule | null> {
   if (kind === 'movie') return { events: [], episodeDates: [], unavailable: false };
   if (!await getWeeklySource(parseWeek(week)!, kind, id)) return null;

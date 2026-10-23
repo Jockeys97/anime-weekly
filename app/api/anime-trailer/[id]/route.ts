@@ -10,6 +10,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!anime) return Response.json({}, { status: 404, headers: { 'Cache-Control': 'no-store' } });
   const preview = trailerPreview(anime.trailer);
   return Response.json(preview ? { preview, sound: trailerPreview(anime.trailer, false), watch: trailerLinks(anime.trailer)!.watch } : {}, {
-    headers: { 'Cache-Control': preview ? 'public, max-age=3600, s-maxage=86400' : 'public, max-age=600, s-maxage=3600' },
+    headers: { 'Cache-Control': preview ? 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' : 'public, max-age=600, s-maxage=86400, stale-while-revalidate=604800' },
   });
 }

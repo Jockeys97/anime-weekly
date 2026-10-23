@@ -8,6 +8,6 @@ export async function GET(request: Request) {
   if (!season || !/^[1-9]\d*$/.test(page) || Number(page) > 2147483647) return Response.json({ error: 'Invalid season' }, { status: 400 });
   try {
     const result = await getSeasonPlatformMetadata(season.year, season.season, Number(page));
-    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=300' } });
+    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=86400, stale-while-revalidate=604800' } });
   } catch { return Response.json({ error: 'Providers unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } }); }
 }

@@ -11,7 +11,7 @@ import { DiscoveryUnavailable } from '@/components/DiscoveryUnavailable';
 import { MIN_IMDB_VOTES } from '@/lib/weekly-rankings';
 
 type Props = { params: Promise<{ locale?: string; genre: string }> };
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400;
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
 async function content(params: Props['params']) {

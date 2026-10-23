@@ -13,12 +13,13 @@ it('reads both catalogs through the writer API using explicit tagged fetch cachi
   expect(await readSharedSimilarCatalog('full')).toEqual([{ id: 1 }]);
   await readSharedSimilarCatalog('seasonal');
   expect(fetcher.mock.calls.map(call => String(call[0]))).toEqual([
-    'https://example.test/api/similar-catalog?catalog=full&cache=v2',
-    'https://example.test/api/similar-catalog?catalog=seasonal&cache=v2',
+    'https://example.test/api/similar-catalog?catalog=full&cache=v3',
+    'https://example.test/api/similar-catalog?catalog=seasonal&cache=v3',
   ]);
   expect(fetcher).toHaveBeenCalledWith(expect.any(URL), {
     headers: { Authorization: 'Bearer test-secret' },
-    cache: 'force-cache', next: { revalidate: 86400, tags: [SIMILAR_CATALOG_RESPONSE_TAG] },
+    cache: 'force-cache', next: { revalidate: 604800, tags: [SIMILAR_CATALOG_RESPONSE_TAG] },
+    signal: expect.any(AbortSignal),
   });
 });
 
@@ -37,7 +38,7 @@ it('keeps preview catalog reads on the preview deployment', async () => {
   const fetcher = vi.fn<typeof fetch>(async () => Response.json({ media: [] }));
   vi.stubGlobal('fetch', fetcher);
   await readSharedSimilarCatalog('full');
-  expect(String(fetcher.mock.calls[0][0])).toBe('https://preview.example.test/api/similar-catalog?catalog=full&cache=v2');
+  expect(String(fetcher.mock.calls[0][0])).toBe('https://preview.example.test/api/similar-catalog?catalog=full&cache=v3');
 });
 
 it('rejects failed and malformed reads instead of ranking an error payload', async () => {

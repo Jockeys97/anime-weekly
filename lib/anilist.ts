@@ -87,9 +87,9 @@ export async function getSeason(year: number, season: Season, page = 1, options:
 
 // Called only by the shared weekly catalog loader, through the same AniList
 // rate limiter as detail and season requests. Never cache raw error responses.
-export async function getPopularCatalogBatch(firstPage: number): Promise<AniListPage[]> {
+export async function getPopularCatalogBatch(firstPage: number, maxWaitMs?: number): Promise<AniListPage[]> {
   if (!Number.isSafeInteger(firstPage) || firstPage < 1) throw new RangeError('Invalid catalog page');
-  const data = await graphql<Record<string, AniListPage>>(popularCatalogQuery(firstPage), {}, { fresh: true });
+  const data = await graphql<Record<string, AniListPage>>(popularCatalogQuery(firstPage), {}, { fresh: true, maxWaitMs });
   return Array.from({ length: POPULAR_PAGES_PER_BATCH }, (_, offset) => {
     const page = data?.[`page${firstPage + offset}`];
     if (!Array.isArray(page?.media)) throw new Error('Popular discovery catalog unavailable');
@@ -206,7 +206,7 @@ export async function getAnimeMappings(ids: number[], byMal = false, maxWaitMs =
         body: JSON.stringify({ query: `query ($ids: [Int]) { Page(page: 1, perPage: 50) {
           pageInfo { hasNextPage } media(type: ANIME, ${byMal ? 'idMal_in' : 'id_in'}: $ids) { id idMal title { romaji english native } coverImage { large extraLarge color } }
         } }`, variables: { ids: selected.slice(offset, offset + 50) } }),
-        next: { revalidate: 600 },
+        next: { revalidate: 86400 },
       }, Math.max(0, deadline - Date.now()));
       if (!response.ok) return { media, unavailable: true };
       const result = await response.json() as { data?: { Page?: { media?: AnimeMapping[]; pageInfo?: { hasNextPage?: boolean } } }; errors?: unknown[] };
@@ -238,7 +238,7 @@ export async function getFavoriteAnime(ids: number[], maxWaitMs = 12000, fresh =
             relations { edges { relationType node { id idMal type format status title { romaji english native } nextAiringEpisode { episode airingAt } } } } }
         } }`, variables: { ids: chunk } }),
         // The weekly cron caches only its validated snapshot, never raw responses.
-        ...(fresh ? { cache: 'no-store' as const } : { next: { revalidate: 600 } }),
+        ...(fresh ? { cache: 'no-store' as const } : { next: { revalidate: 86400 } }),
       }, Math.max(0, deadline - Date.now()));
       if (!response.ok) return { media, unavailable: true };
       const result = await response.json() as { data?: { Page?: { media?: FavoriteAnime[] } }; errors?: unknown[] };

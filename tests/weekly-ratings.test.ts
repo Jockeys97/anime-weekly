@@ -404,7 +404,7 @@ it('reads provider-only snapshots through the legacy production API host indepen
   const fetchMock = vi.fn(async () => Response.json(snapshot)); vi.stubGlobal('fetch', fetchMock);
   const { getWeeklyRatings } = await import('../lib/weekly-ratings');
   expect(await getWeeklyRatings('2026-42')).toEqual(snapshot);
-  expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.vercel.app/api/revalidate?ratings=2026-42', expect.objectContaining({ next: { revalidate: 900, tags: ['weekly-ratings'] } }));
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.vercel.app/api/revalidate?ratings=2026-42', expect.objectContaining({ next: { revalidate: 21600, tags: ['weekly-ratings'] } }));
 });
 
 it('fills default-country gaps from JustWatch once per TMDB refresh, without TMDB logos for new services', async () => {

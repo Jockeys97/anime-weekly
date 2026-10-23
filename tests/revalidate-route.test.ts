@@ -1,3 +1,5 @@
+vi.mock('../lib/daily-similar-warm', () => ({ warmDailySimilarCatalog: vi.fn().mockResolvedValue(true) }));
+import { warmDailySimilarCatalog } from '../lib/daily-similar-warm';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const background = vi.hoisted(() => ({ tasks: [] as Promise<void>[] }));
 vi.mock('../lib/imdb-episode-index', () => ({ readImdbEpisodeChart: vi.fn() }));
@@ -23,6 +25,7 @@ import { after } from 'next/server';
 import { primeWeeklyRatings, readWeeklyRatingsSnapshot, storeWeeklyRatingsSnapshot, storeRatingsStore, readRatingsStore } from '../lib/weekly-ratings';
 import { GET, POST, maxDuration } from '../app/api/revalidate/route';
 beforeEach(() => {
+  vi.mocked(warmDailySimilarCatalog).mockResolvedValue(true);
   vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
   vi.mocked(writeWeekArchive).mockResolvedValue({ week: '2026-41', status: 'written', titleCount: 1 });
   vi.mocked(repairLegacyImdbRatingIndex).mockResolvedValue(true);
@@ -156,9 +159,9 @@ it('computes ratings, invalidates their tag, then stores through a separate POST
   expect(await response.json()).toMatchObject({ revalidated: true, week: '2026-42', total: 1, populated: 1, unavailable: 0, complete: true, storeHits: 1 });
   expect(maxDuration).toBe(300);
   expect(revalidatePath).not.toHaveBeenCalled();
-  expect(revalidateTag).toHaveBeenNthCalledWith(1, 'anime-week', { expire: 0 });
+  expect(revalidateTag).toHaveBeenNthCalledWith(1, 'anime-week', 'max');
   expect(revalidateTag).toHaveBeenNthCalledWith(2, 'weekly-ratings', { expire: 0 });
-  expect(revalidateTag).toHaveBeenNthCalledWith(3, 'weekly-page-output', { expire: 0 });
+  expect(revalidateTag).toHaveBeenNthCalledWith(3, 'weekly-page-output', 'max');
   expect(vi.mocked(primeWeeklyRatings).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidateTag).mock.invocationCallOrder[1]);
   expect(vi.mocked(revalidateTag).mock.invocationCallOrder[1]).toBeLessThan(vi.mocked(after).mock.invocationCallOrder[0]);
   expect(after).toHaveBeenCalledOnce();
@@ -170,7 +173,7 @@ it('computes ratings, invalidates their tag, then stores through a separate POST
   });
   expect(storeWeeklyRatingsSnapshot).toHaveBeenCalledExactlyOnceWith('2026-42', snapshot);
   expect(storeRatingsStore).toHaveBeenCalledExactlyOnceWith(store);
-  expect(revalidateTag).toHaveBeenNthCalledWith(4, 'weekly-page-output', { expire: 0 });
+  expect(revalidateTag).toHaveBeenNthCalledWith(4, 'weekly-page-output', 'max');
   expect(vi.mocked(storeWeeklyRatingsSnapshot).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidateTag).mock.invocationCallOrder[3]);
 });
 it('keeps public snapshot reads independent of authentication and provider work', async () => {
@@ -178,7 +181,7 @@ it('keeps public snapshot reads independent of authentication and provider work'
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue(snapshot);
   const response = await GET(new Request('https://example.test/api/revalidate?ratings=2026-42'));
   expect(await response.json()).toEqual(snapshot);
-  expect(response.headers.get('cache-control')).toBe('public, s-maxage=300');
+  expect(response.headers.get('cache-control')).toBe('public, s-maxage=21600, stale-while-revalidate=604800');
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(revalidateTag).not.toHaveBeenCalled();
   expect(after).not.toHaveBeenCalled();
@@ -249,7 +252,7 @@ it('stores an authenticated POST snapshot and refreshes page output after storag
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ stored: true, titles: 1 });
   expect(storeWeeklyRatingsSnapshot).toHaveBeenCalledExactlyOnceWith('2026-42', snapshot);
-  expect(revalidateTag).toHaveBeenCalledExactlyOnceWith('weekly-page-output', { expire: 0 });
+  expect(revalidateTag).toHaveBeenCalledExactlyOnceWith('weekly-page-output', 'max');
   expect(vi.mocked(storeWeeklyRatingsSnapshot).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(revalidateTag).mock.invocationCallOrder[0]);
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
@@ -318,7 +321,7 @@ it('serves an exact cached IMDb score publicly without calling either writer or 
   vi.mocked(readSharedImdbScore).mockResolvedValue({ imdbId: 'tt2560140', imdbRating: '9.1', imdbStatus: 'ready' });
   const response = await GET(new Request('https://example.test/api/revalidate?imdb=tt2560140'));
   expect(await response.json()).toMatchObject({ imdbId: 'tt2560140', imdbRating: '9.1' });
-  expect(response.headers.get('cache-control')).toContain('s-maxage=300');
+  expect(response.headers.get('cache-control')).toContain('s-maxage=21600');
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
   expect(repairLegacyImdbRatingIndex).not.toHaveBeenCalled();
@@ -394,4 +397,13 @@ it('reports a missing chart index even when the weekly snapshot and title scores
   expect(ensureImdbEpisodeIndex).toHaveBeenCalledOnce();
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
   expect(primeWeeklyEpisodes).not.toHaveBeenCalled();
+});
+
+it('warms the similar catalog from the authorized daily run', async () => {
+  vi.stubEnv('CRON_SECRET', 'fixture');
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
+  vi.mocked(primeWeeklyRatings).mockRejectedValue(new Error('offline'));
+  const request = new Request('https://example.test/api/revalidate', { headers: { authorization: 'Bearer fixture' } });
+  expect(await (await GET(request)).json()).toMatchObject({ similarCatalogReady: true });
+  expect(warmDailySimilarCatalog).toHaveBeenCalledExactlyOnceWith(request);
 });

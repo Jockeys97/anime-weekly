@@ -80,7 +80,7 @@ export async function recoverJustWatchRegions(name: string, imdbId: string, regi
     .normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   if (!slug || !/^tt\d+$/.test(imdbId)) return null;
   const load = async (url: string) => {
-    const response = await fetch(url, { next: { revalidate: 3600, tags: ['anime-week'] }, signal: AbortSignal.timeout(7000), redirect: 'error' });
+    const response = await fetch(url, { next: { revalidate: 86400, tags: ['anime-week'] }, signal: AbortSignal.timeout(7000), redirect: 'error' });
     if (!response.ok) return null;
     const html = await response.text();
     return html.length <= 2_000_000 ? html : null;

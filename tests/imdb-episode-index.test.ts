@@ -59,7 +59,7 @@ it('reads a missing regional index through the collector bundle without download
   vi.stubGlobal('fetch', fetch);
   const [a, b] = await Promise.all([getImdbEpisodeChart('tt100'), getImdbEpisodeChart('tt100')]);
   expect(a).toEqual(b); expect(a.episodes[0].season).toBe(4);
-  expect(fetch).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.example.test/api/revalidate?episodeChart=tt100', expect.objectContaining({ next: { revalidate: 900 } }));
+  expect(fetch).toHaveBeenCalledExactlyOnceWith('https://anime-weekly.example.test/api/revalidate?episodeChart=tt100', expect.objectContaining({ next: { revalidate: 86400 } }));
   expect(runtime.set).not.toHaveBeenCalled();
 });
 it('rejects a collector response for a different series and never fabricates a chart', async () => {

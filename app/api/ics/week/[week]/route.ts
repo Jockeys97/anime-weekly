@@ -1,7 +1,7 @@
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { parseWeek, weekRange } from '@/lib/week';
 import { calendarResponse } from '@/lib/ics';
-export const revalidate = 900;
+export const revalidate = 21600;
 export async function GET(_request: Request, { params }: { params: Promise<{ week: string }> }) {
   const { week: slug } = await params; const week = parseWeek(slug);
   if (!week) return new Response('Invalid week', { status: 400 });

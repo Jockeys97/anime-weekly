@@ -17,6 +17,6 @@ export async function GET(request: Request) {
       const anime = await getAnime(Number(anilist));
       ratings = anime ? (await getDetailAvailability(anime)).ratings : { imdbStatus: 'error' as const };
     }
-    return Response.json(ratings, { headers: { 'Cache-Control': ratings.imdbStatus === 'ready' ? 'public, max-age=60, s-maxage=3600' : 'no-store' } });
+    return Response.json(ratings, { headers: { 'Cache-Control': ratings.imdbStatus === 'ready' ? 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' : 'no-store' } });
   } catch { return Response.json({ imdbStatus: 'error' }, { headers: { 'Cache-Control': 'no-store' } }); }
 }

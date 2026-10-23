@@ -27,7 +27,7 @@ function historyPage(token: string, page: number, capturedAt?: string, maxWaitMs
       shows.set(item.show.ids.trakt, { title: item.show.title, ids: item.show.ids, year: item.show.year, country: item.show.country, genres: item.show.genres });
     }
     return { plays, shows: [...shows.values()], pages: result.pages, partial, capturedAt: endAt };
-  }, ['my-anime-history-v1', tokenHash(token), String(page), capturedAt ?? 'latest'], { revalidate: 900, tags: [personalCacheTag(token)] })();
+  }, ['my-anime-history-v1', tokenHash(token), String(page), capturedAt ?? 'latest'], { revalidate: 86400, tags: [personalCacheTag(token)] })();
 }
 async function loadStats(token: string): Promise<PersonalAnimeStats> {
   const deadline = Date.now() + HISTORY_BUDGET_MS;

@@ -57,7 +57,7 @@ describe('streaming redirect route', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(offer());
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(fetchMock).toHaveBeenCalledWith(regionalWatchPage(target), expect.objectContaining({ cache: 'force-cache', next: { revalidate: 3600, tags: ['anime-week'] }, redirect: 'error' }));
+    expect(fetchMock).toHaveBeenCalledWith(regionalWatchPage(target), expect.objectContaining({ cache: 'force-cache', next: { revalidate: 86400, tags: ['anime-week'] }, redirect: 'error' }));
   });
   it.each(['blocked', 'offline', 'no-match', 'wrong-content'])('falls back to the same title and country on %s', async scenario => {
     vi.stubGlobal('fetch', vi.fn(async () => {

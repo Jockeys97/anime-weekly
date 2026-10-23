@@ -14,6 +14,6 @@ it.each(['imdb=bad','imdb=tt123&anilist=21','tmdb=21&kind=bad','anilist=-2','ani
 it('caches ready scores but not source failures', async () => {
   vi.mocked(getImdbScore).mockResolvedValueOnce({ imdbId:'tt123', imdbRating:'8', imdbStatus:'ready' }).mockResolvedValueOnce({ imdbId:'tt123', imdbStatus:'error' });
   const request = () => new Request('https://example.com/api/imdb?imdb=tt123');
-  expect((await GET(request())).headers.get('cache-control')).toContain('s-maxage=3600');
+  expect((await GET(request())).headers.get('cache-control')).toContain('s-maxage=21600');
   expect((await GET(request())).headers.get('cache-control')).toBe('no-store');
 });

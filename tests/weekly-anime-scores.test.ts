@@ -129,5 +129,5 @@ it('validates the requested week and exposes only completed recovery responses t
   expect(getWeeklyRatingSources).not.toHaveBeenCalled();
   const result = await GET(new Request('https://example.test/api/weekly-ratings?week=2026-42'));
   expect(result.status).toBe(200);
-  expect(result.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=300');
+  expect(result.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=21600, stale-while-revalidate=604800');
 });

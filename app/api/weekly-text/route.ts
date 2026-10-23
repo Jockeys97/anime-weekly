@@ -8,5 +8,5 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Invalid weekly text request' }, { status: 400 });
   }
   const result = await getWeeklyText(id, kind, locale);
-  return Response.json(result, { headers: { 'Cache-Control': result.overview ? 'public, max-age=86400' : 'public, max-age=60' } });
+  return Response.json(result, { headers: { 'Cache-Control': result.overview ? 'public, max-age=86400, s-maxage=21600, stale-while-revalidate=604800' : 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' } });
 }

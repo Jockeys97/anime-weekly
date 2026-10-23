@@ -18,6 +18,10 @@ it.each([
   ['/anime/21', true], ['/anime/cyberpunk-edgerunners-2', true],
   ['/anime', true], ['/anime/21/extra', true], ['/week/2026-99', true],
   ['/api/anime-card/21', false], ['/_next/static/test.js', false], ['/', true],
+  ['/en/api/anime-card/21', false], ['/fr/_next/image', false],
+  ['/_next/image?url=poster.jpg', false], ['/favicon.ico', false],
+  ['/robots.txt', false], ['/sitemap.xml', false], ['/sitemaps/sitemap/discovery.xml', false],
+  ['/es/sitemap.xml', false], ['/en/poster.webp', false], ['/anime/poster.jpg', false],
 ])('matches public pages and excludes APIs/assets: %s', (url, expected) => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(expected);
 });

@@ -40,7 +40,7 @@ async function SearchResults({ filters, locale }: { filters: AnimeFilters; local
   const d = getDictionary(locale);
   // Same platform filter as the season pages, scoped to this page of results.
   const summaries = snapshotCatalog(snapshot);
-  const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
+  const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).filter(([id]) => data.media.some(anime => anime.id === Number(id))).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   const providerUrl = `/api/search-providers?${searchHref(filters, filters.page).split('?')[1]}`;
   return <section aria-labelledby="search-results-heading">
     <div className="explore-results-heading"><h2 id="search-results-heading">{filters.q ? `${d.catalog.searchResults} «${filters.q}»` : d.explore.discover}</h2><span>{d.catalog.page} {filters.page} · {data.media.length} {d.explore.results}</span></div>

@@ -10,7 +10,7 @@ import { StreamingCountrySelector } from '@/components/StreamingCountry';
 import { useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { isSeason, seasonPath } from '@/lib/season';
-import type { AniListAnime } from '@/lib/anilist';
+import type { AnimeDetailViewData } from '@/lib/anime-detail-view-data';
 import { episodePath } from '@/lib/discovery';
 import { animeHeading, nextAnimeEpisode } from '@/lib/anime-seo';
 import { animeAlternateNames } from '@/lib/anime-titles';
@@ -20,7 +20,7 @@ import { EpisodeChartLoading } from '@/components/EpisodeRatingsChart';
 import { detailDesktopMedia, detailMobileMedia, emptyDetailImage, useDetailMobileViewport } from '@/lib/detail-viewport';
 
 export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, episodes, dubbing, intro, weekLinks, similar, localizedNames }: {
-  anime: AniListAnime; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string; weekLinks?: ReactNode; similar?: ReactNode; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>;
+  anime: AnimeDetailViewData; synopsis: ReactNode; imdb: ReactNode; ratings: ReactNode; availability: ReactNode; episodes?: ReactNode; dubbing?: ReactNode; intro?: string; weekLinks?: ReactNode; similar?: ReactNode; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>;
 }) {
   const locale = useLocale();
   const mobile = useDetailMobileViewport();

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const result = await getDubbing(malId, locale);
     const failed = result.reason === 'upstream';
     return Response.json(result, { status: failed ? 503 : 200,
-      headers: { 'Cache-Control': failed ? 'no-store' : 'public, max-age=300, s-maxage=86400' } });
+      headers: { 'Cache-Control': failed ? 'no-store' : 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800' } });
   } catch {
     return Response.json({ status: 'unverified', language: locale, reason: 'upstream' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }

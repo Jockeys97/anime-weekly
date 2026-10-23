@@ -14,5 +14,5 @@ export async function GET(request: Request) {
   }
   const ratings = id ? await getMyAnimeListScore(id) : { malStatus: 'unmatched' };
   const failed = ratings.malStatus === 'error';
-  return Response.json(ratings, { status: failed ? 503 : 200, headers: { 'Cache-Control': failed ? 'no-store' : 'public, max-age=300, s-maxage=86400' } });
+  return Response.json(ratings, { status: failed ? 503 : 200, headers: { 'Cache-Control': failed ? 'no-store' : 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800' } });
 }

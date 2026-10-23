@@ -107,7 +107,7 @@ export function getImdbEpisodeChart(seriesId: string): Promise<EpisodeChartData>
         return await withTimeout((async () => {
           // A short revalidating fetch, not no-store: this runs inside ISR detail renders,
           // where no-store throws static-to-dynamic (500s, or a swallowed miss shown as n/d).
-          const response = await fetch(`https://${host}/api/revalidate?episodeChart=${seriesId}`, { next: { revalidate: 900 }, signal: AbortSignal.timeout(5000) });
+          const response = await fetch(`https://${host}/api/revalidate?episodeChart=${seriesId}`, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) });
           if (!response.ok) throw new Error('Shared episode cache unavailable');
           const result = await response.json() as EpisodeChartData & { seriesId?: string };
           if (result.seriesId !== seriesId || !['ready', 'unavailable'].includes(result.status) || !Array.isArray(result.episodes) || result.episodes.length > 10000 || !result.episodes.every(validChartEpisode)) throw new Error('Invalid shared episode cache');

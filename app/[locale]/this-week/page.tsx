@@ -12,7 +12,7 @@ import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 
-export const revalidate = 900;
+export const revalidate = 21600;
 export const dynamic = 'error';
 export async function generateMetadata({ params }: { params?: LocaleParams }) {
   return landingMetadata('week', await getRequestLocale(params));

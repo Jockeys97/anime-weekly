@@ -19,7 +19,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { episodeStructuredData } from '@/lib/structured-data';
 
 type Props = { params: Promise<{ locale?: string; id: string; episode: string }> };
-export const revalidate = 3600;
+export const revalidate = 86400;
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
 const load = cache(async (id: string, segment: string) => {

@@ -4,7 +4,7 @@ import type { AniListAnime } from '@/lib/anilist';
 import { siteUrl } from '@/lib/seo';
 
 export const SIMILAR_CATALOG_TAG = 'similar-catalog';
-export const SIMILAR_CATALOG_RESPONSE_TAG = 'similar-catalog-response-v2';
+export const SIMILAR_CATALOG_RESPONSE_TAG = 'similar-catalog-response-v3';
 
 // The API owns unstable_cache reads AND cron writes. Pages only cache HTTP
 // responses, whose keys do not depend on compiled loader function source.
@@ -16,14 +16,13 @@ export const readSharedSimilarCatalog = cache(async (catalog: 'full' | 'seasonal
     ? `https://${process.env.VERCEL_URL}` : siteUrl();
   // Version the URL too: Next's fetch key excludes next.tags, and an existing
   // entry can retain its old tags even after a caller stops supplying them.
-  const response = await fetch(new URL(`/api/similar-catalog?catalog=${catalog}&cache=v2`, origin), {
+  const response = await fetch(new URL(`/api/similar-catalog?catalog=${catalog}&cache=v3`, origin), {
     headers: { Authorization: `Bearer ${secret}` },
     // Next 16 keeps authenticated fetches cached with an explicit positive
     // revalidate value, including when the surrounding page is dynamic.
-    // Neither cron invalidates this response. In particular CACHE_TAG's
-    // expire:0 would discard the last good full catalog. Time-based SWR keeps
-    // serving it while the API reads/refills its independent loader caches.
-    cache: 'force-cache', next: { revalidate: 86400, tags: [SIMILAR_CATALOG_RESPONSE_TAG] },
+    // The cron marks only this HTTP snapshot stale after successful warming.
+    cache: 'force-cache', next: { revalidate: 604800, tags: [SIMILAR_CATALOG_RESPONSE_TAG] },
+    signal: AbortSignal.timeout(4000),
   });
   if (!response.ok) throw new Error(`Shared similar catalog unavailable (${response.status})`);
   const result = await response.json() as { media?: AniListAnime[] };

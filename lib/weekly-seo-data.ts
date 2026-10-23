@@ -39,7 +39,7 @@ const readWeekIndex = unstable_cache(async () => {
     }
   }
   return { weeks, appearances };
-}, ['weekly-seo-membership-v1'], { revalidate: 900, tags: [WEEKLY_PAGE_TAG, WEEK_ARCHIVE_LIST_TAG, WEEK_ARCHIVE_TAG] });
+}, ['weekly-seo-membership-v1'], { revalidate: 21600, tags: [WEEKLY_PAGE_TAG, WEEK_ARCHIVE_LIST_TAG, WEEK_ARCHIVE_TAG] });
 
 export async function getSeoWeeks() { return (await readWeekIndex()).weeks; }
 export async function getAnimeWeekAppearances(id: number) { return (await readWeekIndex()).appearances[id] ?? []; }

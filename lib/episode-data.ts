@@ -28,7 +28,7 @@ const readAirings = unstable_cache(async (ids: number[], until: number | null, e
     } }`;
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables: { ...variables, page } }), next: { revalidate: 3600, tags: [CACHE_TAG] },
+      body: JSON.stringify({ query, variables: { ...variables, page } }), next: { revalidate: 21600, tags: [CACHE_TAG] },
     });
     if (!response.ok) throw new Error('Episode schedule unavailable');
     const result = await response.json() as { data?: { Page?: { pageInfo?: { hasNextPage?: boolean }; airingSchedules?: AiringEvent[] } }; errors?: unknown[] };
@@ -38,7 +38,7 @@ const readAirings = unstable_cache(async (ids: number[], until: number | null, e
     if (!data.pageInfo?.hasNextPage) break;
   }
   return events;
-}, ['discovery-airing-schedules-v2'], { revalidate: 3600, tags: [CACHE_TAG] });
+}, ['discovery-airing-schedules-v2'], { revalidate: 21600, tags: [CACHE_TAG] });
 
 export const getAnimeEpisodes = cache(async (anime: AniListAnime, episode: number) => {
   if (anime.format === 'MOVIE') return [];

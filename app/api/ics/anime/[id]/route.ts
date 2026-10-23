@@ -1,6 +1,6 @@
 import { getUpcomingAirings } from '@/lib/upcoming-airings';
 import { calendarResponse } from '@/lib/ics';
-export const revalidate = 3600;
+export const revalidate = 86400;
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[1-9]\d*$/.test(id) || Number(id) > 2147483647) return new Response('Invalid anime id', { status: 400 });

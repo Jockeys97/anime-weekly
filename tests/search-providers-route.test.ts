@@ -16,7 +16,7 @@ it('loads platforms for exactly the search page the visitor sees', async () => {
   expect(discoverAnime).toHaveBeenCalledWith(expect.objectContaining({ q: 'one', genre: 'Action', sort: 'score', page: 2 }));
   expect(getAnimePlatformMetadata).toHaveBeenCalledWith([anime]);
   expect(response.status).toBe(200);
-  expect(response.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=300');
+  expect(response.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=86400, stale-while-revalidate=604800');
   expect(await response.json()).toEqual(snapshot);
 });
 

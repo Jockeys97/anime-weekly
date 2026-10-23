@@ -11,7 +11,7 @@ vi.mock('@/lib/anilist', () => ({ getSeason: vi.fn(), getPopularCatalogBatch: vi
 vi.mock('@/lib/ratings-store', () => ({ readRatingsStore: vi.fn() }));
 vi.mock('@/lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));
 import { getSeason, getPopularCatalogBatch } from '@/lib/anilist';
-import { warmSimilarCatalogs } from '@/lib/discovery-data';
+import { warmSimilarCatalogs } from '@/lib/similar-catalog-store';
 
 afterEach(() => vi.useRealTimers());
 

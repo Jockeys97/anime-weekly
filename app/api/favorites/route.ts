@@ -52,5 +52,5 @@ export async function GET(request: Request) {
     for (const item of items) { const providers = found.get(item.id); if (providers) item.providers = providers; }
   }
   const unavailable = anime.unavailable || cards.some(card => card === null);
-  return Response.json({ items, unavailable }, { headers: { 'Cache-Control': anime.unavailable ? 'no-store' : 'public, max-age=300, s-maxage=600' } });
+  return Response.json({ items, unavailable }, { headers: { 'Cache-Control': anime.unavailable ? 'no-store' : 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800' } });
 }

@@ -23,10 +23,7 @@ const { anime, snapshot, weekData } = vi.hoisted(() => ({
 vi.mock('server-only', () => ({}));
 vi.mock('next/server', () => ({ connection: async () => {} }));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('@/lib/similar-catalog-client', async original => ({ ...await original<typeof import('@/lib/similar-catalog-client')>(), readSharedSimilarCatalog: async (mode: string) => {
-  const local = await import('@/lib/discovery-data');
-  return mode === 'full' ? local.getSimilarCatalog() : local.getDiscoveryCatalog();
-} }));
+vi.mock('@/lib/similar-catalog-client', () => ({ readSharedSimilarCatalog: async () => [{ ...anime, seasonYear: 2026, season: 'FALL' }] }));
 vi.mock('../lib/anilist', async original => ({ ...await original<typeof import('../lib/anilist')>(), getAnime: async () => anime, getSeason: async (year: number, season: string, page = 1) => ({ media: [{ ...anime, seasonYear: year, season: season.toUpperCase() }], pageInfo: { currentPage: page, hasNextPage: false } }), getPopularCatalogBatch: async () => [{ media: [], pageInfo: { currentPage: 1, hasNextPage: false } }] }));
 vi.mock('../lib/platform-metadata', () => ({ getAnimePlatformMetadata: async () => ({ titles: {}, unavailable: false }) }));
 vi.mock('../lib/anime-detail-data', () => ({ getAnimeDetailData: async () => ({ ratings: {}, availability: { ratings: {}, providers: {} }, synopsis: {} }) }));

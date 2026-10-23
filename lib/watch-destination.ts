@@ -5,7 +5,7 @@ import { findProviderOffer, regionalWatchPage, type WatchTarget } from '@/lib/wa
 import { recoverJustWatchOffers } from '@/lib/justwatch-recovery';
 import { verifiedWeeklyIdentity } from '@/lib/verified-weekly-identities';
 
-const LINK_CACHE_SECONDS = 3600;
+const LINK_CACHE_SECONDS = 86400;
 interface TitleIdentity {
   id?: number;
   name?: string;

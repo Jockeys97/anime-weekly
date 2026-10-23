@@ -19,5 +19,8 @@ const config: NextConfig = {
     return { beforeFiles: process.env.NODE_ENV === 'development' && process.env.ANIME_WEEKLY_LOCAL_PREVIEW_DATA === '1' ? [
       { source: '/api/anime-card/:id', destination: 'https://anime-weekly.vercel.app/api/anime-card/:id' },
     ] : [], afterFiles: [], fallback: [] };
-  }, images: { unoptimized: true, remotePatterns: [{ protocol: 'https', hostname: 'images.justwatch.com', pathname: '/icon/**' }, { protocol: 'https', hostname: 'image.tmdb.org', pathname: '/t/p/**' }, { protocol: 'https', hostname: 's4.anilist.co', pathname: '/**' }] } };
+  },
+  // Posters/icons are served directly by AniList/TMDB/JustWatch CDNs.
+  // Keep Vercel image transformations and image-cache writes disabled.
+  images: { unoptimized: true, remotePatterns: [{ protocol: 'https', hostname: 'images.justwatch.com', pathname: '/icon/**' }, { protocol: 'https', hostname: 'image.tmdb.org', pathname: '/t/p/**' }, { protocol: 'https', hostname: 's4.anilist.co', pathname: '/**' }] } };
 export default config;

@@ -42,7 +42,7 @@ const cachedBatch = unstable_cache(async (searches: AnimeSearch[]): Promise<Rati
     if (formatAnimeScore(ratings) === 'n/a') throw new Error('Invalid anime score');
     return { ...ratings, animeStatus: 'ready' };
   });
-}, ['weekly-anilist-recovery-v2-year-labels'], { revalidate: 3600, tags: ['weekly-anilist-scores'] });
+}, ['weekly-anilist-recovery-v2-year-labels'], { revalidate: 21600, tags: ['weekly-anilist-scores'] });
 
 export async function getWeeklyAnimeScores(slug: string): Promise<WeeklyRatingScores> {
   const week = parseWeek(slug);
