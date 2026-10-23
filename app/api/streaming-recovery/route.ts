@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const offers = await recoverJustWatchOffers(pinned.identity.justWatchName, pinned.identity.imdbId, region);
     const [kind, tmdbId] = pinned.key.split(':');
     return Response.json(offers ? { id: Number(tmdbId), kind, name: pinned.identity.justWatchName, providers: { [region]: offers }, providersUnavailable: false, series: false, recovered: true } : {}, {
-      headers: { 'Cache-Control': offers ? 'public, max-age=60, s-maxage=3600' : 'no-store' },
+      headers: { 'Cache-Control': offers ? 'public, max-age=60, s-maxage=86400, stale-while-revalidate=604800' : 'no-store' },
     });
   }
   const anime = await getAnime(id);
@@ -25,6 +25,6 @@ export async function GET(request: Request) {
   if (!source || source.kind !== 'tv' || !watch.ratings.imdbId) return Response.json({}, { headers: { 'Cache-Control': 'no-store' } });
   const availability = await recoverJustWatchOffers(source.name, watch.ratings.imdbId, region);
   return Response.json(availability ? { ...source, providers: { [region]: availability }, providersUnavailable: false, series: Boolean(watch.seriesWatch), recovered: true } : {}, {
-    headers: { 'Cache-Control': availability ? 'public, max-age=60, s-maxage=3600' : 'no-store' },
+    headers: { 'Cache-Control': availability ? 'public, max-age=60, s-maxage=86400, stale-while-revalidate=604800' : 'no-store' },
   });
 }

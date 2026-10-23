@@ -29,7 +29,7 @@ export async function getWeekAirings(ids: number[], week: ISOWeek, maxWaitMs?: n
       const response = await anilistFetch('https://graphql.anilist.co', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ query, variables: { ids: selected, from: start - 1, until, page } }),
-        next: { revalidate: 3600, tags: [CACHE_TAG] },
+        next: { revalidate: 21600, tags: [CACHE_TAG] },
         ...(fresh ? { cache: 'no-store' as const, next: undefined } : {}),
       }, deadline == null ? undefined : Math.max(0, deadline - Date.now()));
       if (!response.ok) return { events, unavailable: true };

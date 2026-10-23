@@ -13,9 +13,9 @@ import { DiscoveryUnavailable } from '@/components/DiscoveryUnavailable';
 
 type Props = { params: Promise<{ locale?: string; id: string }> };
 const SIMILAR_PAGE_LIMIT = 24;
-export const dynamic = 'force-dynamic';
+export const revalidate = 86400;
 export const dynamicParams = true;
-export const maxDuration = 300;
+export const maxDuration = 30;
 export const preferredRegion = 'iad1';
 export function generateStaticParams() { return []; }
 const load = cache(async (id: string) => {

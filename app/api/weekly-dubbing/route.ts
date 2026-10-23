@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   if (!week || !parseWeek(week) || !isLocale(locale)) return Response.json({ error: 'Invalid weekly dubbing lookup' }, { status: 400 });
   try {
     const result = await getWeeklyDubbing(week, locale);
-    return Response.json(result, { headers: { 'Cache-Control': result.complete ? 'public, max-age=300, s-maxage=3600' : 'public, max-age=60, s-maxage=300' } });
+    return Response.json(result, { headers: { 'Cache-Control': result.complete ? 'public, max-age=300, s-maxage=21600, stale-while-revalidate=604800' : 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' } });
   } catch {
     return Response.json({ statuses: {}, complete: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }

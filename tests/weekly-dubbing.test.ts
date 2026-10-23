@@ -32,7 +32,7 @@ it('leaves out upstream failures so those cards fall back to their own lookup, a
   vi.mocked(getDubbing).mockResolvedValue({ status: 'unverified', language: 'it', malId: 11, reason: 'upstream' });
   const response = await GET(new Request('https://example.com/api/weekly-dubbing?week=2026-43&locale=it'));
   expect(await response.json()).toEqual({ statuses: {}, complete: false });
-  expect(response.headers.get('cache-control')).toContain('s-maxage=300');
+  expect(response.headers.get('cache-control')).toContain('s-maxage=21600');
   expect((await GET(new Request('https://example.com/api/weekly-dubbing?week=2026-43&locale=xx'))).status).toBe(400);
 });
 it('shows a prefetched result at once for the calendar season, without a pending state', () => {

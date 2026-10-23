@@ -15,7 +15,7 @@ import { getAnime } from '@/lib/anilist';
 import { getSimilarAnime, getDiscoveryCatalog, getGenreLists } from '@/lib/discovery-data';
 import { getAnimeEpisodes, getSitemapEpisodes } from '@/lib/episode-data';
 import EpisodePage, { generateMetadata as episodeMetadata } from '@/app/[locale]/anime/[id]/[episode]/page';
-import SimilarPage, { generateMetadata as similarMetadata, dynamic as similarDynamic } from '@/app/[locale]/anime/[id]/similar/page';
+import SimilarPage, { generateMetadata as similarMetadata, revalidate as similarRevalidate } from '@/app/[locale]/anime/[id]/similar/page';
 import GenrePage, { generateMetadata as genreMetadata } from '@/app/[locale]/best-this-season/[genre]/page';
 import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { getRankingsWeek } from '@/lib/rankings-seo-data';
@@ -106,7 +106,7 @@ it('expands each qualifying sitemap group into six URLs and excludes short lists
 });
 
 it('renders an uncached temporary state for similar pages during a catalog outage and recovers', async () => {
-  expect(similarDynamic).toBe('force-dynamic');
+  expect(similarRevalidate).toBe(86400);
   vi.mocked(getSimilarAnime).mockRejectedValue(new Error('Discovery catalog unavailable'));
   expect((await similarMetadata(props())).robots).toEqual({ index: false, follow: true });
   const html = renderToStaticMarkup(await SimilarPage(props()));

@@ -50,7 +50,7 @@ export default async function SeasonPage({ params, searchParams }: {
   await connection();
   const [data, snapshot] = await Promise.all([getSeasonWithSnapshot(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
   const summaries = snapshotCatalog(snapshot);
-  const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
+  const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).filter(([id]) => data.media.some(anime => anime.id === Number(id))).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.
   const locale = await getRequestLocale(params);
   const dictionary = getDictionary(locale); const d = dictionary.catalog;

@@ -10,5 +10,5 @@ export async function generateMetadata({ params }: { params?: LocaleParams }) {
   return pageMetadata(d.metadata.title, d.metadata.description, '/', undefined, locale);
 }
 export const dynamic = 'error';
-export const revalidate = 900; // re-read the cron-cached ratings snapshot (cache-only) every 15 min
+export const revalidate = 21600; // live weekly output: refresh at most every six hours
 export default async function Home({ params }: { params?: LocaleParams }) { const locale = await getRequestLocale(params); return <><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /></>; }

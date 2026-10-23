@@ -115,7 +115,7 @@ export function getImdbScore(id: string, week = scoreWeek()): Promise<Ratings> {
       try {
         // Revalidating (not no-store): no-store inside an ISR render throws static-to-dynamic,
         // which the catch below swallowed, so cold pages showed IMDb n/d.
-        const response = await fetch(`https://${host}/api/revalidate?imdb=${id}`, { next: { revalidate: 900 }, signal: AbortSignal.timeout(8000) });
+        const response = await fetch(`https://${host}/api/revalidate?imdb=${id}`, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
         if (response.ok) {
           const result = await response.json() as Ratings;
           if (result.imdbId === id && hasImdbScore(result)) return { ...result, imdbStatus: 'ready' as const };

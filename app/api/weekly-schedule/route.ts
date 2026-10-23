@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   try {
     const result = await withTimeout(getWeeklyTitleSchedule(lookup.week, lookup.kind, lookup.id), 25000);
     if (!result) return Response.json({ error: 'Title not in this week' }, { status: 404 });
-    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=3600' } });
+    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' } });
   } catch {
     console.error('Weekly schedule unavailable');
     return Response.json({ events: [], episodeDates: [], unavailable: true }, { status: 503, headers: { 'Cache-Control': 'no-store' } });

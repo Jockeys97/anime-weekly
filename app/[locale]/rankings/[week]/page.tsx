@@ -12,7 +12,7 @@ import { MIN_IMDB_VOTES, MIN_MAL_SCORED_BY } from '@/lib/weekly-rankings';
 import { animePath } from '@/lib/anime-url';
 
 type Props = { params: Promise<{ week: string; locale?: string }> };
-export const revalidate = 900;
+export const revalidate = 21600;
 export const dynamic = 'error';
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }

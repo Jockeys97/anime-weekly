@@ -17,11 +17,13 @@ import { animeItemList, breadcrumbList } from '@/lib/structured-data';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 
-// Render on request; only successful catalog data is cached. An upstream outage
-// must never become a prerendered landing without genre links.
-export const dynamic = 'force-dynamic';
+// Generate on demand; catalog reads never perform upstream crawls.
+export const revalidate = 86400;
+export function generateStaticParams() { return []; }
 export async function generateMetadata({ params }: { params?: LocaleParams }) {
-  return landingMetadata('best', await getRequestLocale(params));
+  const metadata = landingMetadata('best', await getRequestLocale(params));
+  const catalog = await getGenreLists().catch(() => null);
+  return { ...metadata, ...(!catalog?.media.length ? { robots: { index: false, follow: true } } : {}) };
 }
 export default async function BestThisSeason({ params }: { params?: LocaleParams }) {
   const locale = await getRequestLocale(params);

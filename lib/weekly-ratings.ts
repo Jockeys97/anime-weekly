@@ -84,7 +84,7 @@ export async function getWeeklyRatings(slug: string): Promise<WeeklyRatings> {
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (host && process.env.VERCEL_ENV === 'production') {
     try {
-      const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 900, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
+      const res = await fetch(`https://${host}/api/revalidate?ratings=${encodeURIComponent(slug)}`, { next: { revalidate: 21600, tags: [WEEKLY_RATINGS_TAG] }, signal: AbortSignal.timeout(8000) });
       if (res.ok) {
         const data = await res.json() as WeeklyRatings;
         if (data && data.titles && (Object.keys(data.titles).length || data.episodes || data.availability)) return data;

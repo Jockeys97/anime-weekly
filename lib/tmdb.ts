@@ -66,7 +66,7 @@ async function discover(kind: Kind, week: ISOWeek, locale: Locale, englishNames 
 export async function getRatings(kind: Kind, id: number, revalidate = CACHE_SECONDS, fresh = false): Promise<Ratings> {
   if (!isTMDBConfigured()) return { imdbStatus: 'unconfigured' };
   try {
-    const external = await tmdb<{ imdb_id?: string | null }>(`${kind}/${id}/external_ids`, {}, Math.min(revalidate, 3600), fresh);
+    const external = await tmdb<{ imdb_id?: string | null }>(`${kind}/${id}/external_ids`, {}, Math.max(revalidate, 86400), fresh);
     if (!external.imdb_id || !/^tt\d+$/.test(external.imdb_id)) return { imdbStatus: 'unmatched' };
     return await getImdbScore(external.imdb_id);
   } catch { return { imdbStatus: 'error' }; }

@@ -10,13 +10,13 @@ const page = (events: unknown[], hasNextPage = false) => Response.json({ data: {
 beforeEach(() => request.mockReset());
 afterEach(() => vi.unstubAllGlobals());
 describe('weekly airing schedule lookup', () => {
-  it('requests only matched titles and a precise week window with tagged hourly caching', async () => {
+  it('requests only matched titles and a precise week window with tagged six-hour caching', async () => {
     request.mockResolvedValueOnce(page([event]));
     expect(await getWeekAirings([21, 21, -1, NaN], week)).toEqual({ events: [event], unavailable: false });
     const [url, init] = request.mock.calls[0];
     expect(url).toBe('https://graphql.anilist.co');
     expect(JSON.parse(init.body).variables).toEqual({ ids: [21], from: start - 1, until: start + 604800, page: 1 });
-    expect(init.next).toEqual({ revalidate: 3600, tags: ['anime-week'] });
+    expect(init.next).toEqual({ revalidate: 21600, tags: ['anime-week'] });
   });
   it('paginates, deduplicates and ignores unrelated or invalid events', async () => {
     const second = { ...event, id: 11, episode: 4, airingAt: start + 86400 };

@@ -14,6 +14,7 @@ import { PROVIDER_MAX_AGE, validProviderSnapshot } from '@/lib/provider-snapshot
 import { readImdbEpisodeChart, hasImdbEpisodeIndex, readImdbDiagnostics } from '@/lib/imdb-episode-index';
 import { validImdbId } from '@/lib/episode-chart';
 import { assessDailyHealth } from '@/lib/daily-health';
+import { warmDailySimilarCatalog } from '@/lib/daily-similar-warm';
 export const maxDuration = 300;
 // Runtime Cache is regional: collector and shared read endpoints use one region.
 export const preferredRegion = 'iad1';
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
   if (store !== undefined && !validStore(store)) return Response.json({ error: 'invalid store' }, { status: 400 });
   await storeWeeklyRatingsSnapshot(slug, snapshot);
   if (store) await storeRatingsStore(store);
-  revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
+  revalidateTag(WEEKLY_PAGE_TAG, 'max');
   return Response.json({ stored: true, titles: Object.keys(snapshot.titles).length });
 }
 
@@ -103,13 +104,13 @@ export async function GET(request: Request) {
   if (chart !== null) {
     if (!validImdbId(chart)) return Response.json({ error: 'invalid IMDb series ID' }, { status: 400 });
     const result = await readImdbEpisodeChart(chart);
-    return Response.json({ ...result, seriesId: chart }, { headers: { 'cache-control': result.status === 'ready' ? 'public, max-age=60, s-maxage=300' : 'no-store' } });
+    return Response.json({ ...result, seriesId: chart }, { headers: { 'cache-control': result.status === 'ready' ? 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' : 'no-store' } });
   }
   const imdb = new URL(request.url).searchParams.get('imdb');
   if (imdb !== null) {
     if (!/^tt\d+$/.test(imdb) || imdb.length > 32) return Response.json({ error: 'invalid IMDb ID' }, { status: 400 });
     const rating = await readSharedImdbScore(imdb);
-    return Response.json(rating, { headers: { 'cache-control': hasImdbScore(rating) ? 'public, max-age=60, s-maxage=300' : 'no-store' } });
+    return Response.json(rating, { headers: { 'cache-control': hasImdbScore(rating) ? 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' : 'no-store' } });
   }
   const episodeWeek = new URL(request.url).searchParams.get('episodes');
   if (episodeWeek !== null) {
@@ -117,7 +118,7 @@ export async function GET(request: Request) {
     const snapshot = await readWeeklyRatingsSnapshot(episodeWeek);
     const episodes = snapshot.episodes ?? { entries: [], status: 'pending' as const };
     return Response.json({ ...episodes, entries: topWeeklyEpisodes(episodes.entries, episodeWeek) }, {
-      headers: { 'cache-control': episodes.status === 'ready' ? 'public, max-age=60, s-maxage=300' : 'no-store' },
+      headers: { 'cache-control': episodes.status === 'ready' ? 'public, max-age=60, s-maxage=21600, stale-while-revalidate=604800' : 'no-store' },
     });
   }
   // Public, read-only summary of today's cron output for the daily GitHub check.
@@ -132,11 +133,12 @@ export async function GET(request: Request) {
   if (read !== null) {
     if (!parseWeek(read)) return Response.json({ error: 'invalid week' }, { status: 400 });
     const snapshot = await readWeeklyRatingsSnapshot(read);
-    return Response.json(snapshot, { headers: { 'cache-control': 'public, s-maxage=300' } });
+    return Response.json(snapshot, { headers: { 'cache-control': 'public, s-maxage=21600, stale-while-revalidate=604800' } });
   }
   const d = getDictionary(); const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) return Response.json({ error: d.api.missingSecret }, { status: 500 });
   if (!authorized(request)) return Response.json({ error: d.api.unauthorized }, { status: 401 });
+  const similarWarm = warmDailySimilarCatalog(request);
   const week = isoWeek(new Date());
   // The global ratings tag below also expires last week's entry. Capture it
   // first, then deliver it to the archive invocation after the current work.
@@ -153,11 +155,11 @@ export async function GET(request: Request) {
     const episodeIndexReady = await ensureImdbEpisodeIndex().catch(() => false);
     console.info('[imdb-index] daily indexes verified', { ready: indexReady, episodeIndexReady });
     if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) after(() => archiveLastClosedWeek(request, shiftWeek(week, -1), closedRatings));
-    return Response.json({ revalidated: true, cached: true, indexReady, episodeIndexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
+    return Response.json({ revalidated: true, similarCatalogReady: await similarWarm, cached: true, indexReady, episodeIndexReady, week: formatWeek(week), episodeStatus: previous.episodes.status, episodeCoverage: previous.episodes.coverage, episodeReason: previous.episodes.reason });
   }
   // Similar-page HTTP snapshots deliberately use an independent tag: expiring
   // those here would make the first visitor wait for the catalog API again.
-  revalidateTag(CACHE_TAG, { expire: 0 });
+  revalidateTag(CACHE_TAG, 'max');
   let total = 0;
   let complete = false;
   let populated = 0;
@@ -202,8 +204,8 @@ export async function GET(request: Request) {
   }
   // The ratings snapshot has its own tag: discovery invalidation must never
   // delete the values just computed by this job.
-  revalidateTag(WEEKLY_PAGE_TAG, { expire: 0 });
+  revalidateTag(WEEKLY_PAGE_TAG, 'max');
   const episodeIndexReady = await ensureImdbEpisodeIndex().catch(() => false);
   console.info('[episode-chart] daily index checked', { ready: episodeIndexReady });
-  return Response.json({ revalidated: true, week: formatWeek(week), total, populated, unavailable, complete, storeHits, episodeIndexReady, episodeStatus: episodeSnapshot?.status, episodeCoverage: episodeSnapshot?.coverage, episodeReason: episodeSnapshot?.reason });
+  return Response.json({ revalidated: true, similarCatalogReady: await similarWarm, week: formatWeek(week), total, populated, unavailable, complete, storeHits, episodeIndexReady, episodeStatus: episodeSnapshot?.status, episodeCoverage: episodeSnapshot?.coverage, episodeReason: episodeSnapshot?.reason });
 }

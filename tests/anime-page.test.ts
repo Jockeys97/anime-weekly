@@ -52,7 +52,10 @@ describe('server-rendered anime details', () => {
     vi.mocked(getAnimeAvailability).mockResolvedValue({ match: null, ratings: {}, providers: {}, providersUnavailable: false });
     const page = await AnimePage({ params: Promise.resolve({ id: '21-example-anime' }) });
     expect(textInTree(page, 'Example anime')).toBe(true);
-    expect(page.props.children[2].props.anime.description).toBe('Example synopsis');
+    expect(page.props.children[2].props.anime).not.toHaveProperty('description');
+    expect(page.props.children[2].props.anime).not.toHaveProperty('stats');
+    expect(page.props.children[2].props.anime).not.toHaveProperty('recommendations');
+    expect(page.props.children[2].props.synopsis.props.original).toBe('Example synopsis');
     const view = page.props.children[2];
     const presentation = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, React.createElement(AnimeDetailView, { ...view.props, synopsis: null, imdb: null, ratings: view.props.ratings, availability: null })));
     expect(presentation).toContain('Example anime');
@@ -184,7 +187,8 @@ it.each(['outage', 'not-found'])('renders saved anime in metadata and page on li
   const metadata = await generateMetadata(props);
   expect(metadata.title).toMatchObject({ absolute: expect.stringContaining('Example anime') });
   const page = await AnimePage(props);
-  expect(page.props.children[2].props.anime).toEqual(anime);
+  expect(page.props.children[2].props.anime).toMatchObject({ id: anime.id, title: anime.title, episodes: anime.episodes });
+  expect(page.props.children[2].props.anime).not.toHaveProperty('description');
 });
 
 it.each([true, false])('shares the Italian description between metadata and JSON-LD (localized: %s)', async localized => {

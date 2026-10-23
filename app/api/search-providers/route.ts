@@ -10,6 +10,6 @@ export async function GET(request: Request) {
     const data = await discoverAnime(parseAnimeFilters(params));
     if (data.unavailable || !data.media.length) throw new Error('Search unavailable');
     const result = await getAnimePlatformMetadata(data.media);
-    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=300' } });
+    return Response.json(result, { headers: { 'Cache-Control': result.unavailable ? 'no-store' : 'public, max-age=60, s-maxage=86400, stale-while-revalidate=604800' } });
   } catch { return Response.json({ error: 'Providers unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } }); }
 }

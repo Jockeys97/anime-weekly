@@ -13,13 +13,13 @@ const weeklyProviders = unstable_cache(async (kind: 'tv' | 'movie', id: number):
   const result = await getWeeklyProviders(kind, id);
   if (result.providersUnavailable) throw new MissingProviders();
   return result;
-}, ['weekly-filter-providers-v1'], { revalidate: 3600, tags: [CACHE_TAG] });
+}, ['weekly-filter-providers-v1'], { revalidate: 86400, tags: [CACHE_TAG] });
 const seasonProviders = unstable_cache(async (anime: AniListAnime): Promise<PlatformMetadata> => {
   const result = await getDetailProviders(anime);
   if ((!result.match && !result.seriesWatch && !Object.keys(result.providers).length) || result.providersUnavailable || result.seriesWatch?.providersUnavailable
     || result.ratings.imdbStatus === 'error' || result.ratings.imdbStatus === 'unconfigured') throw new MissingProviders();
   return { match: result.match, providers: result.providers, providersUnavailable: false, ...(result.seriesWatch ? { seriesWatch: result.seriesWatch } : {}) };
-}, ['season-filter-providers-v3-series-identity'], { revalidate: 3600, tags: [CACHE_TAG] });
+}, ['season-filter-providers-v3-series-identity'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 async function collect(entries: { key: string; load: () => Promise<PlatformMetadata> }[], deadline: number, partial = false): Promise<PlatformSnapshot> {
   const result: PlatformSnapshot = { titles: {}, unavailable: partial };

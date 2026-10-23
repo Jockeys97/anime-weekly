@@ -26,7 +26,7 @@ it('resolves AniList and TMDB-only favourites to cards with the next episode', a
     { id: 'anilist:185874', name: 'BLEACH: Thousand-Year Blood War - The Calamity', poster: 'https://s4.anilist.co/x.jpg', href: expect.stringMatching(/^\/anime\/185874-/), status: 'RELEASING', next: { episode: 10, airingAt: 1793026800 } },
     { id: 'tv:57911', name: 'Doraemon', poster: null, href: '/search?q=Doraemon' },
   ]);
-  expect(response.headers.get('cache-control')).toContain('s-maxage=600');
+  expect(response.headers.get('cache-control')).toContain('s-maxage=86400');
 });
 it('reports partial results and does not cache an AniList outage', async () => {
   vi.mocked(getFavoriteAnime).mockResolvedValue({ unavailable: true, media: [] });

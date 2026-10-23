@@ -14,6 +14,6 @@ export async function GET(request: Request) {
   const result = await getSynopsis(titles, year, locale, kind, id);
   const { synopsis } = result;
   return Response.json(result, {
-    headers: { 'Cache-Control': synopsis ? 'public, max-age=86400' : 'public, max-age=60' },
+    headers: { 'Cache-Control': synopsis ? 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800' : 'public, max-age=60, s-maxage=86400, stale-while-revalidate=604800' },
   });
 }

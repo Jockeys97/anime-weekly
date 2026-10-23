@@ -25,7 +25,7 @@ describe('personal AniList ID mappings', () => {
     expect(first.variables.ids).toHaveLength(50);
     expect(first.query).toContain('id_in: $ids'); expect(first.query).toContain('idMal');
     expect(first.query).toContain('title { romaji english native }');
-    expect(anilistFetch.mock.calls[0][1].next).toEqual({ revalidate: 600 });
+    expect(anilistFetch.mock.calls[0][1].next).toEqual({ revalidate: 86400 });
   });
   it('uses MAL IDs as GraphQL variables and rejects mismatched upstream entries', async () => {
     anilistFetch.mockResolvedValue(Response.json({ data: { Page: { media: [

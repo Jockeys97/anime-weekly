@@ -29,5 +29,5 @@ export function generateIcs(episodes: readonly CalendarEpisode[], stamp = new Da
   return lines.map(foldCalendarLine).join('\r\n') + '\r\n';
 }
 export function calendarResponse(episodes: readonly CalendarEpisode[], filename: string, name?: string): Response {
-  return new Response(generateIcs(episodes, new Date(), name), { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'public, max-age=3600' } });
+  return new Response(generateIcs(episodes, new Date(), name), { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${filename}"`, 'Cache-Control': 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400' } });
 }

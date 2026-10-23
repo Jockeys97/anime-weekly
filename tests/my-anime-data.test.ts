@@ -32,12 +32,12 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('private personalized data', () => {
-  it('uses only token hashes in a 600-second cache key, isolated by token and week', async () => {
+  it('uses only token hashes in a six-hour cache key, isolated by token and week', async () => {
     await getPersonalWeek({ mal: token('user-a-secret') }, week);
     await getPersonalWeek({ mal: token('user-b-secret') }, week);
     await getPersonalWeek({ mal: token('user-b-secret') }, { year: 2026, week: 44 });
     const calls = cache.mock.calls as unknown as [() => unknown, string[], { revalidate: number }][];
-    expect(calls[0][2]).toMatchObject({ revalidate: 600, tags: [expect.stringMatching(/^my-anime:[a-f0-9]{64}$/)] });
+    expect(calls[0][2]).toMatchObject({ revalidate: 21600, tags: [expect.stringMatching(/^my-anime:[a-f0-9]{64}$/)] });
     expect(JSON.stringify(calls)).not.toContain('user-a-secret');
     expect(JSON.stringify(calls)).not.toContain('user-b-secret');
     expect(calls[0][1]).not.toEqual(calls[1][1]); expect(calls[1][1]).not.toEqual(calls[2][1]);

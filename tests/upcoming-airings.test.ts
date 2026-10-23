@@ -5,12 +5,12 @@ vi.mock('../lib/rate-limited-fetch', () => ({ anilistFetch: vi.fn() }));
 import { anilistFetch } from '../lib/rate-limited-fetch';
 import { getUpcomingAirings } from '../lib/upcoming-airings';
 afterEach(() => vi.resetAllMocks());
-it('requests future Media airingSchedule pages with hourly caching and stable episode IDs', async () => {
+it('requests future Media airingSchedule pages with six-hour caching and stable episode IDs', async () => {
   vi.mocked(anilistFetch).mockImplementation(async (_url, init) => {
     const variables = JSON.parse(String(init?.body)).variables;
     expect(variables.id).toBe(21);
     expect(JSON.parse(String(init?.body)).query).toContain('notYetAired: true');
-    expect((init as RequestInit & { next: { revalidate: number } }).next.revalidate).toBe(3600);
+    expect((init as RequestInit & { next: { revalidate: number } }).next.revalidate).toBe(21600);
     return Response.json({ data: { Media: { id: 21, title: { english: 'Example' }, airingSchedule: { pageInfo: { hasNextPage: variables.page === 1 }, nodes: [{ episode: variables.page, airingAt: 1791990000 + variables.page * 86400 }] } } } });
   });
   const events = await getUpcomingAirings(21);

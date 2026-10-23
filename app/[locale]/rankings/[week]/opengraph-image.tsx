@@ -6,7 +6,7 @@ import { getRankingsWeek } from '@/lib/rankings-seo-data';
 export const alt = 'Weekly Anime · IMDb / MyAnimeList';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const revalidate = 900;
+export const revalidate = 21600;
 export default async function Image({ params }: { params: Promise<{ week: string; locale?: string }> }) {
   const { week } = await params;
   const data = await getRankingsWeek(week);

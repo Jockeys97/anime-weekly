@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
     return new Response(await pending, { headers: {
       'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+      'Cache-Control': 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800',
     } });
   } catch (error) {
     console.error('[sitemap] Shard unavailable', { id, message: error instanceof Error ? error.message : 'Unknown error' });
