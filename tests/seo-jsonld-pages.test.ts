@@ -4,7 +4,8 @@ import React from 'react';
 import { PassThrough } from 'node:stream';
 import { renderToPipeableStream } from 'react-dom/server';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import Home from '../app/[locale]/page';
+import { generateStaticParams as localeParams, dynamicParams as localeDynamicParams } from '../app/[locale]/layout';
+import Home, { generateStaticParams as homeParams, dynamicParams as homeDynamicParams, revalidate as homeRevalidate } from '../app/[locale]/page';
 import Week from '../app/[locale]/week/[week]/page';
 import Season from '../app/[locale]/season/[year]/[season]/page';
 import ThisWeek from '../app/[locale]/this-week/page';
@@ -111,4 +112,13 @@ it('includes real dates, episode count and votes and omits incomplete or invalid
   expect(movie['@type']).toBe('Movie');
   expect(movie.datePublished).toBe('1999-10-20');
   expect(movie).not.toHaveProperty('episode');
+});
+
+
+it('generates locale homepages on first request without disabling the six-hour ISR cache', () => {
+  expect(localeParams()).toEqual([]);
+  expect(localeDynamicParams).toBe(true);
+  expect(homeParams()).toEqual([]);
+  expect(homeDynamicParams).toBe(true);
+  expect(homeRevalidate).toBe(21600);
 });

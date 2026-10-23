@@ -44,11 +44,12 @@ export async function readDetailRatings(anime: AniListAnime): Promise<Ratings> {
 export const getAnimeDetailData = cache(async (anime: AniListAnime, locale: Locale = 'it') => {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
+  const deadline = Date.now() + SERVER_WAIT_MS;
   const stored = withTimeout(readDetailRatings(anime), SERVER_WAIT_MS).catch((): Ratings => ({}));
   const ratings = stored.then(async scores => ({
     ...scores, anilistId: anime.id, anilistScore: anime.averageScore ?? scores.anilistScore,
     ...(!hasMalScore(scores) && anime.idMal
-      ? await withTimeout(getMyAnimeListScore(anime.idMal), SERVER_WAIT_MS).catch((): Ratings => ({ malId: anime.idMal!, malStatus: 'error' }))
+      ? await withTimeout(getMyAnimeListScore(anime.idMal), Math.max(0, deadline - Date.now())).catch((): Ratings => ({ malId: anime.idMal!, malStatus: 'error' }))
       : {}),
   }));
   const availability = withTimeout(getCachedDetailAvailability(anime), SERVER_WAIT_MS)

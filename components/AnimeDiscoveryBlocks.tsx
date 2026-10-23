@@ -11,7 +11,9 @@ import { localePath } from '@/lib/locale-routing';
 import { withTimeout } from '@/lib/async-timeout';
 
 export async function AnimeSimilarBlock({ anime, name, locale }: { anime: AniListAnime; name: string; locale: Locale }) {
-  const items = await withTimeout(getSimilarAnime(anime), 5000).catch(() => []);
+  // Recommendations are optional: never hold the detail page for a cold catalog.
+  // Keep the existing cache-only reader; no crawl or background refresh on visits.
+  const items = await withTimeout(getSimilarAnime(anime, 200), 250).catch(() => []);
   if (items.length < 4) return null;
   const d = getDictionary(locale).discovery;
   return <section className="landing-day detail-discovery" aria-labelledby="similar-anime-heading"><h2 id="similar-anime-heading">{d.similar}</h2>

@@ -262,3 +262,36 @@ it('hides the banner at the picture breakpoint and reserves cover space before l
   expect(css).toMatch(/\.anime-detail\{grid-template-columns:220px/);
   expect(css).toContain('.anime-detail>.poster{width:160px}');
 });
+
+
+it('does not hold core SSR ratings and platforms for a stalled similar catalog', async () => {
+  vi.useFakeTimers();
+  vi.mocked(getSimilarAnime).mockReturnValue(new Promise(() => {}));
+  let settled = false;
+  const pending = render().then(html => { settled = true; return html; });
+  await vi.advanceTimersByTimeAsync(249);
+  expect(settled).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
+  const html = await pending;
+  for (const value of ['Netflix', '8.4', '81%', 'Una trama italiana.']) expect(html).toContain(value);
+  expect(html).not.toContain('similar-anime-heading');
+  expect(getSimilarAnime).toHaveBeenCalledWith(anime, 200);
+});
+
+it('shares one rating deadline across a slow cache read and missing MAL score', async () => {
+  vi.useFakeTimers();
+  vi.mocked(readRatingsStore).mockImplementation(() => new Promise(resolve => {
+    setTimeout(() => resolve({ ratings: {}, sources: {} }), 2000);
+  }));
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {
+    'movie:10': { anilistId: 42, imdbId: 'tt123', imdbRating: '8.6' },
+  }, events: [] });
+  vi.mocked(getMyAnimeListScore).mockReturnValue(new Promise(() => {}));
+  const pending = getAnimeDetailData(anime);
+  await vi.advanceTimersByTimeAsync(2500);
+  const result = await pending;
+  expect(result.ratings.imdbRating).toBe('8.6');
+  expect(result.ratings.malStatus).toBe('error');
+  expect(result.availability.providers.IT?.providers[0].provider_name).toBe('Netflix');
+  expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
+});

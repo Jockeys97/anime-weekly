@@ -10,7 +10,7 @@ const sources = cache(readRatingsStore);
 // Published translations only. TMDB can merge several seasons: require its
 // English title to match the exact AniList work before using translated slugs.
 // No mapping/translation means the real AniList title remains the fallback.
-export const getAnimeLocalizedTitles = cache(async (id: number, name: string): Promise<Partial<Record<Locale, string>>> => {
+async function loadLocalizedTitles(id: number, name: string): Promise<Partial<Record<Locale, string>>> {
   try {
     const store = await withTimeout(sources(), 2500);
     const key = Object.keys(store.sources).find(key => store.sources[key].anilistId === id && /^(tv|movie):[1-9]\d*$/.test(key));
@@ -25,4 +25,9 @@ export const getAnimeLocalizedTitles = cache(async (id: number, name: string): P
       return entry ? [[locale, entry.name!.trim()]] : [];
     }));
   } catch { return {}; }
-});
+}
+
+// One deadline covers both the store lookup and translations, rather than two
+// sequential 2.5s waits on every uncached detail/metadata render.
+export const getAnimeLocalizedTitles = cache((id: number, name: string) =>
+  withTimeout(loadLocalizedTitles(id, name), 2500).catch(() => ({} as Partial<Record<Locale, string>>)));
