@@ -4,6 +4,10 @@ import { clearNextCache } from './helpers/next-cache';
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
+vi.mock('@/lib/similar-catalog-client', async original => ({ ...await original<typeof import('@/lib/similar-catalog-client')>(), readSharedSimilarCatalog: async (mode: string) => {
+  const local = await import('@/lib/discovery-data');
+  return mode === 'full' ? local.getSimilarCatalog() : local.getDiscoveryCatalog();
+} }));
 vi.mock('@/lib/anilist', () => ({ getSeason: vi.fn(), getPopularCatalogBatch: vi.fn() }));
 vi.mock('@/lib/ratings-store', () => ({ readRatingsStore: vi.fn() }));
 vi.mock('@/lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));

@@ -79,7 +79,8 @@ it('applies list thresholds to actual metadata and 404 behavior', async () => {
   }
   vi.mocked(getSimilarAnime).mockResolvedValue([]);
   vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [] });
-  await expect(SimilarPage(props())).rejects.toThrow('404');
+  expect((await similarMetadata(props())).robots).toEqual({ index: false, follow: true });
+  expect(renderToStaticMarkup(await SimilarPage(props()))).toContain('Please try loading the guide again.');
   await expect(GenrePage({ params: Promise.resolve({ locale: 'en', genre: 'action' }) })).rejects.toThrow('404');
 });
 it.each(locales)('describes the wider similarity pool accurately in the page and metadata (%s)', async locale => {
