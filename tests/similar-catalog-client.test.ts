@@ -1,8 +1,9 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import { readSharedSimilarCatalog, SIMILAR_CATALOG_TAG } from '@/lib/similar-catalog-client';
 import { CACHE_TAG } from '@/lib/config';
 
+beforeEach(() => { vi.stubEnv('CRON_SECRET', 'test-secret'); });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 it('reads both catalogs through the writer API using explicit tagged fetch caching', async () => {
@@ -17,8 +18,18 @@ it('reads both catalogs through the writer API using explicit tagged fetch cachi
     'https://example.test/api/similar-catalog?catalog=seasonal',
   ]);
   expect(fetcher).toHaveBeenCalledWith(expect.any(URL), {
+    headers: { Authorization: 'Bearer test-secret' },
     cache: 'force-cache', next: { revalidate: 86400, tags: [CACHE_TAG, SIMILAR_CATALOG_TAG] },
   });
+});
+
+it.each([undefined, '', '   '])('rejects a missing or blank secret (%s) before fetching', async secret => {
+  vi.stubEnv('CRON_SECRET', secret);
+  const fetcher = vi.fn();
+  vi.stubGlobal('fetch', fetcher);
+  await expect(readSharedSimilarCatalog('full')).rejects.toThrow('CRON_SECRET is required');
+  await expect(readSharedSimilarCatalog('seasonal')).rejects.toThrow('CRON_SECRET is required');
+  expect(fetcher).not.toHaveBeenCalled();
 });
 
 it('keeps preview catalog reads on the preview deployment', async () => {
