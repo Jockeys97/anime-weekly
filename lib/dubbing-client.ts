@@ -6,7 +6,8 @@ import { withTimeout } from '@/lib/async-timeout';
 const requests = new Map<string, { promise: Promise<DubbingResult>; expires: number }>();
 const waiting: Array<() => void> = [];
 let active = 0;
-function drain() { while (active < 2 && waiting.length) waiting.shift()!(); }
+// Responses are edge-cached: six at a time fills a screenful of cards at once.
+function drain() { while (active < 6 && waiting.length) waiting.shift()!(); }
 export function loadDubbing(query: string, locale: Locale, malId?: number): Promise<DubbingResult> {
   const key = `${locale}:${query}`;
   const previous = requests.get(key);
