@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { formatWeek, isoWeek } from '@/lib/week';
 import { JsonLd } from '@/components/JsonLd';
 import { getDictionary } from '@/lib/i18n';
 import { getRequestLocale } from '@/lib/request-locale';
@@ -16,15 +17,21 @@ export const revalidate = 21600;
 export const dynamic = 'error';
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
-async function load(segment: string) {
+async function load(segment: string, locale: Parameters<typeof localePath>[1]) {
   const data = await getRankingsWeek(segment);
-  if (!data) notFound();
+  if (!data) {
+    // The current week may simply not be collected yet: send visitors to the
+    // this-week alias (which falls back to the latest populated week) instead
+    // of caching a 404 for the whole revalidate window.
+    if (segment === formatWeek(isoWeek(new Date()))) redirect(localePath('/rankings/this-week', locale));
+    notFound();
+  }
   return data;
 }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { week } = await params;
   const locale = await getRequestLocale(params);
-  const data = await load(week);
+  const data = await load(week, locale);
   const d = getDictionary(locale).rankings;
   const title = (week === 'this-week' ? d.currentTitle : d.title).replace('{week}', data.week);
   const description = (week === 'this-week' ? d.currentDescription : d.description).replace('{week}', data.week);
@@ -33,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RankingsPage({ params }: Props) {
   const { week } = await params;
   const locale = await getRequestLocale(params);
-  const data = await load(week);
+  const data = await load(week, locale);
   const d = getDictionary(locale);
   const heading = (week === 'this-week' ? d.rankings.currentTitle : d.rankings.title).replace('{week}', data.week);
   const path = `/rankings/${week}`;

@@ -10,6 +10,7 @@ import { animeItemList, breadcrumbList } from '@/lib/structured-data';
 import { getQuickWeekData, type AnimeTitle } from '@/lib/tmdb';
 import { buildWeeklyCalendar } from '@/lib/weekly-calendar';
 import { getWeeklyRatings } from '@/lib/weekly-ratings';
+import { withIdentityFallback } from '@/lib/weekly-id-fallback';
 import { formatWeek, isoWeek } from '@/lib/week';
 
 export const revalidate = 21600;
@@ -20,7 +21,8 @@ export async function generateMetadata({ params }: { params?: LocaleParams }) {
 export default async function ThisWeek({ params }: { params?: LocaleParams }) {
   const locale = await getRequestLocale(params); const d = getDictionary(locale);
   const now = new Date(); const week = isoWeek(now); const slug = formatWeek(week);
-  const [data, snapshot] = await Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(slug)]);
+  const [data, liveSnapshot] = await Promise.all([getQuickWeekData(week, 'en'), getWeeklyRatings(slug)]);
+  const snapshot = await withIdentityFallback(slug, liveSnapshot);
   const titles = data.titles.map(title => ({ ...title, ratings: snapshot.titles[`${title.kind}:${title.id}`] ?? title.ratings }));
   const calendar = buildWeeklyCalendar(titles, snapshot.events, week, snapshot.episodes?.entries);
   const heading = landingHeading('week', locale, now);
