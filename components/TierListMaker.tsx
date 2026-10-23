@@ -176,7 +176,18 @@ export function TierListMaker({ locale, season, seasonName, items, shareUrl }: {
       <span>{t.selected.replace('{name}', byId.get(selected)?.name ?? '')}</span>
       <button type="button" onClick={() => setSelected(null)}>{t.cancel}</button>
     </>}</p>
-    <DndContext sensors={sensors} collisionDetection={collisions} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+    {selected !== null && <aside className={styles.quickPlace} aria-label={t.chooseTier}>
+      <div className={styles.quickHeader}>
+        <strong>{byId.get(selected)?.name}</strong>
+        <button type="button" className={styles.secondary} onClick={() => setSelected(null)}>{t.cancel}</button>
+      </div>
+      <p>{t.chooseTier}</p>
+      <div className={styles.quickTiers}>
+        {board.tiers.map(tier => <button key={tier.id} type="button" style={{ background: tier.color }} onClick={() => tapTarget(tier.id)}>{tier.label}</button>)}
+        {placed.has(selected) && <button type="button" onClick={() => tapTarget(null)}>{t.unranked}</button>}
+      </div>
+    </aside>}
+    <DndContext sensors={sensors} collisionDetection={collisions} autoScroll={{ acceleration: 24, threshold: { x: .15, y: .25 } }} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
       <div className={styles.board}>
         {board.tiers.map(tier => <TierRow key={tier.id} tier={tier} picking={selected !== null} onTap={() => tapTarget(tier.id)} onRename={value => rename(tier, value)} editLabel={t.editLabel}>
           {board.rows[tier.id].map(id => byId.get(id)).filter((item): item is TierItem => Boolean(item)).map(item =>

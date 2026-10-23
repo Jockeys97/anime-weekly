@@ -551,6 +551,7 @@
     "shareText": "La mia tier list anime di {season} {year}",
     "editLabel": "Modifica etichetta della riga",
     "selected": "Selezionato: {name}. Tocca una riga per posizionarlo.",
+    "chooseTier": "Scegli una riga, senza trascinare fino in cima.",
     "cancel": "Annulla",
     "empty": "Non ci sono ancora anime disponibili per questa stagione.",
     "loading": "Caricamento degli anime per la tier list…",

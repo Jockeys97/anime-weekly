@@ -7,6 +7,14 @@
 .error { color: #843c30; font-size: 12px; margin: 0 0 10px; }
 .status { display: flex; align-items: center; gap: 12px; min-height: 22px; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
 .status button { border: 0; background: none; padding: 0; color: var(--ink); text-decoration: underline; cursor: pointer; font-size: 12px; }
+.quickPlace { position: fixed; z-index: 50; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(620px, calc(100% - 24px)); max-height: 45dvh; overflow-y: auto; padding: 14px; padding-bottom: max(14px, env(safe-area-inset-bottom)); background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 40px #173b2c30; }
+.quickHeader { display: flex; align-items: center; gap: 12px; }
+.quickHeader strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.quickHeader button { flex-shrink: 0; }
+.quickPlace p { margin: 8px 0; font-size: 12px; color: var(--muted); }
+.quickTiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.quickTiers button { min-height: 44px; padding: 8px; border: 1px solid #0002; border-radius: 8px; color: #171717; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; cursor: pointer; }
+.quickTiers button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 
 /* The board mirrors the shared image: dark, flat, edge-to-edge posters. */
 .board { position: relative; background: #1a1a1a; font-family: Arial, Helvetica, sans-serif; }
