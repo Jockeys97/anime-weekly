@@ -23,11 +23,12 @@ function sharedCandidate(anime: AniListAnime) {
 }
 
 export async function GET(request: Request) {
+  if (!authorizedCron(request)) return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
   const catalog = new URL(request.url).searchParams.get('catalog');
   if (catalog !== null) {
     if (catalog !== 'full' && catalog !== 'seasonal') return Response.json({ error: 'invalid catalog' }, { status: 400 });
     try {
-      // Read-only: never invalidate on a public request. HTTP caching lives in
+      // Read-only: never invalidate on a catalog request. HTTP caching lives in
       // the caller's tagged Next fetch cache, not a second untagged CDN cache.
       const media = await (catalog === 'full' ? getSimilarCatalog() : getDiscoveryCatalog());
       return Response.json({ media: media.map(sharedCandidate) }, { headers: { 'cache-control': 'no-store' } });
@@ -36,7 +37,6 @@ export async function GET(request: Request) {
       return Response.json({ error: 'catalog unavailable' }, { status: 503, headers: { 'cache-control': 'no-store' } });
     }
   }
-  if (!authorizedCron(request)) return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'cache-control': 'no-store' } });
   const started = Date.now();
   try {
     // 'max' = stale-while-revalidate: the old catalog keeps serving and is

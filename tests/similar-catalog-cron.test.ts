@@ -27,12 +27,12 @@ const request = (auth?: string) => new Request('https://example.test/api/similar
 beforeEach(() => {
   vi.clearAllMocks();
   clearNextCache();
-  process.env.CRON_SECRET = 'test-secret';
-  vi.stubGlobal('fetch', vi.fn(async (url: URL) => GET(new Request(url))));
+  vi.stubEnv('CRON_SECRET', 'test-secret');
+  vi.stubGlobal('fetch', vi.fn(async (url: URL, init?: RequestInit) => GET(new Request(url, init))));
   vi.mocked(getSeason).mockImplementation(async (_y, _s, page = 1) => ({ media: [seasonalMatch], pageInfo: { currentPage: page, hasNextPage: false } }));
   vi.mocked(getPopularCatalogBatch).mockResolvedValue([{ media: [popularMatch], pageInfo: { currentPage: 1, hasNextPage: false } }]);
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); delete process.env.CRON_SECRET; });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 it('schedules the daily cron once a day after the 06:00 UTC revalidate cron', () => {
   expect(config.crons).toContainEqual({ path: '/api/similar-catalog', schedule: '0 7 * * *' });
@@ -76,12 +76,34 @@ it('awaits the full crawl on the authorized warm path, even after the page timeo
   expect(await response.json()).toMatchObject({ status: 'ok', seasonal: 1, popular: 1, ms: 22000, popularMs: 22000, seasonalMs: 0 });
 });
 
-it('serves the merged catalog from the writer bundle without granting public invalidation', async () => {
-  const response = await GET(new Request('https://example.test/api/similar-catalog?catalog=full'));
-  expect(response.status).toBe(200);
-  expect((await response.json()).media.map((anime: AniListAnime) => anime.id)).toEqual([3, 2]);
+it.each(['full', 'seasonal'])('rejects unauthorized %s reads before loading any catalog', async catalog => {
+  for (const auth of [undefined, 'Bearer wrong']) {
+    const response = await GET(new Request(`https://example.test/api/similar-catalog?catalog=${catalog}`, {
+      headers: auth ? { authorization: auth } : {},
+    }));
+    expect(response.status).toBe(401);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  }
+  vi.stubEnv('CRON_SECRET', undefined);
+  expect((await GET(new Request(`https://example.test/api/similar-catalog?catalog=${catalog}`, {
+    headers: { authorization: 'Bearer test-secret' },
+  }))).status).toBe(401);
+  expect(getSeason).not.toHaveBeenCalled();
+  expect(getPopularCatalogBatch).not.toHaveBeenCalled();
   expect(revalidateTag).not.toHaveBeenCalled();
-  expect((await GET(new Request('https://example.test/api/similar-catalog?catalog=invalid'))).status).toBe(400);
+});
+
+it.each(['full', 'seasonal'])('serves authenticated %s reads without invalidation', async catalog => {
+  const response = await GET(new Request(`https://example.test/api/similar-catalog?catalog=${catalog}`, {
+    headers: { authorization: 'Bearer test-secret' },
+  }));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect((await response.json()).media.map((anime: AniListAnime) => anime.id)).toEqual(catalog === 'full' ? [3, 2] : [2]);
+  expect(revalidateTag).not.toHaveBeenCalled();
+  expect((await GET(new Request('https://example.test/api/similar-catalog?catalog=invalid', {
+    headers: { authorization: 'Bearer test-secret' },
+  }))).status).toBe(400);
 });
 
 it('fails soft with 503 when AniList is unavailable', async () => {
