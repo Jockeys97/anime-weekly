@@ -12,6 +12,7 @@ import { DiscoveryList } from '@/components/DiscoveryList';
 import { DiscoveryUnavailable } from '@/components/DiscoveryUnavailable';
 
 type Props = { params: Promise<{ locale?: string; id: string }> };
+const SIMILAR_PAGE_LIMIT = 24;
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
@@ -23,7 +24,7 @@ const load = cache(async (id: string) => {
   const [items, names] = await Promise.all([getSimilarAnime(anime).catch(() => null), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
   if (!items) return null;
   if (!items.length) notFound();
-  return { anime, items, names };
+  return { anime, items: items.slice(0, SIMILAR_PAGE_LIMIT), names };
 });
 async function content(params: Props['params']) {
   const locale = await getRequestLocale(params);

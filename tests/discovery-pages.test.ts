@@ -170,6 +170,31 @@ it.each(locales)('renders the full similar page as localized cover cards with th
   });
 });
 
+it.each(locales)('limits full similar page cards and ItemList to the same first 24 ranked items (%s)', async locale => {
+  for (const count of [30, 7]) {
+    const ids = Array.from({ length: count }, (_, i) => 100 - i);
+    const items = ids.map(id => ({ ...row(id), anime: { ...anime(id), coverImage: {
+      large: `https://s4.anilist.co/${id}.jpg`, extraLarge: null, color: null,
+    } } }));
+    vi.mocked(getSimilarAnime).mockResolvedValue(items);
+    const shownIds = ids.slice(0, 24);
+    const html = localizedHtml(await SimilarPage(props(locale)), locale);
+    const metadata = await similarMetadata(props(locale));
+    expect(html.match(/<article class="anime-card landing-anime-card landing-anime-card-compact">/g)).toHaveLength(shownIds.length);
+    expect([...html.matchAll(/<h2><a[^>]*>([^<]+)<\/a><\/h2>/g)].map(match => match[1])).toEqual(shownIds.map(id => `Anime ${id}`));
+    const posters = html.match(/<img[^>]+>/g) ?? [];
+    expect(posters).toHaveLength(shownIds.length);
+    posters.forEach((poster, index) => expect(poster).toContain(`src="https://s4.anilist.co/${shownIds[index]}.jpg"`));
+    const jsonLd = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);
+    expect(jsonLd.itemListElement).toEqual(shownIds.map((id, index) => ({
+      '@type': 'ListItem', position: index + 1, name: `Anime ${id}`,
+      url: new URL(localePath(`/anime/${id}-anime-${id}`, locale), metadata.alternates?.canonical as string).href,
+    })));
+    expect(metadata.description).toContain(String(shownIds.length));
+    expect(html).toContain(`<p class="catalog-intro">${metadata.description}</p>`);
+  }
+});
+
 it.each(locales)('renders bounded discovery cards and only internal localized links (%s)', async locale => {
   const candidates = Array.from({ length: 9 }, (_, i) => ({ ...anime(i + 2), coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null } }));
   vi.mocked(getSimilarAnime).mockResolvedValue(candidates.map(anime => ({ anime, score: 8, genres: ['Action'] })));
