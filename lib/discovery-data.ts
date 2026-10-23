@@ -55,6 +55,10 @@ export const getDiscoveryCatalog = cache(async () => {
   const { year, season } = currentSeason();
   return catalog(year, season);
 });
+// Own tag: the daily CACHE_TAG expiry in /api/revalidate must not wipe this
+// weekly catalog (a cold read crawls AniList for minutes). The daily
+// /api/similar-catalog cron refreshes it with stale-while-revalidate instead.
+export const SIMILAR_CATALOG_TAG = 'similar-catalog';
 // Independent of year, locale and source anime: one all-time crawl per week.
 let pendingPopular: Promise<AniListAnime[]> | undefined;
 const popularCatalog = unstable_cache(() => {
@@ -68,14 +72,41 @@ const popularCatalog = unstable_cache(() => {
     return [...media.values()];
   })().finally(() => { pendingPopular = undefined; });
   return pendingPopular;
-}, ['discovery-popular-catalog-v1-top500'], { revalidate: 604800, tags: [CACHE_TAG] });
+}, ['discovery-popular-catalog-v1-top500'], { revalidate: 604800, tags: [SIMILAR_CATALOG_TAG] });
 export const getSimilarCatalog = cache(async () => {
   // Sequential crawls keep the shared AniList queue bounded on a cold build.
   const seasonal = await getDiscoveryCatalog();
   const popular = await popularCatalog();
   return [...new Map([...popular, ...seasonal].map(anime => [anime.id, anime])).values()];
 });
-export const getSimilarAnime = cache(async (anime: AniListAnime) => rankSimilar(anime, await getSimilarCatalog()));
+const getSimilarAnimeFull = cache(async (anime: AniListAnime) => rankSimilar(anime, await getSimilarCatalog()));
+
+// Page path: never wait minutes for a cold all-time catalog. After maxWaitMs,
+// rank against the seasonal catalog only (kept warm daily); the full crawl
+// keeps running and the daily cron populates it for later requests.
+export const SIMILAR_PAGE_WAIT_MS = 4000;
+export async function getSimilarAnime(anime: AniListAnime, maxWaitMs = SIMILAR_PAGE_WAIT_MS) {
+  const full = getSimilarAnimeFull(anime);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), maxWaitMs); });
+  try {
+    const result = await Promise.race([full, timeout]);
+    if (result) return result;
+  } finally { clearTimeout(timer); }
+  full.catch(() => undefined);
+  console.warn('[discovery] Similar catalog cold; using seasonal fallback', { id: anime.id });
+  return rankSimilar(anime, await getDiscoveryCatalog());
+}
+
+// Daily cron: mark the all-time catalog stale (old entry keeps serving and is
+// kept if the refresh fails), trigger its background refresh, and warm the
+// seasonal catalog. Nothing is persisted outside the Next data cache.
+export async function refreshSimilarCatalogs(revalidate: (tag: string) => void) {
+  revalidate(SIMILAR_CATALOG_TAG);
+  const seasonal = await getDiscoveryCatalog();
+  const popular = await popularCatalog();
+  return { seasonal: seasonal.length, popular: popular.length };
+}
 
 export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {
   const season = currentSeason();

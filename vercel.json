@@ -3,6 +3,10 @@
     {
       "path": "/api/revalidate",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/similar-catalog",
+      "schedule": "0 7 * * *"
     }
   ],
   "git": {
