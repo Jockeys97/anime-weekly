@@ -163,7 +163,7 @@ export function TierListMaker({ locale, season, seasonName, items, shareUrl }: {
   const redditUrl = `https://www.reddit.com/submit?${new URLSearchParams({ url: shareUrl, title: shareText })}`;
   const activeItem = active === null ? undefined : byId.get(active);
 
-  return <section className={styles.maker} aria-label={t.title}>
+  return <section className={styles.maker} aria-label={t.title} data-tier-dragging={active !== null ? 'true' : undefined}>
     <div className={styles.toolbar}>
       <button type="button" className="button" onClick={download} disabled={Boolean(exporting)}>{exporting ? t.exporting : t.download}</button>
       {shareFiles && <button type="button" className={styles.secondary} onClick={share} disabled={Boolean(exporting)}>{t.share}</button>}
@@ -187,7 +187,7 @@ export function TierListMaker({ locale, season, seasonName, items, shareUrl }: {
         {placed.has(selected) && <button type="button" onClick={() => tapTarget(null)}>{t.unranked}</button>}
       </div>
     </aside>}
-    <DndContext sensors={sensors} collisionDetection={collisions} autoScroll={{ acceleration: 24, threshold: { x: .15, y: .25 } }} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+    <DndContext sensors={sensors} collisionDetection={collisions} autoScroll={{ acceleration: 32, threshold: { x: .15, y: .35 } }} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
       <div className={styles.board}>
         {board.tiers.map(tier => <TierRow key={tier.id} tier={tier} picking={selected !== null} onTap={() => tapTarget(tier.id)} onRename={value => rename(tier, value)} editLabel={t.editLabel}>
           {board.rows[tier.id].map(id => byId.get(id)).filter((item): item is TierItem => Boolean(item)).map(item =>

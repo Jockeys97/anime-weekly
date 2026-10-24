@@ -1,3 +1,4 @@
+import { readMildNudityIds } from '@/lib/mal-content';
 import 'server-only';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { AnimeFilters } from '@/lib/anime-search';
@@ -57,7 +58,7 @@ function rememberCatalog(media: AniListAnime[]): void {
 const emptyPage = (page: number): AniListPage => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false } });
 
 interface FetchOptions { fresh?: boolean; maxWaitMs?: number }
-async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null>, options: FetchOptions = {}): Promise<T | null> {
+async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null | number[]>, options: FetchOptions = {}): Promise<T | null> {
   try {
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -129,9 +130,18 @@ export async function getSeasonFamily(search: string): Promise<AniListAnime[]> {
 
 export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage & { unavailable?: boolean }> {
   const sorts = { relevance: filters.q ? 'SEARCH_MATCH' : 'POPULARITY_DESC', popular: 'POPULARITY_DESC', score: 'SCORE_DESC', newest: 'START_DATE_DESC', trending: 'TRENDING_DESC' };
-  const variables: Record<string, string | number> = { page: filters.page, sort: sorts[filters.sort] };
+  const variables: Record<string, string | number | number[]> = { page: filters.page, sort: sorts[filters.sort] };
   const definitions = ['$page: Int!', '$sort: [MediaSort!]'];
   const argumentsList = ['type: ANIME', 'isAdult: false', 'sort: $sort'];
+  let verifiedMalIds: Set<number> | undefined;
+  if (filters.malRating === 'r-plus') {
+    const ids = await readMildNudityIds();
+    if (!ids?.length) return { ...emptyPage(filters.page), unavailable: true };
+    definitions.push('$malIds: [Int]');
+    argumentsList.push('idMal_in: $malIds');
+    variables.malIds = ids;
+    verifiedMalIds = new Set(ids);
+  }
   const optional = [
     ['search', 'String', filters.q || undefined], ['genre', 'String', filters.genre],
     ['format', 'MediaFormat', filters.format], ['status', 'MediaStatus', filters.status],
@@ -153,6 +163,7 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
     }
   }`, variables);
   if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(filters.page), unavailable: true };
+  if (verifiedMalIds && data.Page.media.some(anime => !anime.idMal || !verifiedMalIds.has(anime.idMal))) return { ...emptyPage(filters.page), unavailable: true };
   rememberCatalog(data.Page.media);
   return { media: data.Page.media, pageInfo: { currentPage: filters.page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }

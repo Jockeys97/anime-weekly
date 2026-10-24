@@ -13,10 +13,11 @@ vi.mock('@/lib/ratings-store', () => ({ readRatingsStore: vi.fn() }));
 vi.mock('@/lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));
 vi.mock('@/lib/weekly-seo-data', () => ({ getSeoWeeks: vi.fn() }));
 vi.mock('@/lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
-vi.mock('@/lib/platform-metadata', () => ({ getAnimePlatformMetadata: async () => ({ titles: {}, unavailable: false }) }));
+vi.mock('@/lib/platform-metadata', () => ({ getAnimePlatformMetadata: vi.fn(async () => ({ titles: {}, unavailable: false })) }));
 vi.mock('@/lib/rate-limited-fetch', () => ({ anilistFetch: vi.fn(), jikanFetch: vi.fn() }));
 
 import { readSharedSimilarCatalog } from '@/lib/similar-catalog-client';
+import { getAnimePlatformMetadata } from '@/lib/platform-metadata';
 import { getSeason } from '@/lib/anilist';
 import { readRatingsStore } from '@/lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
@@ -164,4 +165,27 @@ it('shares simultaneous discovery shard requests and rejects unknown shard filen
   expect(new Set(xmls).size).toBe(1);
   for (const filename of ['discovery', 'unknown.xml', 'NaN.xml']) expect((await requestShard(filename)).status).toBe(404);
   expect(getSeason).not.toHaveBeenCalled();
+});
+
+it('renders ranking content and saved providers before a stalled platform batch finishes', async () => {
+  vi.mocked(getAnimePlatformMetadata).mockReturnValueOnce(new Promise(() => {}));
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'tv:1': { anilistId: 1 } }, events: [],
+    availability: { titles: { 'tv:1': { fetchedAt: now.getTime(), countries: { US: [8] } } }, providers: { 8: { name: 'Netflix', logo: null } } } });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const page = await Promise.race([BestThisSeason({ params: Promise.resolve({ locale: 'en' }) }),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Ranking waited for providers')), 250); })]);
+    const html = renderWithLocale(page);
+    expect(html).toContain('Anime 1');
+    expect(html).toContain('Anime 6');
+    expect(html).toContain('Netflix');
+    expect(getAnimePlatformMetadata).toHaveBeenCalledTimes(1);
+  } finally { clearTimeout(timer); }
+});
+it('limits a stalled optional weekly snapshot while still showing the seasonal ranking', async () => {
+  vi.useFakeTimers();
+  vi.mocked(readWeeklyRatingsSnapshot).mockReturnValue(new Promise(() => {}));
+  const pending = BestThisSeason({ params: Promise.resolve({ locale: 'en' }) });
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(renderWithLocale(await pending)).toContain('Anime 1');
 });

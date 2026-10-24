@@ -4,17 +4,14 @@ import { findSnapshotAnime, readAniListSnapshotSeason } from '@/lib/anilist-snap
 import { withTimeout } from '@/lib/async-timeout';
 import type { Season } from '@/lib/season';
 
-// Snapshot misses during an outage rethrow the original transient error,
-// never turn into a cached 404. Live null remains a confirmed not-found.
+// Lists and details use the same complete daily catalog. Opening a title that
+// is already in it must not queue another live AniList lookup first.
 export async function getAnimeWithSnapshot(id: number) {
-  let anime;
-  try { anime = await getAnime(id); }
-  catch (error) {
-    const saved = await findSnapshotAnime(id);
-    if (saved) return saved;
-    throw error;
-  }
-  return anime ?? findSnapshotAnime(id);
+  const saved = await withTimeout(findSnapshotAnime(id), 3000).catch(() => null);
+  if (saved) return saved;
+  // Historical titles still use live/cached details; a timeout is transient,
+  // never a confirmed not-found and never cached as an empty detail page.
+  return withTimeout(getAnime(id), 6000);
 }
 
 export async function getSeasonWithSnapshot(year: number, season: Season, page = 1) {
