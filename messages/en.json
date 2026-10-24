@@ -273,7 +273,8 @@
     "optionalTitle": "A title is optional. Combine filters to discover something new.",
     "apply": "Find anime",
     "filters": "Refine your search",
-    "genre": "Genre",
+    "genre": "Genres",
+    "genresHint": "Select one or more genres. Results must match every selection.",
     "year": "Season year",
     "anyYear": "Any year",
     "allGenres": "All genres",
@@ -301,6 +302,7 @@
       "trending": "Trending"
     },
     "genres": {
+      "Martial Arts": "Fighting / martial arts",
       "Action": "Action",
       "Adventure": "Adventure",
       "Comedy": "Comedy",

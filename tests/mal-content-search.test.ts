@@ -22,7 +22,7 @@ it('filters the entire AniList catalog by verified MAL IDs before sorting and 20
   expect((await discoverAnime(filters)).pageInfo).toMatchObject({ currentPage: 2, hasNextPage: true });
   const body = JSON.parse(vi.mocked(anilistFetch).mock.calls[0][1]!.body as string);
   expect(body.query).toContain('idMal_in: $malIds'); expect(body.query).toContain('perPage: 20');
-  expect(body.variables).toMatchObject({ malIds: [11, 22, 33], genre: 'Action', seasonYear: 2026, averageScore_greater: 79, page: 2 });
+  expect(body.variables).toMatchObject({ malIds: [11, 22, 33], genres: ['Action'], seasonYear: 2026, averageScore_greater: 79, page: 2 });
 });
 it('shows an unavailable search when the verification index is missing, without guessing classifications', async () => {
   vi.mocked(readMildNudityIds).mockResolvedValue(null);

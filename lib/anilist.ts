@@ -58,7 +58,7 @@ function rememberCatalog(media: AniListAnime[]): void {
 const emptyPage = (page: number): AniListPage => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false } });
 
 interface FetchOptions { fresh?: boolean; maxWaitMs?: number }
-async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null | number[]>, options: FetchOptions = {}): Promise<T | null> {
+async function graphql<T>(query: string, variables: Record<string, string | number | boolean | null | number[] | string[]>, options: FetchOptions = {}): Promise<T | null> {
   try {
     const response = await anilistFetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -130,7 +130,7 @@ export async function getSeasonFamily(search: string): Promise<AniListAnime[]> {
 
 export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage & { unavailable?: boolean }> {
   const sorts = { relevance: filters.q ? 'SEARCH_MATCH' : 'POPULARITY_DESC', popular: 'POPULARITY_DESC', score: 'SCORE_DESC', newest: 'START_DATE_DESC', trending: 'TRENDING_DESC' };
-  const variables: Record<string, string | number | number[]> = { page: filters.page, sort: sorts[filters.sort] };
+  const variables: Record<string, string | number | number[] | string[]> = { page: filters.page, sort: sorts[filters.sort] };
   const definitions = ['$page: Int!', '$sort: [MediaSort!]'];
   const argumentsList = ['type: ANIME', 'isAdult: false', 'sort: $sort'];
   let verifiedMalIds: Set<number> | undefined;
@@ -142,8 +142,15 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
     variables.malIds = ids;
     verifiedMalIds = new Set(ids);
   }
+  const genres = filters.genres.filter(genre => genre !== 'Martial Arts');
+  if (genres.length) {
+    definitions.push('$genres: [String!]'); argumentsList.push('genre_in: $genres'); variables.genres = genres;
+  }
+  if (filters.genres.includes('Martial Arts')) {
+    definitions.push('$combatTags: [String!]'); argumentsList.push('tag_in: $combatTags'); variables.combatTags = ['Martial Arts'];
+  }
   const optional = [
-    ['search', 'String', filters.q || undefined], ['genre', 'String', filters.genre],
+    ['search', 'String', filters.q || undefined],
     ['format', 'MediaFormat', filters.format], ['status', 'MediaStatus', filters.status],
     ['season', 'MediaSeason', filters.season], ['seasonYear', 'Int', filters.year],
     ['averageScore_greater', 'Int', filters.minScore == null ? undefined : filters.minScore * 10 - 1],
