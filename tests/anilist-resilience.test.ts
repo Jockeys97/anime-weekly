@@ -56,14 +56,15 @@ it('uses live success without consulting Blob', async () => {
   expect(await getAnimeWithSnapshot(21)).toEqual(anime); expect(get).not.toHaveBeenCalled();
 });
 
-it('paginates the season fallback and keeps genuine empty live pages', async () => {
+it('serves complete saved seasons first and keeps genuine empty live pages only on a snapshot miss', async () => {
   const media = Array.from({ length: 51 }, (_, i) => ({ ...anime, id: i + 1 }));
   files.set('anilist/seasons/2026-fall.json', { ...snapshot, count: media.length, media });
   expect(await getSeasonWithSnapshot(2026, 'fall', 1)).toMatchObject({ stale: true, pageInfo: { currentPage: 1, hasNextPage: true }, media: media.slice(0, 50) });
   expect(await getSeasonWithSnapshot(2026, 'fall', 2)).toMatchObject({ stale: true, pageInfo: { currentPage: 2, hasNextPage: false }, media: media.slice(50) });
   expect(await getSeasonWithSnapshot(2025, 'fall')).toMatchObject({ unavailable: true, media: [] });
   vi.mocked(fetch).mockImplementation(async () => Response.json({ data: { Page: { media: [], pageInfo: { hasNextPage: false } } } }));
-  expect(await getSeasonWithSnapshot(2026, 'fall')).toEqual({ media: [], pageInfo: { currentPage: 1, hasNextPage: false } });
+  expect((await getSeasonWithSnapshot(2026, 'fall')).media).toEqual(media.slice(0, 50));
+  expect(await getSeasonWithSnapshot(2025, 'fall')).toEqual({ media: [], pageInfo: { currentPage: 1, hasNextPage: false } });
 });
 
 it.each([undefined, 'Bearer wrong', 'Basic fixture-secret', 'Bearer fixture-secret-longer'])('rejects missing/wrong cron bearer: %s', async auth => {

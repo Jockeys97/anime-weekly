@@ -1,3 +1,4 @@
+vi.mock('@/lib/anilist-snapshot', () => ({ readAniListSnapshotSeason: vi.fn(async () => null), snapshotHealth: vi.fn(), refreshAniListSnapshot: vi.fn() }));
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { AniListAnime } from '@/lib/anilist';
 import { clearNextCache, revalidateTag as expireLoaderTag } from './helpers/next-cache';

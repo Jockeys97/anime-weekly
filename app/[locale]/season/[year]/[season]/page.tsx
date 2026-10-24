@@ -1,3 +1,5 @@
+import { withTimeout } from '@/lib/async-timeout';
+import { localePath } from '@/lib/locale-routing';
 import { getRequestLocale } from '@/lib/request-locale';
 import Link from '@/components/LocaleLink';
 import { notFound } from 'next/navigation';
@@ -48,7 +50,7 @@ export default async function SeasonPage({ params, searchParams }: {
   const { page: pageQuery } = await searchParams;
   const page = parsePage(pageQuery);
   await connection();
-  const [data, snapshot] = await Promise.all([getSeasonWithSnapshot(value.year, value.season, page), getWeeklyRatings(formatWeek(isoWeek(new Date())))]);
+  const [data, snapshot] = await Promise.all([getSeasonWithSnapshot(value.year, value.season, page), withTimeout(getWeeklyRatings(formatWeek(isoWeek(new Date()))), 1500).catch(() => ({ titles: {}, events: [] }))]);
   const summaries = snapshotCatalog(snapshot);
   const initialProviders = { unavailable: false, titles: Object.fromEntries(Object.entries(summaries).filter(([id]) => data.media.some(anime => anime.id === Number(id))).map(([id, summary]) => [`anilist:${id}`, summary.availability])) };
   // Extra rating and provider data is loaded only for cards approaching the viewport.
@@ -90,7 +92,7 @@ export default async function SeasonPage({ params, searchParams }: {
         </div>
       </div>
     </section>
-    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} initialProviders={initialProviders} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}&watch=v3`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} initialSummary={summaries[anime.id]} /> }))} /> : <div className="empty-state" role="status"><p>{d.seasonEmpty}</p></div>}
+    {data.media.length ? <SeasonContent key={`${path}:${page}`} locale={locale} initialProviders={initialProviders} providerUrl={`/api/season-providers?year=${value.year}&season=${value.season}&page=${page}&watch=v3`} entries={data.media.map(anime => ({ id: anime.id, genres: anime.genres ?? [], card: <CatalogCard anime={anime} locale={locale} initialSummary={summaries[anime.id]} /> }))} /> : <div className="empty-state" role="status"><p>{'unavailable' in data && data.unavailable ? dictionary.error.body : d.seasonEmpty}</p>{'unavailable' in data && data.unavailable && <a className="button" href={localePath(path, locale)}>{dictionary.error.retry}</a>}</div>}
     <nav className="catalog-pagination" aria-label={d.pagination}>
       {page > 1 && <Link prefetch={false} href={`${path}?page=${page - 1}`}>← {d.previousPage}</Link>}
       <span>{d.page} {page}</span>

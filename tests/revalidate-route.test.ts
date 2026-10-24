@@ -1,8 +1,9 @@
+vi.mock('../lib/anilist-snapshot', () => ({ snapshotHealth: vi.fn(async () => ({ ok: false, stale: true, savedAt: null, ageHours: null, seasons: [] })) }));
 vi.mock('../lib/daily-similar-warm', () => ({ warmDailySimilarCatalog: vi.fn().mockResolvedValue(true) }));
 import { warmDailySimilarCatalog } from '../lib/daily-similar-warm';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const background = vi.hoisted(() => ({ tasks: [] as Promise<void>[] }));
-vi.mock('../lib/imdb-episode-index', () => ({ readImdbEpisodeChart: vi.fn() }));
+vi.mock('../lib/imdb-episode-index', () => ({ readImdbEpisodeChart: vi.fn(), hasImdbEpisodeIndex: vi.fn(async () => true), readImdbDiagnostics: vi.fn(async () => null) }));
 import { readImdbEpisodeChart } from '../lib/imdb-episode-index';
 vi.mock('../lib/imdb-datasets', () => ({ repairLegacyImdbRatingIndex: vi.fn(), ensureImdbEpisodeIndex: vi.fn() }));
 import { repairLegacyImdbRatingIndex, ensureImdbEpisodeIndex } from '../lib/imdb-datasets';
@@ -413,5 +414,15 @@ it('rejects a Vercel cron header without Bearer credentials', async () => {
   const response = await GET(new Request('https://example.test/api/revalidate', { headers: { 'x-vercel-cron': '1' } }));
   expect(response.status).toBe(401);
   expect(warmDailySimilarCatalog).not.toHaveBeenCalled();
+  expect(primeWeeklyRatings).not.toHaveBeenCalled();
+});
+
+it('includes missing durable seasonal catalogs in the scheduled public health summary', async () => {
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: {}, events: [] });
+  const response = await GET(new Request('https://example.test/api/revalidate?health=1'));
+  const data = await response.json();
+  expect(data.ok).toBe(false);
+  expect(data.catalog).toMatchObject({ ok: false, seasons: [] });
+  expect(data.problems).toContain('Catalogo stagioni persistente assente o non aggiornato nelle ultime 24 ore.');
   expect(primeWeeklyRatings).not.toHaveBeenCalled();
 });

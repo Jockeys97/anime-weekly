@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { getPopularCatalogBatch, getSeason, type AniListAnime } from '@/lib/anilist';
 import { POPULAR_CATALOG_PAGES, POPULAR_PAGES_PER_BATCH, discoveryCandidate } from '@/lib/anilist-discovery-query';
 import { currentSeason, shiftSeason } from '@/lib/season';
+import { readAniListSnapshotSeason, refreshAniListSnapshot, snapshotHealth } from '@/lib/anilist-snapshot';
 import { SIMILAR_CATALOG_TAG } from '@/lib/similar-catalog-client';
 
 function compactCandidate(anime: AniListAnime) {
@@ -67,8 +68,14 @@ function seasonalCache(canCrawl: boolean) {
   return unstable_cache(loader, ['cron-seasonal-catalog-v1'], { revalidate: 86400, tags: [SIMILAR_CATALOG_TAG] });
 }
 export async function readSeasonalCatalog() {
-  const { year, season } = currentSeason();
-  return seasonalCache(false)(year, season);
+  const current = currentSeason();
+  const saved = await readAniListSnapshotSeason(current.year, current.season);
+  if (saved) {
+    const previous = shiftSeason(current, -1);
+    const older = await readAniListSnapshotSeason(previous.year, previous.season);
+    return [...new Map([...(older?.media ?? []), ...saved.media].map(anime => [anime.id, compactCandidate(anime)])).values()];
+  }
+  return seasonalCache(false)(current.year, current.season);
 }
 // Catalogs have their own tag and refresh only in the authorized warm path.
 
@@ -105,8 +112,19 @@ export async function warmSimilarCatalogs() {
   const started = Date.now();
   return warmDeadline.run(started + 240000, async () => {
     const { year, season } = currentSeason();
-    const cachedSeasonal = await seasonalCache(true)(year, season);
-    const seasonal = await (pendingCatalogs.get(`${year}-${season}`) ?? cachedSeasonal);
+    let seasonal: AniListAnime[];
+    if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+      // Persist first, then expose the completed catalog. Never clear yesterday's
+      // files before refreshing: failed/partial crawls retain the last good copy.
+      const health = await snapshotHealth();
+      if (!health.ok || health.savedAt?.slice(0, 10) !== new Date().toISOString().slice(0, 10)) await refreshAniListSnapshot();
+      seasonal = await readSeasonalCatalog();
+    } else {
+      // Local setups without Blob retain the legacy cache, with explicit health
+      // reporting in production so a missing durable store cannot go unnoticed.
+      const cachedSeasonal = await seasonalCache(true)(year, season);
+      seasonal = await (pendingCatalogs.get(`${year}-${season}`) ?? cachedSeasonal);
+    }
     const seasonalMs = Date.now() - started;
     const cachedPopular = await popularCache(true)();
     const popular = await (pendingPopular ?? cachedPopular);
