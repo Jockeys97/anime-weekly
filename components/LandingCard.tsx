@@ -8,7 +8,7 @@ function Chip({ name, logo }: { name: string; logo: string | null }) {
   return <span className="landing-chip">{logo && <Image src={`https://image.tmdb.org/t/p/w92${logo}`} alt="" width={18} height={18} loading="lazy" />}<span>{name}</span></span>;
 }
 /** Server-rendered landing card sharing the homepage `.anime-card` poster/body layout. */
-export function LandingCard({ locale, href, name, poster, typeLabel, ratings, genres, primary, others, badge, aside, headingLevel = 3, compact = false }: { locale: Locale; href: string; name: string; poster: string | null; typeLabel?: string; ratings: string; genres?: string[]; primary: LandingCountry | null; others: LandingCountry[]; badge?: ReactNode; aside?: ReactNode; headingLevel?: 2 | 3; compact?: boolean }) {
+export function LandingCard({ locale, href, name, poster, typeLabel, ratings, genres, primary, others, badge, aside, headingLevel = 3, compact = false, providerContent }: { locale: Locale; href: string; name: string; poster: string | null; typeLabel?: string; ratings: string; genres?: string[]; primary: LandingCountry | null; others: LandingCountry[]; badge?: ReactNode; aside?: ReactNode; headingLevel?: 2 | 3; compact?: boolean; providerContent?: ReactNode }) {
   const d = getDictionary(locale); const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return <article className={`anime-card landing-anime-card${compact ? ' landing-anime-card-compact' : ''}`}>
     <Link href={href} prefetch={false} className="poster" aria-label={name}>{poster ? compact
@@ -19,8 +19,16 @@ export function LandingCard({ locale, href, name, poster, typeLabel, ratings, ge
       <Heading><Link href={href} prefetch={false}>{name}</Link></Heading>
       {Boolean(genres?.length) && <p className="landing-genres">{genres!.join(' · ')}</p>}
       {ratings && <p className="landing-ratings">{ratings}{aside}</p>}
-      {primary && <div className="landing-providers"><span className="landing-region">{d.regions[primary.country]}</span>{primary.providers.map(p => <Chip key={p.id} name={p.name} logo={p.logo} />)}</div>}
-      {others.length > 0 && <details className="landing-other-countries"><summary>{d.landings.otherCountries} ({others.length})</summary><ul>{others.map(item => <li key={item.country}><strong>{d.regions[item.country]}</strong>: {item.providers.map(p => p.name).join(', ')}</li>)}</ul></details>}
+      {providerContent ?? <LandingCardProviders locale={locale} primary={primary} others={others} />}
     </div>
   </article>;
+}
+
+/** Optional server-streamed providers, independent of the card's title/score. */
+export function LandingCardProviders({ locale, primary, others }: { locale: Locale; primary: LandingCountry | null; others: LandingCountry[] }) {
+  const d = getDictionary(locale);
+  return <>
+      {primary && <div className="landing-providers"><span className="landing-region">{d.regions[primary.country]}</span>{primary.providers.map(p => <Chip key={p.id} name={p.name} logo={p.logo} />)}</div>}
+      {others.length > 0 && <details className="landing-other-countries"><summary>{d.landings.otherCountries} ({others.length})</summary><ul>{others.map(item => <li key={item.country}><strong>{d.regions[item.country]}</strong>: {item.providers.map(p => p.name).join(', ')}</li>)}</ul></details>}
+  </>;
 }

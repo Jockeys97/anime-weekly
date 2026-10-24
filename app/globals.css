@@ -321,6 +321,9 @@
 
 /* Week at a glance */
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+/* dnd-kit scrolls every few milliseconds: smooth scrolling would restart each
+   step instead of following the pointer. Restore normal scrolling on release. */
+html:has([data-tier-dragging="true"]) { scroll-behavior: auto; }
 .calendar-release, .calendar-day { scroll-margin-top: 96px; }
 .week-glance { position: relative; margin-bottom: 28px; }
 .week-glance-scroller { position: relative; }
@@ -445,3 +448,6 @@
  .genre-ranking-list .landing-ratings strong{font-size:23px}
  .genre-ranking-rule{font-size:12px;margin:16px 0 22px}
 }
+
+.explore-classification { display: flex; align-items: center; gap: 9px; margin-top: 18px; font-size: 14px; cursor: pointer; }
+.anime-search-filters .explore-classification input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; flex: 0 0 18px; accent-color: var(--dark); }

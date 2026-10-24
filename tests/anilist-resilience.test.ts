@@ -26,12 +26,10 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.useRealTimers(); });
 
-it.each([403, 500, 503])('serves detail data from Blob during HTTP %s without caching the live error', async status => {
+it.each([403, 500, 503])('opens saved seasonal details without waiting for the live API (HTTP %s)', async status => {
   vi.mocked(fetch).mockImplementation(async () => new Response(null, { status }));
   expect(await getAnimeWithSnapshot(21)).toEqual(anime);
-  // Recovery is immediate at the data layer, even with a warm snapshot cache.
-  vi.mocked(fetch).mockImplementation(async () => Response.json({ data: { Media: { ...anime, description: 'Live again' } } }));
-  expect((await getAnimeWithSnapshot(21))?.description).toBe('Live again');
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 it('serves the saved detail when the live network throws', async () => {
@@ -51,9 +49,11 @@ it.each([200, 404])('returns null only for confirmed not-found with no snapshot 
   expect(await getAnimeWithSnapshot(21)).toEqual(anime);
 });
 
-it('uses live success without consulting Blob', async () => {
-  vi.mocked(fetch).mockResolvedValue(Response.json({ data: { Media: anime } }));
-  expect(await getAnimeWithSnapshot(21)).toEqual(anime); expect(get).not.toHaveBeenCalled();
+it('uses live details when the title is absent from the saved seasons', async () => {
+  const historical = { ...anime, id: 999 };
+  vi.mocked(fetch).mockResolvedValue(Response.json({ data: { Media: historical } }));
+  expect(await getAnimeWithSnapshot(999)).toEqual(historical);
+  expect(fetch).toHaveBeenCalledOnce();
 });
 
 it('serves complete saved seasons first and keeps genuine empty live pages only on a snapshot miss', async () => {
@@ -117,4 +117,17 @@ it.each(['old', 'missing', 'previous-missing'] as const)('returns health 503 wit
   expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ ok: false, stale: true });
   expect(JSON.parse(vi.mocked(console.warn).mock.calls[0][0])).toMatchObject({ event: 'anilist_snapshot_stale', ageHours: state === 'old' ? 25 : state === 'missing' ? null : 0.5 });
   expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain('fixture-token');
+});
+
+it('opens a saved seasonal title even when the live API never responds', async () => {
+  vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+  expect(await getAnimeWithSnapshot(21)).toEqual(anime);
+  expect(fetch).not.toHaveBeenCalled();
+});
+it('bounds a stalled historical detail lookup instead of caching a false 404', async () => {
+  vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+  const pending = getAnimeWithSnapshot(999);
+  const assertion = expect(pending).rejects.toThrow('Lookup timed out');
+  await vi.advanceTimersByTimeAsync(6000);
+  await assertion;
 });

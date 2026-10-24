@@ -279,6 +279,8 @@
     "sort": "Trier par",
     "reset": "Effacer les filtres",
     "scoreHint": "Le filtre utilise la moyenne AniList, convertie sur une échelle de 10 points.",
+    "mildNudity": "Uniquement R+ · Mild Nudity",
+    "mildNudityHint": "Uniquement les fiches MAL de la saison exacte avec une classification R+ vérifiée.",
     "discover": "Découvrir des anime",
     "results": "résultats sur cette page",
     "loading": "Recherche des anime…",
