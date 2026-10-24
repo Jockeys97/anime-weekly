@@ -451,3 +451,19 @@ html:has([data-tier-dragging="true"]) { scroll-behavior: auto; }
 
 .explore-classification { display: flex; align-items: center; gap: 9px; margin-top: 18px; font-size: 14px; cursor: pointer; }
 .anime-search-filters .explore-classification input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; flex: 0 0 18px; accent-color: var(--dark); }
+
+/* Multi-genre search: native disclosure, touch-sized choices, AND semantics. */
+.search-genres{min-width:0;font-size:14px;font-weight:600}
+.search-genres>span{display:block;margin-bottom:8px}
+.search-genres details{position:relative}
+.search-genres summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:12px 14px;background:#fff;border:1px solid #c5d1ba;border-radius:9px;cursor:pointer;font-weight:400;list-style:none}
+.search-genres summary::-webkit-details-marker{display:none}
+.search-genres summary>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-genres summary:focus-visible{outline:3px solid #769641;outline-offset:3px}
+.search-genres details[open] summary{border-color:#769641}
+.search-genres-options{position:absolute;top:calc(100% + 7px);left:0;z-index:10;width:320px;max-width:calc(100vw - 80px);max-height:350px;overflow:auto;padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px #213e3026}
+.search-genres-options p{margin:0 4px 10px;color:var(--muted);font-size:12px;font-weight:400;line-height:1.5}
+.explore-fields .search-genres-options label{flex-direction:row;align-items:center;gap:10px;min-height:40px;padding:7px;border-radius:6px;font-size:13px;font-weight:400;cursor:pointer}
+.search-genres-options label:has(input:checked){background:#e6edda;color:var(--dark);font-weight:600}
+.anime-search-filters .search-genres-options input{flex:0 0 18px;width:18px;height:18px;min-height:0;padding:0;accent-color:var(--dark)}
+@media(max-width:600px){.search-genres-options{position:static;width:100%;max-width:none;margin-top:8px;max-height:320px;box-shadow:none}.explore-fields .search-genres-options label{min-height:44px}}

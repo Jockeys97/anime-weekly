@@ -12,8 +12,8 @@ it('loads platforms for exactly the search page the visitor sees', async () => {
   vi.mocked(discoverAnime).mockResolvedValue({ media: [anime], pageInfo: { currentPage: 2, hasNextPage: true } });
   const snapshot = { unavailable: false, titles: { 'anilist:21': { providers: { IT: { link: '', providers: [{ provider_id: 8, provider_name: 'Netflix', logo_path: null }] } }, providersUnavailable: false } } };
   vi.mocked(getAnimePlatformMetadata).mockResolvedValue(snapshot as Awaited<ReturnType<typeof getAnimePlatformMetadata>>);
-  const response = await GET(new Request('https://anime.example/api/search-providers?q=one&genre=Action&sort=score&page=2'));
-  expect(discoverAnime).toHaveBeenCalledWith(expect.objectContaining({ q: 'one', genre: 'Action', sort: 'score', page: 2 }));
+  const response = await GET(new Request('https://anime.example/api/search-providers?q=one&genre=Action&genre=Comedy&genre=Martial+Arts&sort=score&page=2'));
+  expect(discoverAnime).toHaveBeenCalledWith(expect.objectContaining({ q: 'one', genres: ['Action', 'Comedy', 'Martial Arts'], sort: 'score', page: 2 }));
   expect(getAnimePlatformMetadata).toHaveBeenCalledWith([anime]);
   expect(response.status).toBe(200);
   expect(response.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=86400, stale-while-revalidate=604800');

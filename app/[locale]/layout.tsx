@@ -1,3 +1,4 @@
+import { SearchHistory } from '@/components/SearchHistory';
 import type { Metadata } from 'next';
 import { SITE_TITLE_SUFFIX, siteUrl } from '@/lib/seo';
 import { Suspense } from 'react';
@@ -28,5 +29,5 @@ export async function generateMetadata({ params }: { params: LocaleParams }): Pr
 export default async function RootLayout({ children, params }: Readonly<{ children: React.ReactNode; params: LocaleParams }>) {
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale);
-  return <html lang={locale}><body><LocaleProvider key={locale} locale={locale}><VisitorTimeProvider><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state route-loading" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider><FilteredAnalytics /></body></html>;
+  return <html lang={locale}><body><LocaleProvider key={locale} locale={locale}><VisitorTimeProvider><SearchHistory /><div className="site-shell"><SiteHeader myAnimeEnabled={myAnimeConfig().enabled} /><StreamingCountryProvider><Suspense fallback={<main className="empty-state route-loading" role="status">{d.loading}</main>}>{children}</Suspense></StreamingCountryProvider><SiteFooter /></div></VisitorTimeProvider></LocaleProvider><FilteredAnalytics /></body></html>;
 }

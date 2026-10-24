@@ -1,11 +1,11 @@
 import { discoverAnime } from '@/lib/anilist';
-import { parseAnimeFilters } from '@/lib/anime-search';
+import { parseAnimeFilters, searchParamsRecord } from '@/lib/anime-search';
 import { getAnimePlatformMetadata } from '@/lib/platform-metadata';
 export const maxDuration = 30;
 // Platforms for one page of search results: the same AniList query as the
 // page (served from the fetch cache) and per-title TMDB providers cached hourly.
 export async function GET(request: Request) {
-  const params = Object.fromEntries(new URL(request.url).searchParams);
+  const params = searchParamsRecord(new URL(request.url).searchParams);
   try {
     const data = await discoverAnime(parseAnimeFilters(params));
     if (data.unavailable || !data.media.length) throw new Error('Search unavailable');

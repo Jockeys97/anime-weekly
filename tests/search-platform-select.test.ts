@@ -29,3 +29,12 @@ it('places the optional MAL checkbox below the field grid and preserves its sele
   expect(html.indexOf('explore-classification')).toBeGreaterThan(html.indexOf('>Platform<'));
   expect(html).toContain('Only R+ · Mild Nudity');
 });
+
+it('renders selected genres as independent checked fields and explains the intersection', () => {
+  const html = renderToStaticMarkup(React.createElement(LocaleProvider, { locale: 'it', children:
+    React.createElement(StreamingCountryProvider, null,
+      React.createElement(PlatformOptionsProvider, null, React.createElement(AnimeSearchFilters, { filters: parseAnimeFilters({ genre: ['Action', 'Comedy', 'Martial Arts'] }), locale: 'it' }))) }));
+  expect(html).toContain('Azione + Commedia + Combattimenti / arti marziali');
+  expect(html).toContain('I risultati devono corrispondere a tutte le scelte.');
+  for (const genre of ['Action', 'Comedy', 'Martial Arts']) expect(html).toContain(`name="genre" checked="" value="${genre}"`);
+});
