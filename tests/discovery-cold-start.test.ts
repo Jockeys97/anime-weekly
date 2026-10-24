@@ -1,3 +1,4 @@
+vi.mock('next/server', () => ({ connection: vi.fn(async () => {}) }));
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -105,7 +106,7 @@ it('rejects an episode outage instead of caching a partial shard, and recovers o
 });
 
 it('renders a temporary landing state on catalog outage and restores genre links on the next request', async () => {
-  expect(landingRevalidate).toBe(86400);
+  expect(landingRevalidate).toBe(0);
   const params = Promise.resolve({ locale: 'en' });
   vi.mocked(readSharedSimilarCatalog).mockRejectedValueOnce(new Error('Discovery catalog unavailable'));
   const failed = renderWithLocale(await BestThisSeason({ params }));
@@ -117,7 +118,7 @@ it('renders a temporary landing state on catalog outage and restores genre links
 });
 
 it('does not turn an unavailable genre into a cached 404, and recovers without a rebuild', async () => {
-  expect(genreRevalidate).toBe(86400);
+  expect(genreRevalidate).toBe(0);
   const params = Promise.resolve({ locale: 'en', genre: 'action' });
   vi.mocked(readSharedSimilarCatalog).mockRejectedValueOnce(new Error('Discovery catalog unavailable'));
   expect((await generateMetadata({ params })).robots).toEqual({ index: false, follow: true });

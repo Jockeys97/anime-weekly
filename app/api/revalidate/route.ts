@@ -1,3 +1,4 @@
+import { snapshotHealth } from '@/lib/anilist-snapshot';
 import { repairLegacyImdbRatingIndex, ensureImdbEpisodeIndex } from '@/lib/imdb-datasets';
 import { readSharedImdbScore, hasImdbScore } from '@/lib/imdb';
 import { authorizedCron as authorized } from '@/lib/cron-auth';
@@ -126,9 +127,9 @@ export async function GET(request: Request) {
   if (new URL(request.url).searchParams.has('health')) {
     const slug = formatWeek(isoWeek(new Date()));
     const day = japanDate();
-    const [snapshot, chartIndex, diagnostics] = await Promise.all([readWeeklyRatingsSnapshot(slug), hasImdbEpisodeIndex(day), readImdbDiagnostics(day)]);
+    const [snapshot, chartIndex, diagnostics, catalog] = await Promise.all([readWeeklyRatingsSnapshot(slug), hasImdbEpisodeIndex(day), readImdbDiagnostics(day), snapshotHealth()]);
     const health = assessDailyHealth(slug, snapshot, new Date(), { day, chartIndex, diagnostics });
-    return Response.json(health, { headers: { 'cache-control': 'no-store' } });
+    return Response.json({ ...health, ok: health.ok && catalog.ok, catalog, problems: [...health.problems, ...(!catalog.ok ? ['Catalogo stagioni persistente assente o non aggiornato nelle ultime 24 ore.'] : [])] }, { headers: { 'cache-control': 'no-store' } });
   }
   const read = new URL(request.url).searchParams.get('ratings');
   if (read !== null) {

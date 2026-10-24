@@ -1,10 +1,11 @@
 import 'server-only';
+import { withTimeout } from '@/lib/async-timeout';
 import { cache } from 'react';
 import { readSharedSimilarCatalog } from '@/lib/similar-catalog-client';
 import type { AniListAnime } from '@/lib/anilist';
 import { currentSeason } from '@/lib/season';
 import { rankGenre, rankSimilar } from '@/lib/discovery';
-import { readRatingsStore } from '@/lib/ratings-store';
+import { readRatingsStore, type RatingsStore } from '@/lib/ratings-store';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 import type { Ratings } from '@/lib/ratings';
@@ -32,7 +33,7 @@ export async function getSimilarAnime(anime: AniListAnime, maxWaitMs = SIMILAR_P
 
 export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {
   const season = currentSeason();
-  const [catalog, store, snapshot] = await Promise.all([providedCatalog ?? getDiscoveryCatalog(), readRatingsStore(), readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date())))]);
+  const [catalog, store, snapshot] = await Promise.all([providedCatalog ?? getDiscoveryCatalog(), withTimeout(readRatingsStore(), 1500).catch(() => ({ ratings: {}, sources: {} } as RatingsStore)), withTimeout(readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date()))), 1500).catch(() => ({ titles: {}, events: [] }))]);
   const media = catalog.filter(anime => anime.seasonYear === season.year && anime.season?.toLowerCase() === season.season);
   const ratings: Record<number, Ratings> = {};
   const weekly = new Map(Object.values(snapshot.titles).map(r => [r.anilistId, r]));

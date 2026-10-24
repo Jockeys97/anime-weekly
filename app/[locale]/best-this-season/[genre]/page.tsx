@@ -1,3 +1,4 @@
+import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
 import { animeSlug } from '@/lib/anime-url';
@@ -11,10 +12,11 @@ import { DiscoveryUnavailable } from '@/components/DiscoveryUnavailable';
 import { MIN_IMDB_VOTES } from '@/lib/weekly-rankings';
 
 type Props = { params: Promise<{ locale?: string; genre: string }> };
-export const revalidate = 86400;
+export const revalidate = 0;
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
 async function content(params: Props['params']) {
+  await connection();
   const locale = await getRequestLocale(params);
   const { genre: slug } = await params;
   const data = await getGenreLists().catch(() => null);

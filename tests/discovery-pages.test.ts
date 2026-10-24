@@ -1,3 +1,4 @@
+vi.mock('next/server', () => ({ connection: vi.fn(async () => {}) }));
 import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, type ReactNode } from 'react';

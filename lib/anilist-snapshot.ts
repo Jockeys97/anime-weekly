@@ -139,7 +139,7 @@ export function warnSnapshotStale(health: Awaited<ReturnType<typeof snapshotHeal
 }
 
 type RefreshSeason = { key: string; season: string; status: 'written' | 'failed'; count?: number; reason?: string };
-export async function refreshAniListSnapshot(now = new Date()) {
+async function refreshSnapshot(now: Date) {
   const results: RefreshSeason[] = [];
   const writtenSnapshots = new Map<string, SnapshotSeason>();
   const deadline = Date.now() + 240000;
@@ -206,4 +206,11 @@ export async function refreshAniListSnapshot(now = new Date()) {
   }
   const written = results.filter(result => result.status === 'written').length;
   return { ok: written === 2 && !manifestFailed, written, manifestFailed, seasons: results };
+}
+
+// Concurrent authorized warm calls in the same runtime share one crawl.
+let refreshing: Promise<Awaited<ReturnType<typeof refreshSnapshot>>> | undefined;
+export function refreshAniListSnapshot(now = new Date()) {
+  if (!refreshing) refreshing = refreshSnapshot(now).finally(() => { refreshing = undefined; });
+  return refreshing;
 }

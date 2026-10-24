@@ -1,3 +1,4 @@
+vi.mock('@/lib/anilist-snapshot', () => ({ readAniListSnapshotSeason: vi.fn(async () => null), snapshotHealth: vi.fn(), refreshAniListSnapshot: vi.fn() }));
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 import { readSharedSimilarCatalog, SIMILAR_CATALOG_RESPONSE_TAG } from '@/lib/similar-catalog-client';

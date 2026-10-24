@@ -1,3 +1,4 @@
+import { connection } from 'next/server';
 import Link from '@/components/LocaleLink';
 import { JsonLd } from '@/components/JsonLd';
 import { LandingCard } from '@/components/LandingCard';
@@ -18,14 +19,16 @@ import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
 
 // Generate on demand; catalog reads never perform upstream crawls.
-export const revalidate = 86400;
+export const revalidate = 0;
 export function generateStaticParams() { return []; }
 export async function generateMetadata({ params }: { params?: LocaleParams }) {
+  await connection();
   const metadata = landingMetadata('best', await getRequestLocale(params));
   const catalog = await getGenreLists().catch(() => null);
   return { ...metadata, ...(!catalog?.media.length ? { robots: { index: false, follow: true } } : {}) };
 }
 export default async function BestThisSeason({ params }: { params?: LocaleParams }) {
+  await connection();
   const locale = await getRequestLocale(params);
   const d = getDictionary(locale); const now = new Date(); const season = currentSeason(now);
   const [snapshot, genreLists] = await Promise.all([

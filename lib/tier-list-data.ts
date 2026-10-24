@@ -1,5 +1,6 @@
 import 'server-only';
 import { animeName, getSeason, type AniListAnime } from '@/lib/anilist';
+import { readAniListSnapshotSeason } from '@/lib/anilist-snapshot';
 import { readSharedSimilarCatalog } from '@/lib/similar-catalog-client';
 import { withTimeout } from '@/lib/async-timeout';
 import type { AnimeSeason } from '@/lib/season';
@@ -22,6 +23,8 @@ function seasonItems(media: AniListAnime[], season: AnimeSeason): TierItem[] {
 
 export async function getTierListData(season: AnimeSeason): Promise<{ items: TierItem[]; unavailable: boolean }> {
   const deadline = Date.now() + TOTAL_WAIT_MS;
+  const saved = await withTimeout(readAniListSnapshotSeason(season.year, season.season), 3000).catch(() => null);
+  if (saved) return { items: seasonItems(saved.media, season), unavailable: false };
   // Read the daily cron's existing catalog. A miss never starts its crawler.
   try {
     const items = seasonItems(await withTimeout(readSharedSimilarCatalog('seasonal'), CATALOG_WAIT_MS), season);

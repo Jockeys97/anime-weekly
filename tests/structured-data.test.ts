@@ -65,7 +65,7 @@ it('renders WebSite SearchAction once on home and only breadcrumbs on a week arc
 it('lists only the current season page with localized breadcrumbs for an English URL', async () => {
   vi.mocked(getSeason).mockResolvedValue({ media: [{ id: 42, title: { english: 'Titolo', romaji: null, native: null } }] as Awaited<ReturnType<typeof getSeason>>['media'], pageInfo: { currentPage: 2, hasNextPage: false } });
   const html = renderToStaticMarkup(await SeasonPage({ params: Promise.resolve({ year: '2026', season: 'fall', locale: 'en' }), searchParams: Promise.resolve({ page: '2' }) }));
-  expect(getSeason).toHaveBeenCalledExactlyOnceWith(2026, 'fall', 2);
+  expect(getSeason).toHaveBeenCalledExactlyOnceWith(2026, 'fall', 2, { maxWaitMs: 6000 });
   const data = scripts(html);
   expect(data).toHaveLength(2);
   expect(data[0].itemListElement).toEqual([{ '@type': 'ListItem', position: 1, name: 'Titolo', url: 'https://weeklyanime.com/en/anime/42-titolo' }]);

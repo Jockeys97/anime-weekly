@@ -50,7 +50,7 @@ export default async function TierListPage({ params, searchParams }: { params?: 
 async function TierListContent({ season, seasonName, locale }: { season: AnimeSeason; seasonName: string; locale: Locale }) {
   const d = getDictionary(locale); const t = d.tierList;
   const { items, unavailable } = await getTierListData(season);
-  if (unavailable) return <div className="empty-state" role="status"><p>{t.unavailable}</p><Link prefetch={false} className="button" href={tierListPath(season)}>{d.error.retry}</Link></div>;
+  if (unavailable) return <div className="empty-state" role="status"><p>{t.unavailable}</p><a className="button" href={localePath(tierListPath(season), locale)}>{d.error.retry}</a></div>;
   return items.length ? <TierListMaker key={`${season.year}-${season.season}`} locale={locale} season={season} seasonName={seasonName} items={items}
     shareUrl={new URL(localePath(tierListPath(season), locale), siteUrl()).href} />
     : <div className="empty-state" role="status"><p>{t.empty}</p></div>;

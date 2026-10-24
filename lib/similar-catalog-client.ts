@@ -1,6 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import type { AniListAnime } from '@/lib/anilist';
+import { readAniListSnapshotSeason } from '@/lib/anilist-snapshot';
+import { currentSeason } from '@/lib/season';
 import { internalOrigin } from '@/lib/internal-origin';
 
 export const SIMILAR_CATALOG_TAG = 'similar-catalog';
@@ -10,6 +12,13 @@ export const SIMILAR_CATALOG_RESPONSE_TAG = 'similar-catalog-response-v3';
 // responses, whose keys do not depend on compiled loader function source.
 // Only the server's cron credential is sent; never forward visitor headers.
 export const readSharedSimilarCatalog = cache(async (catalog: 'full' | 'seasonal'): Promise<AniListAnime[]> => {
+  // Current-season consumers read the durable file directly. A cold Next HTTP
+  // cache must not make genres/tier lists depend on a successful daily crawl.
+  if (catalog === 'seasonal') {
+    const season = currentSeason();
+    const saved = await readAniListSnapshotSeason(season.year, season.season);
+    if (saved) return saved.media;
+  }
   const secret = process.env.CRON_SECRET;
   if (!secret?.trim()) throw new Error('CRON_SECRET is required to read the shared similar catalog');
   const origin = internalOrigin();
