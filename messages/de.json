@@ -520,7 +520,13 @@
     "detailContext": "Veröffentlichungstermine, Folgen, Streamingplattformen und IMDb/MAL-Wertungen.",
     "animeYear": "{format}-Anime aus {year}.",
     "animeScore": "Bewertung {score}/10.",
-    "animeFallback": "Handlung, Bewertungen und Streamingangebote für {name}."
+    "animeFallback": "Handlung, Bewertungen und Streamingangebote für {name}.",
+    "ctrEpisode": "Folge",
+    "ctrRelease": "Start",
+    "ctrWatch": "wo streamen",
+    "ctrWatchDate": "wo streamen und Erscheinungsdatum",
+    "alsoKnownAs": "Auch bekannt als",
+    "mostSearched": "Diese Woche meistgesucht"
   },
   "landings": {
     "weekNav": "Diese Woche",

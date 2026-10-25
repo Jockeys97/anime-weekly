@@ -526,7 +526,13 @@
     "detailContext": "Release schedule, episodes, streaming platforms and IMDb/MAL scores.",
     "animeYear": "{format} anime from {year}.",
     "animeScore": "Rating {score}/10.",
-    "animeFallback": "Synopsis, ratings and where to stream {name}."
+    "animeFallback": "Synopsis, ratings and where to stream {name}.",
+    "ctrEpisode": "Episode",
+    "ctrRelease": "release",
+    "ctrWatch": "where to watch",
+    "ctrWatchDate": "where to watch and release date",
+    "alsoKnownAs": "Also known as",
+    "mostSearched": "Most searched this week"
   },
   "landings": {
     "weekNav": "This week",

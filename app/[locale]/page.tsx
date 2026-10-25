@@ -1,3 +1,7 @@
+import Link from 'next/link';
+import { mostSearched } from '@/lib/most-searched';
+import { animePath } from '@/lib/anime-url';
+import { localePath } from '@/lib/locale-routing';
 import { WeeklyGuide } from '@/components/WeeklyGuide';
 import { isoWeek } from '@/lib/week';
 import { pageMetadata } from '@/lib/seo';
@@ -15,4 +19,4 @@ export const dynamic = 'error';
 export const dynamicParams = true;
 export function generateStaticParams() { return []; }
 export const revalidate = 21600; // live weekly output: refresh at most every six hours
-export default async function Home({ params }: { params?: LocaleParams }) { const locale = await getRequestLocale(params); return <><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /></>; }
+export default async function Home({ params }: { params?: LocaleParams }) { const locale = await getRequestLocale(params); return <><JsonLd data={websiteSearch(locale)} /><JsonLd data={organization()} /><WeeklyGuide week={isoWeek(new Date())} locale={locale} newsletter /><section className="catalog-page"><h2>{getDictionary(locale).seo.mostSearched}</h2><ul>{mostSearched.map(anime => <li key={anime.id}><Link prefetch={false} href={localePath(animePath(anime.id, anime.name), locale)}>{anime.name}</Link></li>)}</ul></section></>; }

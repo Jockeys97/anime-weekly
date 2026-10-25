@@ -1,7 +1,7 @@
 import { getRequestLocale } from '@/lib/request-locale';
 import type { Metadata } from 'next';
 import { Suspense, cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { animeLanguageAlternates, animePath, parseAnimeId } from '@/lib/anime-url';
 import { DubbingSummary } from '@/components/DubbingSummary';
 import { AnimeDetailView } from '@/components/AnimeDetailView';
@@ -19,8 +19,11 @@ import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { pageMetadata, siteUrl } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
 import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
-import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
-import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
+import { getDictionary } from '@/lib/i18n';
+import { localePath } from '@/lib/locale-routing';
+import { withTimeout } from '@/lib/async-timeout';
+import { getAnimeEpisodes } from '@/lib/episode-data';
+import { nextAnimeEpisode } from '@/lib/anime-seo';
 import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
 import { AnimeWeekLinks } from '@/components/AnimeWeekLinks';
 import { animeDetailSeo, animeIntro } from '@/lib/anime-seo';
@@ -35,8 +38,7 @@ export function generateStaticParams() { return []; }
 const loadAnime = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (numericId === null) notFound();
-  // Snapshot reads lower ISR to five minutes when live details fail or return
-  // not-found. A failure without a saved copy still throws a transient error.
+  // A failure without a saved copy remains transient, never a cached 404.
   const anime = await getAnimeWithSnapshot(numericId);
   if (!anime) notFound();
   return anime;
@@ -63,15 +65,20 @@ export default async function AnimePage({ params }: Props) {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
   const namesPromise = getAnimeLocalizedTitles(anime.id, animeName(anime));
+  // Numeric URLs need only the canonical title, not optional provider cards.
+  if (/^\d+$/.test((await params).id)) {
+    const names = await namesPromise;
+    const path = animePath(anime.id, names[locale] || animeName(anime));
+    if (path !== `/anime/${anime.id}`) permanentRedirect(localePath(path, locale));
+  }
   // Resolve optional cards with the core data so streamed sections cannot push
   // the episode chart or streaming information down after the initial paint.
-  const [names, { ratings: animeRatings, availability, synopsis }, similar] = await Promise.all([
+  const [names, { ratings: animeRatings, availability, synopsis }, similar, episodes] = await Promise.all([
     namesPromise, getAnimeDetailData(anime, locale),
     AnimeSimilarBlock({ anime, name: animeName(anime), locale }),
+    DetailEpisodes({ anime, locale }),
   ]);
   const name = names[locale] || animeName(anime);
-  // Other slugs and bare IDs render the same page with a canonical anime URL.
-  // A redirect here would need searchParams (dynamic) inside an ISR, streamed route.
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const structured = animeStructuredData(anime, name, animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability.ratings).description, locale);
@@ -81,16 +88,20 @@ export default async function AnimePage({ params }: Props) {
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
       ratings={<DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />}
-      episodes={['TV', 'TV_SHORT', 'ONA'].includes(anime.format || '') ? <DetailEpisodeChart availability={Promise.resolve(availability)} name={name} /> : null}
+      episodes={episodes}
       availability={Object.values(availability.providers).some(region => region?.providers.length) ? <DetailAvailability availability={availability} name={name} locale={locale} id={anime.id} /> : null} />
   </>;
 }
 
-async function DetailEpisodeChart({ availability, name }: { availability: Promise<AnimeAvailability>; name: string }) {
-  const watch = await availability;
-  const id = watch.episodeSeries?.imdbId || watch.ratings.imdbId;
-  const initial = id ? await getImdbEpisodeChart(id) : { status: 'unavailable' as const, episodes: [] };
-  return <EpisodeRatingsChart key={id || name} initial={initial} seriesId={id} seriesTitle={watch.episodeSeries?.title || watch.ratings.imdbSeriesTitle || name} />;
+async function DetailEpisodes({ anime, locale }: { anime: import('@/lib/anilist').AniListAnime; locale: Locale }) {
+  const next = nextAnimeEpisode(anime);
+  const fallback = next ? [{ episode: next.episode, airingAt: next.airingAt }] : [];
+  const events = await withTimeout(getAnimeEpisodes(anime), 1200).catch(() => fallback);
+  if (!events.length) return null;
+  const d = getDictionary(locale);
+  return <section className="landing-day"><h2>{d.catalog.episodes}</h2><ul>{events.map(event => <li key={event.episode}>
+    {d.discovery.episode.replace('{n}', String(event.episode))} · <time dateTime={new Date(event.airingAt * 1000).toISOString()}>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(event.airingAt * 1000))}</time>
+  </li>)}</ul></section>;
 }
 
 function DetailImdbRating({ availability, name, locale, id }: {

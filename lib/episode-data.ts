@@ -9,7 +9,7 @@ import { episodeInSitemap } from '@/lib/discovery';
 
 // One batch over catalog IDs, not one request per anime or locale. Keep the
 // newest 2,000 real airings; long-running series remain accessible on demand.
-const readAirings = unstable_cache(async (ids: number[], until: number | null, episodes: number[] = []) => {
+const readAirings = unstable_cache(async (ids: number[], until: number | null, episodes: number[] = [], maxPages = 40) => {
   const events: AiringEvent[] = [];
   // AniList distinguishes omitted filters from explicit nulls. A detail lookup
   // has no time bound; the sitemap has no episode-number filter.
@@ -22,7 +22,7 @@ const readAirings = unstable_cache(async (ids: number[], until: number | null, e
   if (episodes.length) {
     definitions.push('$episodes: [Int]'); filters.push('episode_in: $episodes'); variables.episodes = episodes;
   }
-  for (let page = 1; page <= (episodes.length ? 1 : 40); page++) {
+  for (let page = 1; page <= (episodes.length ? 1 : maxPages); page++) {
     const query = `query (${definitions.join(', ')}) { Page(page: $page, perPage: 50) {
       pageInfo { hasNextPage } airingSchedules(${filters.join(', ')}, sort: TIME_DESC) { id mediaId episode airingAt }
     } }`;
@@ -40,9 +40,9 @@ const readAirings = unstable_cache(async (ids: number[], until: number | null, e
   return events;
 }, ['discovery-airing-schedules-v2'], { revalidate: 21600, tags: [CACHE_TAG] });
 
-export const getAnimeEpisodes = cache(async (anime: AniListAnime, episode: number) => {
+export const getAnimeEpisodes = cache(async (anime: AniListAnime, episode?: number) => {
   if (anime.format === 'MOVIE') return [];
-  const events = [...await readAirings([anime.id], null, [episode - 1, episode, episode + 1].filter(n => n > 0)).catch(() => [] as AiringEvent[])];
+  const events = [...await readAirings([anime.id], null, episode == null ? [] : [episode - 1, episode, episode + 1].filter(n => n > 0), 1).catch(() => [] as AiringEvent[])];
   const next = anime.nextAiringEpisode;
   if (next && !events.some(e => e.episode === next.episode) && Number.isSafeInteger(next.episode) && next.episode > 0 && Number.isSafeInteger(next.airingAt) && next.airingAt > 0) {
     events.push({ id: 0, mediaId: anime.id, ...next });

@@ -1,3 +1,4 @@
+vi.mock('../lib/episode-data', () => ({ getAnimeEpisodes: vi.fn(async () => []) }));
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
 vi.mock('../lib/discovery-data', () => ({ getSimilarAnime: vi.fn(async () => []) }));
 vi.mock('../lib/weekly-seo-data', () => ({ getSeoWeek: vi.fn().mockResolvedValue(null), getSeoWeeks: vi.fn().mockResolvedValue([]), getAnimeWeekAppearances: async () => [] }));
@@ -7,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { detailDesktopMedia, detailMobileMedia, emptyDetailImage } from '../lib/detail-viewport';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); } }));
+vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('not-found'); }, permanentRedirect: (url: string) => { throw new Error(`redirect308:${url}`); } }));
 vi.mock('../lib/anilist', async importOriginal => ({ ...await importOriginal<typeof import('../lib/anilist')>(), getAnime: vi.fn() }));
 vi.mock('../lib/ratings-store', () => ({ readRatingsStore: vi.fn() }));
 vi.mock('../lib/weekly-ratings', () => ({ readWeeklyRatingsSnapshot: vi.fn() }));
@@ -81,9 +82,9 @@ it('still renders the detail page when the similarity lookup stalls', async () =
 
 it('reuses already loaded IMDb data in metadata without another upstream lookup', async () => {
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'en' }) });
-  const title = 'Example – IMDb 8.4 & Where to Watch';
+  const title = 'Example MOVIE – where to watch and release date';
   expect(metadata.title).toEqual({ absolute: title });
-  expect(metadata.description).toContain('IMDb 8.4 & Where to Watch');
+  expect(metadata.description).toContain('IMDb 8.4/10');
   expect(metadata.openGraph).toMatchObject({ title, description: metadata.description });
   expect(metadata.twitter).toMatchObject({ title, description: metadata.description });
   expect(getCachedDetailAvailability).toHaveBeenCalledTimes(1);
@@ -94,8 +95,8 @@ it('includes an IMDb score from the weekly cache when availability has no score'
   vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { 'movie:10': { anilistId: 42, malId: 123, malScore: 8.3, imdbId: 'tt123', imdbRating: '8.6' } }, events: [] });
   vi.mocked(getCachedDetailAvailability).mockResolvedValue(empty);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '42-example', locale: 'it' }) });
-  expect(metadata.title).toEqual({ absolute: 'Example – IMDb 8.6 e dove vederlo' });
-  expect(metadata.description).toContain('IMDb 8.6 e dove vederlo');
+  expect(metadata.title).toEqual({ absolute: 'Example MOVIE – dove vederlo e data di uscita' });
+  expect(metadata.description).toContain('IMDb 8,6/10');
   expect(getMyAnimeListScore).not.toHaveBeenCalled();
 });
 
@@ -103,22 +104,22 @@ it('shares the first kana fallback between the visible subtitle, metadata and JS
   const fixture = animeSeoRegressionExamples[0];
   vi.mocked(getAnime).mockResolvedValue(fixture.anime);
   const html = await render('21-one-piece');
-  expect(html).toContain('<p class="catalog-intro">ワンピース</p>');
+  expect(html).toContain('Conosciuto anche come: OP · 海賊王 · ワンピース · ワンピース別名');
   const nodes = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map(match => JSON.parse(match[1]));
-  expect(nodes[0].alternateName).toEqual(['ワンピース']);
+  expect(nodes[0].alternateName).toEqual(['OP', '海賊王', 'ワンピース', 'ワンピース別名']);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '21-one-piece', locale: 'en' }) });
-  expect(metadata.title).toEqual({ absolute: 'One Piece (ワンピース) – IMDb 8.4 & Where to Watch' });
-  expect(metadata.description).toContain('One Piece (ワンピース)');
+  expect(metadata.title).toEqual({ absolute: 'One Piece TV – where to watch and release date' });
+  expect(metadata.description).toContain('ワンピース');
 });
 
 it('uses the localized series rating in absolute metadata titles for sequels', async () => {
   vi.mocked(getAnime).mockResolvedValue(animeSeoRegressionExamples[2].anime);
   const metadata = await generateMetadata({ params: Promise.resolve({ id: '195516', locale: 'it' }) });
   const title = (metadata.title as { absolute: string }).absolute;
-  expect(title).toContain('IMDb 8.4 (serie)');
+  expect(title).not.toContain('IMDb');
   expect(title).toContain('Season 3');
   expect(title).not.toContain('Weekly Anime');
-  expect(metadata.description).toContain('IMDb 8.4 (serie)');
+  expect(metadata.description).toContain('IMDb 8,4/10');
   expect(metadata.openGraph).toMatchObject({ title });
   expect(metadata.twitter).toMatchObject({ title });
 });
@@ -187,7 +188,7 @@ it('renders exactly one episode H1 followed by the factual localized intro', () 
   const view = React.createElement(AnimeDetailView, { anime: next, intro, synopsis: null, imdb: null, ratings: null, availability: null });
   const html = renderToStaticMarkup(React.createElement(StreamingCountryProvider, null, view));
   expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-  expect(html).toContain('<h1>Example episodio 3: data di uscita e voti</h1><p class="catalog-intro">');
+  expect(html).toMatch(/<h1>Example.*episodio 3: uscita .* – dove vederlo<\/h1>/);
   expect(html).toContain('26 ottobre 2026');
   expect(html).toContain('Europe/Rome');
   for (const source of ['IMDb', 'MyAnimeList', 'AniList']) expect(intro).toContain(source);
@@ -294,4 +295,40 @@ it('shares one rating deadline across a slow cache read and missing MAL score', 
   expect(result.ratings.malStatus).toBe('error');
   expect(result.availability.providers.IT?.providers[0].provider_name).toBe('Netflix');
   expect(getMyAnimeListScore).toHaveBeenCalledTimes(1);
+});
+
+it.each(['it', 'en', 'es', 'fr', 'de', 'pt'])('redirects a bare numeric ID using already loaded titles (%s)', async locale => {
+  await expect(AnimePage({ params: Promise.resolve({ id: '42', locale }) })).rejects.toThrow(`redirect308:/${locale === 'it' ? '' : `${locale}/`}anime/42-example`);
+  expect(getAnime).toHaveBeenCalledTimes(1);
+});
+
+it('retains weekly scores when the independent ratings store fails', async () => {
+  vi.mocked(readRatingsStore).mockRejectedValue(new Error('Store unavailable'));
+  vi.mocked(readWeeklyRatingsSnapshot).mockResolvedValue({ titles: { exact: { anilistId: 42, malId: 123, malScore: 8.3 } }, events: [] });
+  const result = await getAnimeDetailData(anime);
+  expect(result.ratings.malScore).toBe(8.3);
+  expect(getMyAnimeListScore).not.toHaveBeenCalled();
+});
+
+it('renders an OVA with an empty weekly snapshot and failed optional providers', async () => {
+  vi.mocked(getAnime).mockResolvedValue({ ...anime, id: 203367, format: 'OVA', idMal: null });
+  vi.mocked(getCachedDetailAvailability).mockRejectedValue(new Error('Unavailable'));
+  vi.mocked(getSynopsis).mockRejectedValue(new Error('Unavailable'));
+  const html = await render('203367-example');
+  expect(html).toContain('Example');
+  expect(html).toContain('OVA');
+  expect(html).not.toContain('episode-ratings-chart');
+});
+
+it('falls back to only the real next airing when history stalls', async () => {
+  vi.useFakeTimers();
+  const { getAnimeEpisodes } = await import('../lib/episode-data');
+  vi.mocked(getAnimeEpisodes).mockReturnValueOnce(new Promise(() => {}));
+  vi.mocked(getAnime).mockResolvedValue({ ...anime, format: 'OVA', nextAiringEpisode: { episode: 2, airingAt: 1795651200 } });
+  const html = render();
+  await vi.advanceTimersByTimeAsync(1200);
+  const result = await html;
+  expect(result).toContain('Episodio 2');
+  expect(result).toContain('<time dateTime="2026-11-26T00:00:00.000Z">');
+  expect(result).not.toContain('Episodio 1');
 });

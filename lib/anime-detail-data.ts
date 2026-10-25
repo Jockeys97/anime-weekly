@@ -19,7 +19,10 @@ const hasMalScore = (ratings: Ratings) => typeof ratings.malScore === 'number' &
 
 // Read only: never trigger the weekly collector or spend OMDb quota here.
 export async function readDetailRatings(anime: AniListAnime): Promise<Ratings> {
-  const [store, weekly] = await Promise.all([readRatingsStore(), readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date())))]);
+  const [store, weekly] = await Promise.all([
+    readRatingsStore().catch((): Awaited<ReturnType<typeof readRatingsStore>> => ({ sources: {}, ratings: {} })),
+    readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date()))).catch(() => ({ titles: {}, events: [] })),
+  ]);
   const snapshot = Object.values(weekly.titles).find(rating => rating.anilistId === anime.id);
   const mapped = Object.values(store.sources).find(source => source.anilistId === anime.id && Date.now() - source.fetchedAt <= MAX_STORED_AGE);
   const ratings: Ratings = { ...snapshot, anilistId: anime.id, malId: anime.idMal ?? undefined };

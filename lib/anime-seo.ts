@@ -17,25 +17,26 @@ function truncate(text: string, limit: number): string {
   return `${(space > limit / 2 ? head.slice(0, space) : head).trimEnd()}…`;
 }
 
-function namedPrefix(name: string, aliases: string[], limit: number): string {
-  if (name.length > limit) return truncateAnimeName(name, limit);
-  const selected: string[] = [];
-  for (const alias of aliases) {
-    if (`${name} (${[...selected, alias].join(' / ')})`.length <= limit) selected.push(alias);
+function truncateAnimeName(name: string, limit: number): string {
+  if (name.length <= limit) return name;
+  const words = name.split(' ');
+  const selected = words.slice(0, 4);
+  for (const word of words.slice(4)) {
+    if ([...selected, word].join(' ').length + 1 > limit) break;
+    selected.push(word);
   }
-  return selected.length ? `${name} (${selected.join(' / ')})` : name;
+  return selected.join(' ') + '…';
 }
 
-function truncateAnimeName(name: string, limit: number): string {
-  // Keep the identifying season/part and the end of the published name. This
-  // applies only to detail names, not synopsis text or other page formatters.
-  const marker = /\b(?:(?:season|part|cour|stagione|parte|temporada|saison|partie|staffel|teil)\s+(?:\d+|[ivxlcdm]+)\b|(?:\d+(?:st|nd|rd|th)|[ivxlcdm]+)\s+(?:season|part|cour)\b|(?:final|last)\s+(?:season|part|cour)\b|(?:[^\s:–—]+\s+){0,2}arc\b|[ivxlcdm]+\s*$)/i.exec(name);
-  if (!marker) return truncate(name, limit);
-  let tail = name.slice(marker.index).trim();
-  if (tail.length > limit - 4) {
-    tail = tail.slice(-(limit - 4)).replace(/^\S*\s/, '');
-  }
-  return `${truncate(name, limit - tail.length - 1)} ${tail}`;
+function ctrTitle(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'> & { format?: string | null }, locale: Locale) {
+  name = compact(name).replace(/\.+$/, '');
+  const d = getDictionary(locale).seo;
+  const next = nextAnimeEpisode(anime);
+  const date = next && new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: locale === 'it' ? 'Europe/Rome' : 'UTC' }).format(next.date);
+  const suffix = next ? ` ${d.ctrEpisode} ${next.episode}: ${d.ctrRelease} ${date} – ${d.ctrWatch}` : ` – ${d.ctrWatchDate}`;
+  const format = anime.format ? ` ${anime.format === 'TV_SHORT' ? 'TV' : anime.format}` : '';
+  const label = name.length + format.length + suffix.length <= 75 ? format : '';
+  return truncateAnimeName(name, 75 - suffix.length - label.length) + label + suffix;
 }
 
 // Ratings are supplied by the detail's existing shared loader. This formatter
@@ -47,23 +48,15 @@ export function animeDetailSeo(
   locale: Locale,
   ratings: Ratings = {},
 ): { title: string; description: string } {
-  name = compact(name);
+  name = compact(name).replace(/\.+$/, '');
   const aliases = animeAlternateNames(name, anime.title, anime.synonyms);
+  const next = nextAnimeEpisode(anime);
   const d = getDictionary(locale).seo;
-  const score = ratings.imdbRating?.trim() ? Number(ratings.imdbRating) : NaN;
-  const ratedWatch = anime.relations?.edges.some(edge => edge.relationType === 'PREQUEL')
-    ? d.detailSeriesRatedWatchTitle : d.detailRatedWatchTitle;
-  const watch = Number.isFinite(score) && score > 0 && score <= 10
-    ? ratedWatch.replace('{rating}', score.toFixed(1))
-    : d.detailWatchTitle;
-  const suffix = ` – ${watch}`;
-  // The detail page uses an absolute title, shared with OG/Twitter.
-  const title = namedPrefix(name, aliases, 65 - suffix.length) + suffix;
-  const lead = namedPrefix(name, aliases, 160 - suffix.length - 1) + suffix + '.';
-  const context = animeIntro(anime, { ...ratings, imdbRating: undefined }, locale);
-  const tail = [context, compact(synopsis), d.detailContext].filter(Boolean).join(' ');
-  const remaining = 160 - lead.length - 1;
-  return { title, description: remaining > 0 ? `${lead} ${truncate(tail, remaining)}` : lead };
+  const episode = next ? `${d.ctrEpisode} ${next.episode}: ${d.ctrRelease} ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: locale === 'it' ? 'Europe/Rome' : 'UTC' }).format(next.date)}.` : '';
+  const intro = [episode, animeIntro({ ...anime, nextAiringEpisode: null }, ratings, locale)].filter(Boolean).join(' ');
+  const format = anime.format || '';
+  const description = [intro, format && `${format}.`, aliases.length && `${getDictionary(locale).seo.alsoKnownAs}: ${aliases.join(' · ')}.`, compact(synopsis), getDictionary(locale).seo.detailContext].filter(Boolean).join(' ');
+  return { title: ctrTitle(name, anime, locale), description: truncate(description, 160) };
 }
 
 // Inputs come from the detail's existing server loaders. Never infer offers from
@@ -78,7 +71,7 @@ export function formatAnimeSeo(
   name = compact(name);
   if (nextAnimeEpisode(anime)) {
     const title = animeHeading(name, anime, locale);
-    return { title, description: truncate(`${title}. ${animeIntro(anime, {}, locale)}`, 155) };
+    return { title, description: truncate(`${animeIntro(anime, {}, locale)} ${anime.format || ""}. ${compact(italianSynopsis)}`, 155) };
   }
   const format = formats[anime.format || ''];
   const validYear = (year: number | null | undefined): year is number => Number.isInteger(year) && year! > 0 && year! <= 9999;
@@ -140,10 +133,9 @@ export function nextAnimeEpisode(anime: Pick<AniListAnime, 'nextAiringEpisode'>)
   return Number.isNaN(date.getTime()) ? null : { ...next, date };
 }
 
-export function animeHeading(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'>, locale: Locale) {
+export function animeHeading(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'> & { format?: string | null }, locale: Locale) {
   const next = nextAnimeEpisode(anime);
-  const copy = episodeCopy[locale];
-  return next ? `${compact(name)} ${copy.episode} ${next.episode}: ${copy.suffix}` : name;
+  return next ? ctrTitle(name, anime, locale) : compact(name).replace(/\.+$/, '');
 }
 
 export function animeIntro(anime: Pick<AniListAnime, 'nextAiringEpisode' | 'seasonYear' | 'averageScore'> & Partial<Pick<AniListAnime, 'season'>>, ratings: import('@/lib/ratings').Ratings, locale: Locale) {

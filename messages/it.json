@@ -520,7 +520,13 @@
     "detailContext": "Calendario uscite, episodi, piattaforme streaming e voti IMDb/MAL.",
     "animeYear": "{format} anime del {year}.",
     "animeScore": "Voto {score}/10.",
-    "animeFallback": "Trama, valutazioni e dove guardare {name} in streaming."
+    "animeFallback": "Trama, valutazioni e dove guardare {name} in streaming.",
+    "ctrEpisode": "episodio",
+    "ctrRelease": "uscita",
+    "ctrWatch": "dove vederlo",
+    "ctrWatchDate": "dove vederlo e data di uscita",
+    "alsoKnownAs": "Conosciuto anche come",
+    "mostSearched": "Più cercati questa settimana"
   },
   "landings": {
     "weekNav": "Questa settimana",
