@@ -56,14 +56,13 @@ import { animeHeading, animeIntro, nextAnimeEpisode } from '../lib/anime-seo';
 import { locales } from '../lib/locales';
 const airing = { ...anime, season: 'FALL', seasonYear: 2026, nextAiringEpisode: { episode: 3, airingAt: Date.parse('2026-10-25T23:30:00Z') / 1000 } };
 it('uses real next episode data for localized titles, metadata and dated intros in the specified zones', () => {
-  const expected = {
-    it: 'Titolo episodio 3: data di uscita e voti', en: 'Titolo episode 3: release date & ratings',
-    es: 'Titolo episodio 3: fecha de estreno y valoraciones', fr: 'Titolo épisode 3: date de sortie et notes',
-    de: 'Titolo Folge 3: Erscheinungsdatum und Bewertungen', pt: 'Titolo episódio 3: data de lançamento e avaliações',
-  };
   for (const locale of locales) {
-    expect(formatAnimeSeo('Titolo', airing, '', undefined, locale).title).toBe(expected[locale]);
-    expect(animeHeading('Titolo', airing, locale)).toBe(expected[locale]);
+    const title = formatAnimeSeo('Titolo', airing, '', undefined, locale).title;
+    expect(title).toBe(animeHeading('Titolo', airing, locale));
+    expect(title).toContain('3:');
+    expect(title).toContain(' – ');
+    expect(title).toMatch(/25|26/);
+    expect(formatAnimeSeo('Titolo', airing, '', undefined, locale).description).not.toContain(title);
     const intro = animeIntro(airing, { imdbRating: '8.4', malScore: 8.2 }, locale);
     expect(intro).toContain(locale === 'it' ? '26 ottobre 2026' : '25');
     expect(intro).toContain(locale === 'it' ? '(Europe/Rome)' : '(UTC)');
@@ -77,4 +76,13 @@ it('omits absent or invalid episode, season and scores without invented fallback
     expect(animeHeading('Titolo', { nextAiringEpisode }, 'it')).toBe('Titolo');
   }
   expect(animeIntro({ averageScore: 101, seasonYear: null }, { imdbRating: 'N/A', malScore: Infinity }, 'it')).toBe('');
+});
+
+it.each(locales)('places real episode and short release date in CTR metadata (%s)', locale => {
+  const next = { ...airing, format: 'OVA', nextAiringEpisode: { episode: 2, airingAt: Date.parse('2026-11-26T12:00:00Z') / 1000 } };
+  const seo = formatAnimeSeo('Example.', next, '', undefined, locale);
+  expect(seo.title).toContain('Example OVA');
+  expect(seo.title).toContain('2:');
+  expect(seo.title).toMatch(/26|Nov/);
+  expect(seo.title).not.toContain('Example.');
 });

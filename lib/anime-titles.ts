@@ -16,12 +16,12 @@ export function animeAlternateNames(name: string, titles: AniListAnime['title'],
     seen.add(key);
     return [title];
   });
-  // Only replace an absent/duplicate native title, and only with the first
-  // synonym containing kana. Other synonyms are not published aliases here.
-  const native = titles.native?.trim();
-  if (!native || [name, titles.english, titles.romaji].some(value => value && identity(value) === identity(native))) {
-    const japanese = synonyms?.find(value => /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(clean(value)));
-    if (japanese && !seen.has(identity(japanese))) alternateNames.push(clean(japanese));
+  for (const value of synonyms || []) {
+    const title = clean(value);
+    if (title && !seen.has(identity(title))) {
+      seen.add(identity(title));
+      alternateNames.push(title);
+    }
   }
   return alternateNames;
 }

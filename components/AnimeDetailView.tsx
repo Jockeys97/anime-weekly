@@ -56,7 +56,7 @@ export function AnimeDetailView({ anime, synopsis, imdb, ratings, availability, 
       <div className="card-body">
         <span className="type-label">{format}{year ? ` · ${year}` : ''}</span>
         <h1>{animeHeading(name, anime, locale)}</h1>
-        {alternateNames.length > 0 && <p className="catalog-intro">{alternateNames.join(' · ')}</p>}
+        {alternateNames.length > 0 && <p className="catalog-intro">{d.seo.alsoKnownAs}: {alternateNames.join(' · ')}</p>}
         {intro && <p className="catalog-intro">{intro}</p>}
         <AnimeActions watchlistId={`anilist:${anime.id}`} animeId={anime.id} locale={locale} placement="detail" />
         {synopsis}
