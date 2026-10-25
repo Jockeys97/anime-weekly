@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { animeName, getAnime } from '@/lib/anilist';
+import { animeName } from '@/lib/anilist';
+import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
 import { parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { getSimilarAnime } from '@/lib/discovery-data';
@@ -21,7 +22,7 @@ export function generateStaticParams() { return []; }
 const load = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (!numericId) notFound();
-  const anime = await getAnime(numericId);
+  const anime = await getAnimeWithSnapshot(numericId);
   if (!anime) notFound();
   const [items, names] = await Promise.all([getSimilarAnime(anime).catch(() => null), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
   if (!items?.length) return null;

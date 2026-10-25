@@ -1,7 +1,8 @@
 import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { animeName, getAnime } from '@/lib/anilist';
+import { animeName } from '@/lib/anilist';
+import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
 import { animePath, parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { getAnimeEpisodes } from '@/lib/episode-data';
@@ -25,7 +26,7 @@ export function generateStaticParams() { return []; }
 const load = cache(async (id: string, segment: string) => {
   const numericId = parseAnimeId(id), n = parseEpisode(segment);
   if (!numericId || !n) notFound();
-  const anime = await getAnime(numericId);
+  const anime = await getAnimeWithSnapshot(numericId);
   if (!anime) notFound();
   const [episodes, names] = await Promise.all([getAnimeEpisodes(anime, n), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
   const event = episodes.find(e => e.episode === n);
