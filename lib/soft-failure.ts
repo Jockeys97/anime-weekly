@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { siteUrl } from '@/lib/seo';
+import { markAnimeUnavailable } from '@/lib/soft-failure-gate';
 
 // Seconds a transient-failure (AniList 429/timeout) soft page may stay in ISR.
 export const SOFT_FAILURE_REVALIDATE = 60;
@@ -20,7 +21,9 @@ export async function softLookup<T>(work: () => Promise<T>, context: Record<stri
   try { return await work(); }
   catch (error) {
     console.warn('[anime-detail] transient lookup failure', { ...context, message: error instanceof Error ? error.message : 'Unknown error' });
-    await shortenSoftFailureCache();
+    // This render is still a 200 soft page (ISR cannot change status); the
+    // mark makes proxy.ts answer the following requests with a real 503.
+    await Promise.all([shortenSoftFailureCache(), typeof context.id === 'number' ? markAnimeUnavailable(context.id) : undefined]);
     return undefined;
   }
 }

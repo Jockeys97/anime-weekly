@@ -4,6 +4,7 @@ import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { animePath } from '@/lib/anime-url';
 import { localePath } from '@/lib/locale-routing';
 import { isLocale } from '@/lib/locales';
+import { animeUnavailableResponse } from '@/lib/soft-failure-gate';
 
 // Bare numeric detail URLs (/anime/123, /en/anime/123) are rewritten here by
 // proxy.ts. Unlike the ISR page, a route handler can answer a transient
@@ -11,9 +12,6 @@ import { isLocale } from '@/lib/locales';
 // from error.tsx, and the resolved 308 is CDN-cached without an ISR render.
 // The saved daily snapshot is read first, so most titles never touch AniList.
 const NOT_FOUND_HTML = '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>404</title><p>Anime not found. <a href="/">weeklyanime.com</a></p>';
-// A 503 + Retry-After already tells crawlers to come back; a noindex here
-// could be remembered and drop the real page.
-const UNAVAILABLE_HTML = '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="20"><title>503</title><p>Temporarily unavailable, retrying shortly…</p>';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try { anime = await getAnimeWithSnapshot(numericId); }
   catch (error) {
     console.warn('[anime-redirect] transient lookup failure', { id: numericId, message: error instanceof Error ? error.message : 'Unknown error' });
-    return new Response(UNAVAILABLE_HTML, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Retry-After': '120' } });
+    return animeUnavailableResponse();
   }
   if (!anime) {
     // Confirmed AniList not-found only; cache briefly in case an id appears.

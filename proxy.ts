@@ -1,9 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { animeUnavailableResponse, isAnimeUnavailable } from '@/lib/soft-failure-gate';
 import { isLocale, negotiateLocale } from '@/lib/locales';
 import { discoveryInternalPath, landingRoute, localePath, pathLocale, stripLocale } from '@/lib/locale-routing';
 
 const bots = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview/i;
-export function proxy(request: NextRequest) {
+// Detail, episode and similar URLs of an anime whose AniList lookup just
+// failed get a real uncached 503 + Retry-After instead of the 200 soft page
+// (lib/soft-failure-gate). Only these URLs wait on the gate read; every other
+// path stays synchronous.
+const GATED_ANIME = /^\/anime\/([1-9]\d{0,9})-[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[^/]+)?\/?$/i;
+export function proxy(request: NextRequest): NextResponse | Promise<NextResponse> {
+  const gated = GATED_ANIME.exec(stripLocale(request.nextUrl.pathname));
+  if (!gated) return route(request);
+  return isAnimeUnavailable(Number(gated[1])).then(down => down ? animeUnavailableResponse() : route(request));
+}
+function route(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const bare = stripLocale(pathname);
   const locale = pathLocale(pathname);
