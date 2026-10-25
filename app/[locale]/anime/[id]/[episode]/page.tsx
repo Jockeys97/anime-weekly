@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
 import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
+import { softLookup } from '@/lib/soft-failure';
+import { DetailTemporarilyUnavailable } from '@/components/DetailTemporarilyUnavailable';
 import { animePath, parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { getAnimeEpisodes } from '@/lib/episode-data';
@@ -26,7 +28,8 @@ export function generateStaticParams() { return []; }
 const load = cache(async (id: string, segment: string) => {
   const numericId = parseAnimeId(id), n = parseEpisode(segment);
   if (!numericId || !n) notFound();
-  const anime = await getAnimeWithSnapshot(numericId);
+  const anime = await softLookup(() => getAnimeWithSnapshot(numericId), { id: numericId, episode: n });
+  if (anime === undefined) return null;
   if (!anime) notFound();
   const [episodes, names] = await Promise.all([getAnimeEpisodes(anime, n), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
   const event = episodes.find(e => e.episode === n);
@@ -36,7 +39,9 @@ const load = cache(async (id: string, segment: string) => {
 export async function generateMetadata({ params }: Props) {
   const { id, episode } = await params;
   const locale = await getRequestLocale(params);
-  const { anime, names, event } = await load(id, episode);
+  const loaded = await load(id, episode);
+  if (!loaded) return { title: getDictionary(locale).error.title, robots: { index: false, follow: true } };
+  const { anime, names, event } = loaded;
   const name = names[locale] || animeName(anime);
   const title = episodeTitle(name, event.episode, locale);
   const metadata = pageMetadata(title, `${title}. ${new Date(event.airingAt * 1000).toISOString()} (UTC).`, episodePath(anime.id, name, event.episode), anime.coverImage?.large, locale);
@@ -46,7 +51,9 @@ export async function generateMetadata({ params }: Props) {
 export default async function EpisodePage({ params }: Props) {
   const { id, episode } = await params;
   const locale = await getRequestLocale(params);
-  const { anime, episodes, names, event } = await load(id, episode);
+  const loaded = await load(id, episode);
+  if (!loaded) return <DetailTemporarilyUnavailable locale={locale} />;
+  const { anime, episodes, names, event } = loaded;
   const name = names[locale] || animeName(anime), d = getDictionary(locale);
   const { availability } = await getAnimeDetailData(anime, locale);
   const score = await getEpisodeIndexedScore(availability, event).catch(() => null);

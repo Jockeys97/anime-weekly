@@ -24,6 +24,8 @@ import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { localePath } from '@/lib/locale-routing';
 import { withTimeout } from '@/lib/async-timeout';
+import { softLookup } from '@/lib/soft-failure';
+import { DetailTemporarilyUnavailable } from '@/components/DetailTemporarilyUnavailable';
 import { getAnimeEpisodes } from '@/lib/episode-data';
 import { nextAnimeEpisode } from '@/lib/anime-seo';
 import { AnimeSimilarBlock, AnimeCurrentRanking } from '@/components/AnimeDiscoveryBlocks';
@@ -40,8 +42,10 @@ export function generateStaticParams() { return []; }
 const loadAnime = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (numericId === null) notFound();
-  // A failure without a saved copy remains transient, never a cached 404.
-  const anime = await getAnimeWithSnapshot(numericId);
+  // A failure without a saved copy remains transient, never a cached 404 and
+  // never an HTTP 500 from error.tsx: render a short-lived soft page instead.
+  const anime = await softLookup(() => getAnimeWithSnapshot(numericId), { id: numericId });
+  if (anime === undefined) return null;
   if (!anime) notFound();
   return anime;
 });
@@ -55,6 +59,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
+  if (!anime) return { title: getDictionary(locale).error.title, robots: { index: false, follow: true } };
   const [names, { availability, synopsis }] = await Promise.all([getAnimeLocalizedTitles(anime.id, animeName(anime)), getAnimeDetailData(anime, locale)]);
   const name = names[locale] || animeName(anime);
   const seo = animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability?.ratings);
@@ -66,6 +71,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AnimePage({ params }: Props) {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
+  if (!anime) return <DetailTemporarilyUnavailable locale={locale} />;
   const namesPromise = getAnimeLocalizedTitles(anime.id, animeName(anime));
   // Numeric URLs need only the canonical title, not optional provider cards.
   if (/^\d+$/.test((await params).id)) {
@@ -143,3 +149,4 @@ function DetailAvailability({ availability, name, locale, id }: { availability: 
     providers: watch.providers, providersUnavailable: watch.providersUnavailable,
   }} />;
 }
+
