@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
 import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
+import { softLookup } from '@/lib/soft-failure';
 import { parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { getSimilarAnime } from '@/lib/discovery-data';
@@ -22,7 +23,8 @@ export function generateStaticParams() { return []; }
 const load = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (!numericId) notFound();
-  const anime = await getAnimeWithSnapshot(numericId);
+  const anime = await softLookup(() => getAnimeWithSnapshot(numericId), { id: numericId, page: 'similar' });
+  if (anime === undefined) return null;
   if (!anime) notFound();
   const [items, names] = await Promise.all([getSimilarAnime(anime).catch(() => null), getAnimeLocalizedTitles(anime.id, animeName(anime))]);
   if (!items?.length) return null;
