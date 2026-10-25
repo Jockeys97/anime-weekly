@@ -9,7 +9,13 @@ it.each(['cyberpunk-edgerunners-2', '-1', '1.5', '21-', '%E0%A4%A', '%63yberpunk
   expect(response.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/_anime-not-found/invalid?source=test');
 });
 
-it.each(['21', '999999999', '21-one-piece', '21-cyberpunk-2', '%32%31'])('passes numeric and future slug ID %s through to the route', id => {
+it.each([['/anime/21', 'it'], ['/anime/%32%31', 'it'], ['/en/anime/999999999', 'en'], ['/es/anime/203367?x=1', 'es']])('rewrites bare numeric %s to the slug redirect handler', (path, locale) => {
+  const response = proxy(new NextRequest(`https://weeklyanime.com${path}`));
+  const id = decodeURIComponent(path.split('/').at(-1)!.split('?')[0]);
+  expect(response.headers.get('x-middleware-rewrite')).toBe(`https://weeklyanime.com/api/anime-redirect/${id}?locale=${locale}`);
+});
+
+it.each(['21-one-piece', '21-cyberpunk-2'])('passes slug ID %s through to the route', id => {
   const response = proxy(new NextRequest(`https://weeklyanime.com/anime/${id}`));
   expect(response.headers.get('x-middleware-rewrite')).toBe(`https://weeklyanime.com/it/anime/${id}`);
 });
@@ -69,7 +75,7 @@ it.each(['/anime/21', '/week/2026-42', '/season/2026/fall', '/search?q=Ranma', '
 it.each(['en', 'es', 'fr', 'de', 'pt'])('preserves early 404 rejection and valid details in %s', locale => {
   const invalid = proxy(new NextRequest(`https://weeklyanime.com/${locale}/anime/cyberpunk?source=test`));
   expect(invalid.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/_anime-not-found/invalid?source=test');
-  const valid = proxy(new NextRequest(`https://weeklyanime.com/${locale}/anime/21`));
+  const valid = proxy(new NextRequest(`https://weeklyanime.com/${locale}/anime/21-one-piece`));
   expect(valid.headers.get('x-middleware-next')).toBe('1');
 });
 it('normalizes an explicit Italian prefix while keeping the query', () => {
@@ -80,7 +86,7 @@ it('normalizes an explicit Italian prefix while keeping the query', () => {
 it.each(['/en', '/es/week/2026-42', '/de/anime/21', '/pt/search', '/fr/season/2026/fall'])('matches localized routes: %s', url => {
   expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
 });
-it.each(['/anime/21', '/week/2026-42', '/season/2026/fall', '/search', '/piattaforma/netflix/it', '/en/anime/21'])('does not let a saved language redirect deep URL %s', path => {
+it.each(['/anime/21-one-piece', '/week/2026-42', '/season/2026/fall', '/search', '/piattaforma/netflix/it', '/en/anime/21-one-piece'])('does not let a saved language redirect deep URL %s', path => {
   const response = proxy(new NextRequest(`https://weeklyanime.com${path}`, { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'fr', Cookie: 'anime-language=es' } }));
   expect(response.headers.get('location')).toBeNull();
   expect(response.headers.get('set-cookie')).toBeNull();

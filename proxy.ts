@@ -34,6 +34,14 @@ export function proxy(request: NextRequest) {
       destination.pathname = '/_anime-not-found/invalid';
       return NextResponse.rewrite(destination);
     }
+    // Bare numeric IDs: resolve the slug in a route handler so a transient
+    // AniList 429/timeout returns an uncached 503, never an ISR 500.
+    if (/^[1-9]\d*$/.test(id)) {
+      const destination = request.nextUrl.clone();
+      destination.pathname = `/api/anime-redirect/${id}`;
+      destination.search = `?locale=${locale}`;
+      return NextResponse.rewrite(destination);
+    }
   }
   const discovery = discoveryInternalPath(pathname);
   if (discovery) {
