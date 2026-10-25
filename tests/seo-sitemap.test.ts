@@ -12,30 +12,36 @@ import sitemap, { generateSitemaps } from '../lib/sitemap-shards';
 import { GET } from '../app/sitemap.xml/route';
 import { getSitemapCatalog } from '../lib/sitemap-catalog';
 import robots from '../app/robots';
-import { buildAnimeSitemap, buildSitemap, sitemapUrls } from '../lib/seo-sitemap';
+import { animeLocaleIndexable, buildAnimeSitemap, buildPagesSitemap, buildSitemap, sitemapUrls } from '../lib/seo-sitemap';
 import { serializeJsonLd, siteUrl } from '../lib/seo';
 import { serializeSitemap } from '../lib/sitemap-xml';
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); vi.resetAllMocks(); });
 describe('SEO sitemap', () => {
-  it('includes weeks across year boundaries, three calendar years, platforms and valid unique anime', () => {
-    const urls = buildSitemap([21, 21, -1, NaN, 2147483648, 42], new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example')).filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => entry.url);
+  it('includes weeks across year boundaries, three calendar years, only qualifying platforms and valid unique anime', () => {
+    const urls = [...buildPagesSitemap(new Date('2026-01-01T12:00:00Z'), new URL('https://anime.example'), [], ['/piattaforma/netflix/it', '/piattaforma/unknown/xx'])
+      , ...buildAnimeSitemap([21, 21, -1, NaN, 2147483648, 42].map(id => ({ id })), new URL('https://anime.example'))].filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => entry.url);
     expect(urls).toContain('https://anime.example/');
     expect(urls).not.toContain('https://anime.example/week/2025-52');
     expect(urls).not.toContain('https://anime.example/week/2026-01');
     expect(urls).not.toContain('https://anime.example/week/2026-02');
     expect(urls.filter(url => /\/season\//.test(url))).toHaveLength(12);
     expect(urls).toContain('https://anime.example/season/2024/winter');
-    expect(urls.filter(url => /\/piattaforma\//.test(url))).toHaveLength(42);
+    expect(urls.filter(url => /\/piattaforma\//.test(url))).toEqual(['https://anime.example/piattaforma/netflix/it']);
+    expect(buildSitemap([], new Date('2026-01-01T12:00:00Z')).some(entry => /\/piattaforma\/[^/]+\//.test(entry.url))).toBe(false);
     expect(urls.filter(url => /\/anime\//.test(url))).toEqual(['https://anime.example/anime/21', 'https://anime.example/anime/42']);
     expect(new Set(urls).size).toBe(urls.length);
   });
-  it('keeps every valid anime and uses only upstream anime modification dates', () => {
+  it('lists anime in it/en only, drops known-empty synopses, and uses only upstream anime modification dates', () => {
     const entries = buildAnimeSitemap([
       ...Array.from({ length: 80 }, (_, i) => ({ id: i + 1 })),
       { id: 1, updatedAt: 1720000000 }, { id: 1, updatedAt: 1730000000 },
-      { id: 2, updatedAt: NaN }, { id: 3, updatedAt: -1 },
+      { id: 2, updatedAt: NaN }, { id: 3, updatedAt: -1 }, { id: 99, hasSynopsis: false },
     ]);
-    expect(entries).toHaveLength(80 * 6);
+    expect(entries).toHaveLength(80 * 2);
+    expect(entries.some(entry => /\/(es|fr|de|pt)\//.test(entry.url))).toBe(false);
+    expect(entries.some(entry => entry.url.includes('/anime/99'))).toBe(false);
+    expect(entries.every(entry => !('changeFrequency' in entry))).toBe(true);
+    expect(entries.find(entry => entry.url.endsWith('/anime/1'))!.alternates?.languages).toHaveProperty('fr');
     expect(entries.find(entry => entry.url.endsWith('/anime/1'))!.lastModified).toEqual(new Date(1730000000000));
     expect(entries.find(entry => entry.url.endsWith('/anime/2'))).not.toHaveProperty('lastModified');
     expect(entries.find(entry => entry.url.endsWith('/anime/3'))).not.toHaveProperty('lastModified');
@@ -54,7 +60,8 @@ describe('SEO sitemap', () => {
     expect(archives[0].alternates?.languages).toMatchObject({ it: 'https://anime.example/week/2025-52', en: 'https://anime.example/en/week/2025-52' });
     expect(entries.some(entry => entry.url.endsWith('/week/2025-51'))).toBe(false);
     expect(entries.find(entry => entry.url.endsWith('/week/2026-01'))?.lastModified).toBe(uploadedAt);
-    expect(entries.find(entry => entry.url.endsWith('/season/2024/winter'))?.lastModified).toEqual(date);
+    expect(entries.find(entry => entry.url.endsWith('/season/2024/winter'))).not.toHaveProperty('lastModified');
+    expect(entries.every(entry => !('changeFrequency' in entry))).toBe(true);
   });
   it('paginates the four seasons of one year sequentially and keeps partial results on failure', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -112,7 +119,8 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
     vi.mocked(getSeoWeeks).mockResolvedValue([]);
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(59 * 6);
+    // TMDB is unconfigured here, so no platform list qualifies: 17 hub paths.
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(17 * 6);
     expect(getSeoWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);
@@ -128,7 +136,7 @@ describe('SEO sitemap', () => {
   it('shares concurrent cold crawls of a shard and fills each year shard from its own seasons', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
     vi.mocked(getSeason).mockImplementation(async year => ({
-      media: [{ id: year, title: { english: 'Year' } }],
+      media: [{ id: year, title: { english: 'Year' }, description: 'Synopsis' }],
       pageInfo: { currentPage: 1, hasNextPage: false },
     } as Awaited<ReturnType<typeof getSeason>>));
     const shards = await Promise.all(['2024', '2025', '2026', '2026'].map(id => sitemap({ id: Promise.resolve(id) })));
@@ -136,6 +144,15 @@ describe('SEO sitemap', () => {
     expect(shards.map(entries => entries.filter(entry => !/^\/(en|es|fr|de|pt)(?:\/|$)/.test(new URL(entry.url).pathname)).map(entry => new URL(entry.url).pathname))).toEqual([
       ['/anime/2024-year'], ['/anime/2025-year'], ['/anime/2026-year'], ['/anime/2026-year'],
     ]);
+  });
+  it('treats es/fr/de/pt anime pages as indexable only with a synopsis in their own language', () => {
+    expect(animeLocaleIndexable('it', null)).toBe(true);
+    expect(animeLocaleIndexable('en', null)).toBe(true);
+    for (const locale of ['es', 'fr', 'de', 'pt'] as const) {
+      expect(animeLocaleIndexable(locale, null)).toBe(false);
+      expect(animeLocaleIndexable(locale, 'it')).toBe(false);
+      expect(animeLocaleIndexable(locale, locale)).toBe(true);
+    }
   });
   it('uses the same base URL for robots and metadata', () => {
     expect(siteUrl({ NEXT_PUBLIC_SITE_URL: 'https://custom.example/path', VERCEL_PROJECT_PRODUCTION_URL: 'production.example' }).href).toBe('https://custom.example/');

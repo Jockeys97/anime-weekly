@@ -1,3 +1,4 @@
+import { softFailureMetadata } from '@/lib/soft-failure';
 import { connection } from 'next/server';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
@@ -30,7 +31,7 @@ async function content(params: Props['params']) {
 }
 export async function generateMetadata({ params }: Props) {
   const data = await content(params);
-  if (!data) return { title: getDictionary(await getRequestLocale(params)).error.title, robots: { index: false, follow: true } };
+  if (!data) return softFailureMetadata(getDictionary(await getRequestLocale(params)).error.title);
   return listMetadata(data.title, data.intro, data.path, data.items.length, data.locale);
 }
 export default async function GenrePage({ params }: Props) {

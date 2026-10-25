@@ -28,3 +28,8 @@ export function platformTitle(provider: string, country: string, locale: Locale 
   const d = getDictionary(locale);
   return mapping ? d.seo.platformTitle.replace('{provider}', mapping.provider.name).replace('{country}', d.regions[mapping.country.region as keyof typeof d.regions]) : null;
 }
+
+// Count used by both the platform page (noindex) and the pages sitemap.
+export function platformIndexable(titleCount: number, minimum = 5): boolean {
+  return titleCount >= minimum;
+}

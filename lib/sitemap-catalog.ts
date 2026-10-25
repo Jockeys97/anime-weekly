@@ -63,7 +63,7 @@ async function crawlSeason(year: number, season: Season): Promise<SeasonResult> 
     for (let page = 1; ; page++) {
       const data = await getSeason(year, season, page);
       if (data.unavailable) return { anime, complete: false };
-      for (const item of data.media) anime.push({ id: item.id, name: animeName(item), updatedAt: item.updatedAt ?? null });
+      for (const item of data.media) anime.push({ id: item.id, name: animeName(item), updatedAt: item.updatedAt ?? null, hasSynopsis: Boolean(item.description?.trim()) });
       if (!data.pageInfo.hasNextPage || !data.media.length) return { anime, complete: true };
     }
   } catch { return { anime, complete: false }; }
@@ -96,7 +96,7 @@ const getCachedYearCatalog = unstable_cache(async (year: number) => {
   }
   if (!complete) throw new IncompleteCatalog([...anime.values()]);
   return [...anime.values()];
-}, ['sitemap-year-catalog-v3'], { revalidate: 86400, tags: [CACHE_TAG] });
+}, ['sitemap-year-catalog-v4'], { revalidate: 86400, tags: [CACHE_TAG] });
 
 // Coalesce concurrent cold misses of the same shard into one crawl.
 const pending = new Map<number, Promise<SitemapAnime[]>>();

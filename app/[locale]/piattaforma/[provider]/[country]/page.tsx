@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from '@/components/LocaleLink';
 import { notFound } from 'next/navigation';
 import { getPlatformAnime } from '@/lib/tmdb';
-import { platformMapping, platformTitle } from '@/lib/platforms';
+import { platformIndexable, platformMapping, platformTitle } from '@/lib/platforms';
 import { animeDetailLink } from '@/lib/anime-detail-link';
 import { readWeeklyRatingsSnapshot } from '@/lib/weekly-ratings';
 import { formatWeek, isoWeek } from '@/lib/week';
@@ -21,7 +21,13 @@ export async function generateMetadata({ params }: Props) {
   const locale = await getRequestLocale(params); const d = getDictionary(locale).seo;
   const title = platformTitle(provider, country, locale);
   if (!title) notFound();
-  return pageMetadata(title, `${title}. ${d.platformDescription}`, `/piattaforma/${provider}/${country}`, undefined, locale);
+  const metadata = pageMetadata(title, `${title}. ${d.platformDescription}`, `/piattaforma/${provider}/${country}`, undefined, locale);
+  // Thin catalogs (< 5 titles, or unavailable) are noindex,follow and kept
+  // out of the sitemap. Same cached TMDB read as the page body.
+  const mapping = platformMapping(provider, country)!;
+  const data = await getPlatformAnime(mapping.provider.id, mapping.country.region, locale);
+  if (!(data.status === 'ready' && platformIndexable(data.titles.length))) metadata.robots = { index: false, follow: true };
+  return metadata;
 }
 export default async function PlatformPage({ params }: Props) {
   const { provider, country } = await params;

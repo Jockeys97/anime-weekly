@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { siteUrl } from '@/lib/seo';
 
 // Seconds a transient-failure (AniList 429/timeout) soft page may stay in ISR.
@@ -22,4 +23,12 @@ export async function softLookup<T>(work: () => Promise<T>, context: Record<stri
     await shortenSoftFailureCache();
     return undefined;
   }
+}
+
+// Metadata for a soft page. A page cannot change its HTTP status under ISR,
+// so it stays 200 + noindex,follow, but must not inherit the layout's
+// homepage canonical/hreflang: that would tell Google this URL duplicates
+// the home page. `null` clears the inherited alternates entirely.
+export function softFailureMetadata(title: string): Metadata {
+  return { title, robots: { index: false, follow: true }, alternates: null };
 }

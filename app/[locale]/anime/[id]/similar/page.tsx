@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
 import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
-import { softLookup } from '@/lib/soft-failure';
+import { softFailureMetadata, softLookup } from '@/lib/soft-failure';
 import { parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { getSimilarAnime } from '@/lib/discovery-data';
@@ -41,7 +41,7 @@ async function content(params: Props['params']) {
 }
 export async function generateMetadata({ params }: Props) {
   const data = await content(params);
-  if (!data) return { title: getDictionary(await getRequestLocale(params)).error.title, robots: { index: false, follow: true } };
+  if (!data) return softFailureMetadata(getDictionary(await getRequestLocale(params)).error.title);
   const metadata = listMetadata(data.title, data.intro, data.path, data.items.length, data.locale);
   metadata.alternates!.languages = animeChildAlternates(data.anime, data.names, '/similar');
   return metadata;

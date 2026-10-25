@@ -28,12 +28,19 @@ it('renders direct links only for existing exact TMDB mappings and search links 
   expect(getPlatformAnime).toHaveBeenCalledExactlyOnceWith(8, 'IT', 'it');
   expect(readWeeklyRatingsSnapshot).toHaveBeenCalledTimes(1);
 });
-it('generates metadata without fetching a catalog or ratings', async () => {
-  const meta = await generateMetadata({ params: Promise.resolve({ provider: 'prime-video', country: 'gb' }) });
+const title = (id: number) => ({ id, kind: 'tv' as const, name: `T${id}`, overview: '', poster: null, ratings: {}, providers: {}, providersUnavailable: false, recommendation: null });
+it('generates metadata from the cached platform list only, noindexing thin or unavailable catalogs', async () => {
+  const props = () => ({ params: Promise.resolve({ provider: 'prime-video', country: 'gb' }) });
+  vi.mocked(getPlatformAnime).mockResolvedValue({ status: 'ready', titles: [1, 2, 3, 4, 5].map(title) });
+  const meta = await generateMetadata(props());
   expect(meta.title).toBe('Anime su Prime Video Regno Unito');
   expect(meta.alternates?.canonical).toMatch(/\/piattaforma\/prime-video\/gb$/);
-  expect(getPlatformAnime).not.toHaveBeenCalled();
+  expect(meta.robots).toBeUndefined();
   expect(readWeeklyRatingsSnapshot).not.toHaveBeenCalled();
+  vi.mocked(getPlatformAnime).mockResolvedValue({ status: 'ready', titles: [1, 2, 3, 4].map(title) });
+  expect((await generateMetadata(props())).robots).toEqual({ index: false, follow: true });
+  vi.mocked(getPlatformAnime).mockResolvedValue({ status: 'error', titles: [] });
+  expect((await generateMetadata(props())).robots).toEqual({ index: false, follow: true });
 });
 it('rejects unsupported providers and countries before loading sources', async () => {
   const props = { params: Promise.resolve({ provider: 'netflix', country: 'unknown' }) };

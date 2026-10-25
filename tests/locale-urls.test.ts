@@ -81,14 +81,15 @@ it('strips only a supported leading locale, preserving provider countries', () =
 });
 it('lists each language version with reciprocal sitemap alternates and no duplicate fetch work', () => {
   const base = new URL('https://weeklyanime.com');
-  for (const entries of [buildPagesSitemap(new Date('2026-10-19'), base), buildAnimeSitemap([{ id: 21 }, { id: 21 }], base)]) {
+  for (const [entries, listed] of [[buildPagesSitemap(new Date('2026-10-19'), base), locales], [buildAnimeSitemap([{ id: 21 }, { id: 21 }], base), ['it', 'en']]] as const) {
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     const urls = new Set(entries.map(entry => entry.url));
     for (const entry of entries) {
       const languages = entry.alternates!.languages!;
       expect(Object.keys(languages)).toHaveLength(7);
       expect(languages['x-default']).toBe(languages.it);
-      for (const locale of locales) {
+      // Anime pages list only it/en; hreflang still names all six versions.
+      for (const locale of listed) {
         expect(urls.has(languages[locale] as string)).toBe(true);
         expect(entries.find(other => other.url === languages[locale])?.alternates).toEqual(entry.alternates);
       }
