@@ -20,6 +20,8 @@ import { pageMetadata, siteUrl } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
 import { animeBreadcrumbs, animeStructuredData } from '@/lib/structured-data';
 import { getDictionary } from '@/lib/i18n';
+import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
+import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { localePath } from '@/lib/locale-routing';
 import { withTimeout } from '@/lib/async-timeout';
 import { getAnimeEpisodes } from '@/lib/episode-data';
@@ -73,10 +75,13 @@ export default async function AnimePage({ params }: Props) {
   }
   // Resolve optional cards with the core data so streamed sections cannot push
   // the episode chart or streaming information down after the initial paint.
-  const [names, { ratings: animeRatings, availability, synopsis }, similar, episodes] = await Promise.all([
-    namesPromise, getAnimeDetailData(anime, locale),
+  const detailPromise = getAnimeDetailData(anime, locale);
+  const hasEpisodeChart = ['TV', 'TV_SHORT', 'ONA'].includes(anime.format || '');
+  const [names, { ratings: animeRatings, availability, synopsis }, similar, episodes, chart] = await Promise.all([
+    namesPromise, detailPromise,
     AnimeSimilarBlock({ anime, name: animeName(anime), locale }),
     DetailEpisodes({ anime, locale }),
+    hasEpisodeChart ? detailPromise.then(detail => DetailEpisodeChart({ availability: detail.availability, name: animeName(anime) })) : null,
   ]);
   const name = names[locale] || animeName(anime);
   const year = anime.startDate?.year ?? anime.seasonYear ?? undefined;
@@ -88,9 +93,20 @@ export default async function AnimePage({ params }: Props) {
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
       ratings={<DetailAnimeRating animeRatings={animeRatings} id={anime.id} name={name} locale={locale} />}
-      episodes={episodes}
+      episodes={chart || episodes ? <>{chart}{episodes}</> : null}
       availability={Object.values(availability.providers).some(region => region?.providers.length) ? <DetailAvailability availability={availability} name={name} locale={locale} id={anime.id} /> : null} />
   </>;
+}
+
+// IMDb episode chart, read from the daily cache only. Bounded so a slow cache
+// or shared-origin read hides server data (client loads once on scroll) instead
+// of delaying or failing the detail render.
+const IMDB_CHART_SERVER_WAIT_MS = 2500;
+async function DetailEpisodeChart({ availability, name }: { availability: AnimeAvailability; name: string }) {
+  const id = availability.episodeSeries?.imdbId || availability.ratings.imdbId;
+  const unavailable = { status: 'unavailable' as const, episodes: [] };
+  const initial = id ? await withTimeout(getImdbEpisodeChart(id), IMDB_CHART_SERVER_WAIT_MS).catch(() => unavailable) : unavailable;
+  return <EpisodeRatingsChart key={id || name} initial={initial} seriesId={id} seriesTitle={availability.episodeSeries?.title || availability.ratings.imdbSeriesTitle || name} />;
 }
 
 async function DetailEpisodes({ anime, locale }: { anime: import('@/lib/anilist').AniListAnime; locale: Locale }) {

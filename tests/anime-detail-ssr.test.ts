@@ -1,3 +1,4 @@
+vi.mock('../lib/imdb-episode-index', () => ({ getImdbEpisodeChart: vi.fn(async () => ({ status: 'unavailable', episodes: [] })) }));
 vi.mock('../lib/episode-data', () => ({ getAnimeEpisodes: vi.fn(async () => []) }));
 vi.mock('../lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({}) }));
 vi.mock('../lib/discovery-data', () => ({ getSimilarAnime: vi.fn(async () => []) }));
@@ -331,4 +332,36 @@ it('falls back to only the real next airing when history stalls', async () => {
   expect(result).toContain('Episodio 2');
   expect(result).toContain('<time dateTime="2026-11-26T00:00:00.000Z">');
   expect(result).not.toContain('Episodio 1');
+});
+
+it('renders the IMDb episode chart before the AniList episode list on TV pages', async () => {
+  const { getAnimeEpisodes } = await import('../lib/episode-data');
+  const { getImdbEpisodeChart } = await import('../lib/imdb-episode-index');
+  vi.mocked(getImdbEpisodeChart).mockResolvedValueOnce({ status: 'ready', episodes: [{ imdbId: 'tt900', season: 1, episode: 1, score: 8.1, votes: 120 }] });
+  vi.mocked(getAnimeEpisodes).mockResolvedValueOnce([{ episode: 1, airingAt: 1795651200 }] as never);
+  vi.mocked(getAnime).mockResolvedValue({ ...anime, format: 'TV' });
+  const html = await render();
+  expect(getImdbEpisodeChart).toHaveBeenCalledWith('tt123');
+  const chart = html.indexOf('imdb.com/title/tt123/episodes'), list = html.indexOf('<time dateTime="2026-11-26');
+  expect(chart).toBeGreaterThan(-1);
+  expect(list).toBeGreaterThan(chart);
+});
+
+it('hides server chart data instead of failing when the IMDb read stalls', async () => {
+  vi.useFakeTimers();
+  const { getImdbEpisodeChart } = await import('../lib/imdb-episode-index');
+  vi.mocked(getImdbEpisodeChart).mockReturnValueOnce(new Promise(() => {}));
+  vi.mocked(getAnime).mockResolvedValue({ ...anime, format: 'TV' });
+  const html = render();
+  await vi.advanceTimersByTimeAsync(2500);
+  const result = await html;
+  expect(result).toContain('Example');
+  expect(getImdbEpisodeChart).toHaveBeenCalledTimes(1);
+});
+
+it('does not read the IMDb chart for movies', async () => {
+  const { getImdbEpisodeChart } = await import('../lib/imdb-episode-index');
+  vi.mocked(getImdbEpisodeChart).mockClear();
+  await render();
+  expect(getImdbEpisodeChart).not.toHaveBeenCalled();
 });
