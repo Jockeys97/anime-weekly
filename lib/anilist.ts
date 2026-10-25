@@ -1,4 +1,5 @@
-import { readMildNudityIds } from '@/lib/mal-content';
+import { readMildNudityIds, scheduleMildNuditySelfHeal } from '@/lib/mal-content';
+import { after } from 'next/server';
 import 'server-only';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { AnimeFilters } from '@/lib/anime-search';
@@ -136,7 +137,11 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
   let verifiedMalIds: Set<number> | undefined;
   if (filters.malRating === 'r-plus') {
     const ids = await readMildNudityIds();
-    if (!ids?.length) return { ...emptyPage(filters.page), unavailable: true };
+    if (!ids?.length) {
+      // Rebuild in the background after this response instead of waiting a day for the cron.
+      try { after(() => scheduleMildNuditySelfHeal()); } catch { void scheduleMildNuditySelfHeal(); }
+      return { ...emptyPage(filters.page), unavailable: true };
+    }
     definitions.push('$malIds: [Int]');
     argumentsList.push('idMal_in: $malIds');
     variables.malIds = ids;

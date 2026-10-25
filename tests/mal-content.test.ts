@@ -6,7 +6,7 @@ vi.mock('@/lib/rate-limited-fetch', () => ({ jikanFetch: vi.fn() }));
 import { get, put } from '@vercel/blob';
 import { jikanFetch } from '@/lib/rate-limited-fetch';
 import { clearNextCache } from './helpers/next-cache';
-import { readMildNudityIds, refreshMildNudityIndex } from '@/lib/mal-content';
+import { readMildNudityIds, refreshMildNudityIndex, scheduleMildNuditySelfHeal } from '@/lib/mal-content';
 const files = new Map<string, unknown>();
 const key = 'mal/content/r-plus-v1.json';
 const page = (ids: number[], current = 1, next = false) => Response.json({ data: ids.map(mal_id => ({ mal_id, rating: 'R+ - Mild Nudity' })), pagination: { current_page: current, has_next_page: next } });
@@ -46,4 +46,12 @@ it('does not read or crawl without durable storage configured', async () => {
   vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
   expect(await readMildNudityIds()).toBeNull(); expect(await refreshMildNudityIndex()).toBe(false);
   expect(get).not.toHaveBeenCalled(); expect(jikanFetch).not.toHaveBeenCalled();
+});
+
+it('self-heals a missing index from a search at most once per cooldown', async () => {
+  expect(await readMildNudityIds()).toBeNull();
+  expect(await scheduleMildNuditySelfHeal()).toBe(true);
+  expect(await readMildNudityIds()).toEqual([11, 22]);
+  expect(await scheduleMildNuditySelfHeal()).toBe(false);
+  expect(jikanFetch).toHaveBeenCalledOnce();
 });
