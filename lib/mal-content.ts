@@ -25,10 +25,25 @@ async function readFile(): Promise<ContentIndex> {
   return index;
 }
 const cachedIndex = unstable_cache(readFile, ['mal-content-r-plus-v1'], { revalidate: 300, tags: [TAG] });
-/** Read-only: search visits never crawl MAL or cache a missing index. */
+/** Search visits never crawl MAL inline or cache a missing index. */
 export async function readMildNudityIds(): Promise<number[] | null> {
   if (!configured()) return null;
-  try { return (await cachedIndex()).ids; } catch { return null; }
+  try { return (await cachedIndex()).ids; } catch (error) {
+    console.warn('[mal-content] index read failed', error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+const SELF_HEAL_COOLDOWN_MS = 15 * 60 * 1000;
+let lastSelfHeal = 0;
+/**
+ * A missing/unreadable index made every R+ search fail until the next daily
+ * cron. Let a search schedule one background rebuild (single-flight, at most
+ * once per 15 min per instance). Never awaited by the visitor's render.
+ */
+export function scheduleMildNuditySelfHeal(): Promise<boolean> {
+  if (!configured() || Date.now() - lastSelfHeal < SELF_HEAL_COOLDOWN_MS) return Promise.resolve(false);
+  lastSelfHeal = Date.now();
+  return refreshMildNudityIndex();
 }
 let pending: Promise<boolean> | undefined;
 /** Called by the existing authenticated daily catalog job, never search pages. */
@@ -64,9 +79,9 @@ async function refresh(): Promise<boolean> {
     await put(KEY, JSON.stringify(index), { access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', abortSignal: AbortSignal.timeout(10000) });
     revalidateTag(TAG, { expire: 0 });
     return true;
-  } catch {
+  } catch (error) {
     // Keep yesterday's complete file. Never publish a partial/unknown rating set.
-    console.warn('[mal-content] daily refresh unavailable; retaining saved index');
+    console.warn('[mal-content] refresh unavailable; retaining saved index', error instanceof Error ? error.message : error);
     return false;
   }
 }
