@@ -54,7 +54,7 @@ export default async function RankingsPage({ params }: Props) {
       <h2 id={`ranking-${source}`}>{source === 'imdb' ? 'IMDb' : 'MyAnimeList'}</h2>
       <JsonLd data={animeItemList(data.rankings[source].map(entry => ({ name: entry.anime.name, anilistId: entry.anilistId })), locale, { name: `${heading} · ${source === 'imdb' ? 'IMDb' : 'MyAnimeList'}`, path: `${path}#ranking-${source}` })} />
       {data.rankings[source].length ? <ol className="landing-list">{data.rankings[source].map((entry, index) => <li key={entry.anilistId}>
-        <span aria-hidden="true">{index + 1}. </span><Link href={localePath(animePath(entry.anilistId, entry.anime.name), locale)}>{entry.anime.name}</Link>
+        <span aria-hidden="true">{index + 1}. </span><Link prefetch={false} href={localePath(animePath(entry.anilistId, entry.anime.name), locale)}>{entry.anime.name}</Link>
         {' · '}{number.format(entry.score)}/10{' · '}{d.rankings.votes.replace('{count}', number.format(entry.votes))}
       </li>)}</ol> : <p>{d.rankings.empty}</p>}
     </section>)}

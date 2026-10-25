@@ -176,6 +176,7 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
 }
 
 // Rich recommendations and safety/popularity metadata invalidate old details.
+export const DETAIL_QUEUE_WAIT_MS = 6000;
 const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime | null> => {
   const query = `query ($id: Int!) {
     Media(id: $id, type: ANIME) { ${DISCOVERY_DETAIL_FIELDS} }
@@ -183,7 +184,9 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   const response = await anilistFetch('https://graphql.anilist.co', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ query, variables: { id } }), next: { revalidate: ANILIST_REVALIDATE },
-  });
+  // Leave the shared queue once a visitor would have given up. A queued lookup
+  // that outlives its caller only delays later pages into the same timeout.
+  }, DETAIL_QUEUE_WAIT_MS);
   // Only explicit AniList not-found responses may become cached empty details.
   if (response.status !== 200 && response.status !== 404) throw new Error(`Anime details unavailable (HTTP ${response.status})`);
   const result = await response.json() as {

@@ -3,7 +3,8 @@ vi.mock('server-only', () => ({}));
 vi.mock('next/cache', async () => import('./helpers/next-cache'));
 vi.mock('@vercel/blob', () => ({ BlobNotFoundError: class BlobNotFoundError extends Error {}, get: vi.fn(), put: vi.fn() }));
 // Exercise the actual live response classification, skipping only rate delays.
-vi.mock('../lib/rate-limited-fetch', () => ({ anilistFetch: (...args: Parameters<typeof fetch>) => fetch(...args) }));
+const queueWaits: unknown[] = [];
+vi.mock('../lib/rate-limited-fetch', () => ({ anilistFetch: (url: string, init: RequestInit, maxWaitMs?: number) => { queueWaits.push(maxWaitMs); return fetch(url, init); } }));
 import { get, put } from '@vercel/blob';
 import { clearNextCache } from './helpers/next-cache';
 import { anime, snapshot, blobResult } from './fixtures/anilist-snapshot';
@@ -130,4 +131,12 @@ it('bounds a stalled historical detail lookup instead of caching a false 404', a
   const assertion = expect(pending).rejects.toThrow('Lookup timed out');
   await vi.advanceTimersByTimeAsync(6000);
   await assertion;
+});
+it('bounds the shared AniList queue wait for live detail lookups', async () => {
+  const { DETAIL_QUEUE_WAIT_MS } = await import('../lib/anilist');
+  const queued = vi.fn(async () => new Response(null, { status: 429 }));
+  vi.mocked(fetch).mockImplementation(queued as unknown as typeof fetch);
+  await expect(getAnimeWithSnapshot(996)).rejects.toThrow();
+  expect(queueWaits.at(-1)).toBe(DETAIL_QUEUE_WAIT_MS);
+  expect(DETAIL_QUEUE_WAIT_MS).toBeLessThanOrEqual(6000);
 });
