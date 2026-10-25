@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "refresh:mal-r-plus": "node scripts/refresh-mal-r-plus.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
