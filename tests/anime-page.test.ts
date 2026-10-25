@@ -173,6 +173,8 @@ it('soft-fails AniList failures in metadata and page instead of returning not-fo
   vi.mocked(getAnime).mockRejectedValue(new Error('Anime details unavailable'));
   const props = { params: Promise.resolve({ id: '21-example-anime' }) };
   expect((await generateMetadata(props)).robots).toEqual({ index: false, follow: true });
+  // No inherited homepage canonical/hreflang on a soft page.
+  expect((await generateMetadata(props)).alternates).toBeNull();
   await expect(AnimePage(props)).resolves.toBeTruthy();
   expect(getSynopsis).not.toHaveBeenCalled();
   expect(getAnimeAvailability).not.toHaveBeenCalled();
@@ -241,4 +243,14 @@ it('renders a short-lived noindex soft page instead of throwing on a transient A
   const html = renderToStaticMarkup(await AnimePage({ params }) as React.ReactElement);
   expect(html).toContain('http-equiv="refresh"');
   expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), { next: { revalidate: 60 } });
+});
+
+it('noindexes es/fr/de/pt detail pages without a synopsis in their language, keeping it/en indexable', async () => {
+  vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
+  for (const locale of ['it', 'en', 'es', 'fr', 'de', 'pt']) {
+    const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime', locale }) });
+    expect({ locale, robots: meta.robots }).toEqual({ locale, robots: ['it', 'en'].includes(locale) ? undefined : { index: false, follow: true } });
+  }
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'Una historia.', language: 'es', source: 'tmdb' });
+  expect((await generateMetadata({ params: Promise.resolve({ id: '21-example-anime', locale: 'es' }) })).robots).toBeUndefined();
 });

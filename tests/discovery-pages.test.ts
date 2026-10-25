@@ -49,6 +49,7 @@ it('builds reciprocal episode canonical and hreflang URLs from published localiz
     expect(metadata.alternates?.canonical).toBe(new URL(localePath(`/anime/1-${name.toLowerCase().replace(' ', '-')}/episode-2`, locale), 'http://localhost:3000').href);
     expect(metadata.alternates?.languages?.it).toBe('http://localhost:3000/anime/1-titolo/episodio-2');
     expect(metadata.alternates?.languages?.de).toBe('http://localhost:3000/de/anime/1-titel/folge-2');
+    expect(metadata.robots).toEqual({ index: false, follow: true });
   }
 });
 it('renders UTC SSR fallback and TVEpisode/TVSeries JSON-LD with only dated adjacent links', async () => {
@@ -96,14 +97,17 @@ it.each(locales)('describes the wider similarity pool accurately in the page and
   expect(html).toContain('AniList');
   expect(html).not.toContain('2026');
 });
-it('expands each qualifying sitemap group into six URLs and excludes short lists', async () => {
+it('lists similar lists in it/en, genres in six locales, never episodes, and excludes short lists', async () => {
   const entries = await getDiscoverySitemap(new Date('2026-10-21T12:00:00Z'), new URL('https://example.com'));
-  expect(entries).toHaveLength((1 + 6 + 1) * 6); // episode + six similar lists + genre
+  expect(entries).toHaveLength(6 * 2 + 1 * 6); // six similar lists (it, en) + genre (all locales)
   expect(new Set(entries.map(e => e.url)).size).toBe(entries.length);
-  expect(entries.find(e => e.url === 'https://example.com/anime/1-titolo/episodio-2')?.alternates?.languages?.de).toBe('https://example.com/de/anime/1-titel/folge-2');
+  expect(entries.some(e => /episod|folge/.test(e.url))).toBe(false);
+  expect(entries.every(e => !('changeFrequency' in e))).toBe(true);
+  expect(entries.find(e => e.url === 'https://example.com/anime/1-titolo/simili')?.alternates?.languages?.de).toMatch(/\/de\/anime\/1-titel\//);
+  expect(getSitemapEpisodes).not.toHaveBeenCalled();
   vi.mocked(getDiscoveryCatalog).mockResolvedValue([anime(1), anime(2)]);
   vi.mocked(getGenreLists).mockResolvedValue({ season: { year: 2026, season: 'fall' }, media: [], lists: [{ genre: 'Action', items: [row(1)] }] });
-  expect(await getDiscoverySitemap()).toHaveLength(6); // only the dated episode
+  expect(await getDiscoverySitemap()).toHaveLength(0);
 });
 
 it('renders an uncached temporary state for similar pages during a catalog outage and recovers', async () => {
@@ -122,7 +126,7 @@ it('propagates genre failures so a partial discovery sitemap cannot be cached', 
   const error = new Error('genre catalog unavailable');
   vi.mocked(getGenreLists).mockRejectedValueOnce(error);
   await expect(getDiscoverySitemap()).rejects.toBe(error);
-  expect(await getDiscoverySitemap()).toHaveLength(48);
+  expect(await getDiscoverySitemap()).toHaveLength(18);
 });
 
 it('omits optional detail blocks on upstream errors', async () => {

@@ -1,3 +1,4 @@
+import { animeLocaleIndexable } from '@/lib/seo-sitemap';
 import { getRequestLocale } from '@/lib/request-locale';
 import type { Metadata } from 'next';
 import { Suspense, cache } from 'react';
@@ -24,7 +25,7 @@ import { EpisodeRatingsChart } from '@/components/EpisodeRatingsChart';
 import { getImdbEpisodeChart } from '@/lib/imdb-episode-index';
 import { localePath } from '@/lib/locale-routing';
 import { withTimeout } from '@/lib/async-timeout';
-import { softLookup } from '@/lib/soft-failure';
+import { softFailureMetadata, softLookup } from '@/lib/soft-failure';
 import { DetailTemporarilyUnavailable } from '@/components/DetailTemporarilyUnavailable';
 import { getAnimeEpisodes } from '@/lib/episode-data';
 import { nextAnimeEpisode } from '@/lib/anime-seo';
@@ -59,13 +60,16 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const locale = await getRequestLocale(params);
   const anime = await loadAnime((await params).id);
-  if (!anime) return { title: getDictionary(locale).error.title, robots: { index: false, follow: true } };
+  if (!anime) return softFailureMetadata(getDictionary(locale).error.title);
   const [names, { availability, synopsis }] = await Promise.all([getAnimeLocalizedTitles(anime.id, animeName(anime)), getAnimeDetailData(anime, locale)]);
   const name = names[locale] || animeName(anime);
   const seo = animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability?.ratings);
   const metadata = pageMetadata(seo.title, seo.description, animePath(anime.id, name), anime.coverImage?.extraLarge || anime.coverImage?.large, locale);
   metadata.title = { absolute: seo.title };
   metadata.alternates!.languages = animeLanguageAlternates(anime.id, animeName(anime), names, siteUrl());
+  // es/fr/de/pt pages without a synopsis in their language duplicate the
+  // English text: noindex,follow (it/en are always indexable and in the sitemap).
+  if (!animeLocaleIndexable(locale, synopsis.language)) metadata.robots = { index: false, follow: true };
   return metadata;
 }
 export default async function AnimePage({ params }: Props) {

@@ -17,7 +17,7 @@ it('uses real published translations for reciprocal slugs and falls back only wh
   const languages = animeLanguageAlternates(21, 'Real Title', names, base);
   expect(languages).toMatchObject({ it: 'https://weeklyanime.com/anime/21-titolo-reale', fr: 'https://weeklyanime.com/fr/anime/21-titre-reel', de: 'https://weeklyanime.com/de/anime/21-real-title' });
   const entries = buildAnimeSitemap([{ id: 21, name: 'Real Title', localizedNames: names }], base);
-  expect(entries.map(entry => entry.url)).toContain(languages.fr);
+  expect(entries.map(entry => entry.url)).toEqual([languages.it, languages.en]);
   expect(entries.every(entry => JSON.stringify(entry.alternates?.languages) === JSON.stringify(languages))).toBe(true);
 });
 it('never substitutes the merged parent title for a differently named season or fabricates translations', async () => {

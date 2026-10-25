@@ -81,29 +81,30 @@ it('renders English and Spanish genre pages and links from best-this-season with
   expect(jikanFetch).not.toHaveBeenCalled();
 });
 
-it('includes similar, episode and genre URLs in the actual discovery shard with cold rating stores', async () => {
+it('lists it/en similar and all-locale genre URLs, never episodes, in the discovery shard with cold rating stores', async () => {
   const entries = await sitemap({ id: Promise.resolve('discovery') });
-  expect(entries).toHaveLength((6 + 1 + 1) * 6);
+  expect(entries).toHaveLength(6 * 2 + 1 * 6);
   const paths = entries.map(entry => new URL(entry.url).pathname);
+  expect(paths).toContain(localePath('/anime/1-anime-1/similar', 'en'));
+  expect(paths).not.toContain(localePath('/anime/1-anime-1/similar', 'es'));
   for (const locale of ['en', 'es'] as const) {
-    for (const path of ['/anime/1-anime-1/similar', '/anime/1-anime-1/episode-2', '/best-this-season/action']) {
-      expect(paths).toContain(localePath(path, locale));
-    }
+    expect(paths).toContain(localePath('/best-this-season/action', locale));
+    expect(paths).not.toContain(localePath('/anime/1-anime-1/episode-2', locale));
   }
-  expect(anilistFetch).toHaveBeenCalledOnce();
+  expect(paths.some(path => /\/(episode|episodio|folge|episodo|episodio|épisode)-/.test(path))).toBe(false);
+  expect(anilistFetch).not.toHaveBeenCalled();
   expect(jikanFetch).not.toHaveBeenCalled();
 });
 
 it('rejects a catalog outage instead of returning a cacheable empty shard, and recovers on retry', async () => {
   vi.mocked(readSharedSimilarCatalog).mockRejectedValueOnce(new Error('Discovery catalog unavailable'));
   await expect(sitemap({ id: Promise.resolve('discovery') })).rejects.toThrow('Discovery catalog unavailable');
-  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(48);
+  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(18);
 });
 
-it('rejects an episode outage instead of caching a partial shard, and recovers on retry', async () => {
+it('does not depend on the episode schedule: an AniList outage leaves the shard intact', async () => {
   vi.mocked(anilistFetch).mockResolvedValueOnce(new Response(null, { status: 503 }));
-  await expect(sitemap({ id: Promise.resolve('discovery') })).rejects.toThrow('Episode schedule unavailable');
-  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(48);
+  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(18);
 });
 
 it('renders a temporary landing state on catalog outage and restores genre links on the next request', async () => {
@@ -133,7 +134,7 @@ it('does not turn an unavailable genre into a cached 404, and recovers without a
 
 const requestShard = (id = 'discovery.xml') => GET(new Request(`https://example.com/sitemaps/sitemap/${id}`), { params: Promise.resolve({ id }) });
 
-it.each(['catalog', 'episodes'])('returns uncached 503 XML route responses for a %s outage, then recovers', async source => {
+it.each(['catalog'])('returns uncached 503 XML route responses for a %s outage, then recovers', async source => {
   expect(sitemapDynamic).toBe('force-dynamic');
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
@@ -149,7 +150,7 @@ it.each(['catalog', 'episodes'])('returns uncached 503 XML route responses for a
     expect(recovered.headers.get('Content-Type')).toContain('application/xml');
     expect(recovered.headers.get('Cache-Control')).toContain('s-maxage=86400');
     const xml = await recovered.text();
-    expect(xml.match(/<url>/g)).toHaveLength(48);
+    expect(xml.match(/<url>/g)).toHaveLength(18);
     expect(xml).toContain('/en/best-this-season/action');
     expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
     expect(xml).toContain('hreflang="es"');
@@ -160,7 +161,7 @@ it('shares simultaneous discovery shard requests and rejects unknown shard filen
   const responses = await Promise.all(Array.from({ length: 6 }, () => requestShard()));
   expect(responses.every(response => response.status === 200)).toBe(true);
   expect(getSeason).not.toHaveBeenCalled();
-  expect(anilistFetch).toHaveBeenCalledOnce();
+  expect(anilistFetch).not.toHaveBeenCalled();
   const xmls = await Promise.all(responses.map(response => response.text()));
   expect(new Set(xmls).size).toBe(1);
   for (const filename of ['discovery', 'unknown.xml', 'NaN.xml']) expect((await requestShard(filename)).status).toBe(404);

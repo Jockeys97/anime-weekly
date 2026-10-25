@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { animeName } from '@/lib/anilist';
 import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
-import { softLookup } from '@/lib/soft-failure';
+import { softFailureMetadata, softLookup } from '@/lib/soft-failure';
 import { DetailTemporarilyUnavailable } from '@/components/DetailTemporarilyUnavailable';
 import { animePath, parseAnimeId } from '@/lib/anime-url';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
@@ -40,12 +40,15 @@ export async function generateMetadata({ params }: Props) {
   const { id, episode } = await params;
   const locale = await getRequestLocale(params);
   const loaded = await load(id, episode);
-  if (!loaded) return { title: getDictionary(locale).error.title, robots: { index: false, follow: true } };
+  if (!loaded) return softFailureMetadata(getDictionary(locale).error.title);
   const { anime, names, event } = loaded;
   const name = names[locale] || animeName(anime);
   const title = episodeTitle(name, event.episode, locale);
   const metadata = pageMetadata(title, `${title}. ${new Date(event.airingAt * 1000).toISOString()} (UTC).`, episodePath(anime.id, name, event.episode), anime.coverImage?.large, locale);
   metadata.alternates!.languages = animeChildAlternates(anime, names, `/episode-${event.episode}`);
+  // Episode pages repeat the series page; noindex until they carry unique
+  // content. Links stay followable. They are also out of the sitemap.
+  metadata.robots = { index: false, follow: true };
   return metadata;
 }
 export default async function EpisodePage({ params }: Props) {
