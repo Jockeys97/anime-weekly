@@ -1,4 +1,3 @@
-import { refreshMildNudityIndex } from '@/lib/mal-content';
 import { revalidateTag } from 'next/cache';
 import { authorizedCron } from '@/lib/cron-auth';
 import { readSeasonalCatalog, readSimilarCatalog, warmSimilarCatalogs } from '@/lib/similar-catalog-store';
@@ -30,10 +29,8 @@ export async function GET(request: Request) {
   try {
     // TTLs decide whether a crawl is due (seasonal: daily, popular: weekly).
     // Failed loaders never replace the previous successful catalog.
-    const [catalogResult, contentResult] = await Promise.allSettled([warmSimilarCatalogs(), refreshMildNudityIndex()]);
-    if (catalogResult.status === 'rejected') throw catalogResult.reason;
-    const counts = catalogResult.value;
-    const malContentReady = contentResult.status === 'fulfilled' && contentResult.value;
+    // Mild Nudity IDs are a committed JSON (data/mal-r-plus.json), not refreshed here.
+    const counts = await warmSimilarCatalogs();
     revalidateTag(SIMILAR_CATALOG_RESPONSE_TAG, 'max');
     // Prime the exact authenticated HTTP entries used by pages as well as the
     // API's unstable_cache entries. Existing responses remain available during
@@ -41,7 +38,7 @@ export async function GET(request: Request) {
     // Only the HTTP snapshot tag becomes stale; catalog loader tags stay intact.
     await readSharedSimilarCatalog('full');
     await readSharedSimilarCatalog('seasonal');
-    return Response.json({ status: 'ok', ...counts, malContentReady, ms: Date.now() - started }, { headers: { 'cache-control': 'no-store' } });
+    return Response.json({ status: 'ok', ...counts, ms: Date.now() - started }, { headers: { 'cache-control': 'no-store' } });
   } catch (error) {
     console.error('[similar-catalog] refresh failed', error);
     return Response.json({ status: 'failed', ms: Date.now() - started }, { status: 503, headers: { 'cache-control': 'no-store' } });

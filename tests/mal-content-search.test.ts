@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('@/lib/mal-content', () => ({ readMildNudityIds: vi.fn(), scheduleMildNuditySelfHeal: vi.fn() }));
+vi.mock('@/lib/mal-content', () => ({ readMildNudityIds: vi.fn() }));
 vi.mock('@/lib/rate-limited-fetch', () => ({ anilistFetch: vi.fn() }));
-import { readMildNudityIds, scheduleMildNuditySelfHeal } from '@/lib/mal-content';
+import { readMildNudityIds } from '@/lib/mal-content';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
 import { discoverAnime } from '@/lib/anilist';
 import { parseAnimeFilters, searchHref } from '@/lib/anime-search';
@@ -28,7 +28,6 @@ it('shows an unavailable search when the verification index is missing, without 
   vi.mocked(readMildNudityIds).mockResolvedValue(null);
   expect(await discoverAnime(parseAnimeFilters({ malRating: 'r-plus' }))).toMatchObject({ unavailable: true, media: [] });
   expect(anilistFetch).not.toHaveBeenCalled();
-  expect(scheduleMildNuditySelfHeal).toHaveBeenCalledOnce();
 });
 it('does not touch the MAL index for ordinary searches', async () => {
   vi.mocked(anilistFetch).mockResolvedValue(Response.json({ data: { Page: { media: [], pageInfo: { hasNextPage: false } } } }));
