@@ -162,3 +162,13 @@ it('excludes adult snapshot titles from seasonal lists while preserving their de
   expect((await getSeasonWithSnapshot(2026, 'fall')).media.map(item => item.id)).toEqual([anime.id]);
   expect(await getAnimeWithSnapshot(22)).toMatchObject({ id: 22, isAdult: true });
 });
+
+it('excludes adult live titles on a snapshot miss while retaining pagination', async () => {
+  files.clear();
+  vi.mocked(fetch).mockResolvedValue(Response.json({ data: { Page: {
+    media: [anime, { ...anime, id: 22, isAdult: true }], pageInfo: { hasNextPage: true },
+  } } }));
+  expect(await getSeasonWithSnapshot(2026, 'fall')).toEqual({
+    media: [anime], pageInfo: { currentPage: 1, hasNextPage: true },
+  });
+});

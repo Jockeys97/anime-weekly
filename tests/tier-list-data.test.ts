@@ -20,7 +20,7 @@ it('uses the daily cached season without upstream pagination and keeps the large
   expect(getSeason).not.toHaveBeenCalled();
 });
 it('falls back to cached exact-season pagination when the shared catalog is absent', async () => {
-  vi.mocked(getSeason).mockResolvedValueOnce({ media: [anime(1)], pageInfo: { currentPage: 1, hasNextPage: true } })
+  vi.mocked(getSeason).mockResolvedValueOnce({ media: [anime(1), anime(99, { isAdult: true })], pageInfo: { currentPage: 1, hasNextPage: true } })
     .mockResolvedValueOnce({ media: [anime(2)], pageInfo: { currentPage: 2, hasNextPage: false } });
   const result = await getTierListData(season);
   expect(result.items.map(item => item.id)).toEqual([2, 1]);

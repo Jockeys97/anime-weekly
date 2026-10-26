@@ -96,3 +96,12 @@ it('bounds eager metadata work and exposes a partial response rather than false 
   expect(Object.values(data.titles)).toHaveLength(40);
   expect(Object.values(data.titles).every(title => title.providersUnavailable)).toBe(true);
 });
+
+it('excludes adult titles from seasonal platform listings before provider lookups', async () => {
+  const title = { id: 1, title: { english: 'Example', romaji: null, native: null }, format: 'TV', startDate: { year: 2024 } } as AniListAnime;
+  vi.mocked(getSeason).mockResolvedValue({ media: [title, { ...title, id: 2, isAdult: true }], pageInfo: { currentPage: 1, hasNextPage: false } });
+  vi.mocked(getAnimeAvailability).mockResolvedValue({ ...available, match: { id: 1, kind: 'tv' }, ratings: {} });
+  const data = await getSeasonPlatformMetadata(2024, 'fall', 1);
+  expect(Object.keys(data.titles)).toEqual(['anilist:1']);
+  expect(getAnimeAvailability).toHaveBeenCalledTimes(1);
+});

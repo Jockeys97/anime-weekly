@@ -34,5 +34,6 @@ export async function getSeasonWithSnapshot(year: number, season: Season, page =
     };
   }
   return withTimeout(getSeason(year, season, page, { maxWaitMs: 6000 }), 6000)
+    .then(result => ({ ...result, media: result.media.filter(anime => !anime.isAdult) }))
     .catch(() => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false }, unavailable: true }));
 }

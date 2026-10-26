@@ -36,6 +36,20 @@ describe('AniList catalog (offline)', () => {
     expect(body.query).toMatch(/\bsynonyms\b/);
   });
 
+  it('preserves adult season media for sitemaps and the similar catalog', async () => {
+    const adult = { ...anime, id: 22, isAdult: true };
+    const media = [anime, adult];
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: {
+      media, pageInfo: { hasNextPage: true },
+    } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getSeason } = await import('../lib/anilist');
+    expect(await getSeason(2026, 'fall')).toEqual({
+      media, pageInfo: { currentPage: 1, hasNextPage: true },
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).query).not.toMatch(/isAdult\s*:/);
+  });
+
   it('searches a trimmed title and skips blank searches', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Page: { media: [anime] } } }));
     vi.stubGlobal('fetch', fetchMock);
