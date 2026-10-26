@@ -1,5 +1,6 @@
 import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { localePath } from '@/lib/locale-routing';
 import { animeName } from '@/lib/anilist';
 import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
 import { softFailureMetadata, softLookup } from '@/lib/soft-failure';
@@ -49,5 +50,9 @@ export async function generateMetadata({ params }: Props) {
 export default async function SimilarPage({ params }: Props) {
   const data = await content(params);
   if (!data) return <DiscoveryUnavailable locale={await getRequestLocale(params)} path={`/anime/${(await params).id}/similar`} />;
+  // Wrong-slug variants 308 to this locale's canonical similar URL.
+  const segment = (await params).id;
+  let decoded = segment; try { decoded = decodeURIComponent(segment); } catch {}
+  if (data.path !== `/anime/${decoded}/similar`) permanentRedirect(localePath(data.path, data.locale));
   return <DiscoveryList {...data} rule={getDictionary(data.locale).discovery.similarRule} cards />;
 }
