@@ -18,7 +18,7 @@ export function AnimeSearchFilters({ filters, locale }: { filters: AnimeFilters;
       <label>{d.minScore}<select name="minScore" defaultValue={filters.minScore || ''}><option value="">{d.anyScore}</option>{[6, 7, 8, 9].map(score => <option key={score} value={score}>≥ {score} / 10</option>)}</select></label>
       <label>{d.sort}<select name="sort" defaultValue={filters.sort}>{SEARCH_SORTS.map(sort => <option key={sort} value={sort}>{d.sorts[sort]}</option>)}</select></label>
       <SearchPlatformSelect />
-    </div><label className="explore-classification" title={d.mildNudityHint}><input type="checkbox" name="malRating" value="r-plus" defaultChecked={filters.malRating === 'r-plus'} /><span>{d.mildNudity}</span></label></fieldset>
+    </div><label className="explore-classification" title={d.mildNudityHint}><input type="checkbox" name="malRating" value="r-plus" defaultChecked={filters.malRating === 'r-plus'} /><span>{d.mildNudity}</span></label><label className="explore-classification" title={d.hentaiHint}><input type="checkbox" name="malRating" value="hx" defaultChecked={filters.malRating === 'hx'} /><span>{d.hentai}</span></label></fieldset>
     <div className="explore-actions"><span>{d.scoreHint}</span><Link href="/search" prefetch={false}>{d.reset} ↗</Link></div>
   </Form>;
 }

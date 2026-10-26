@@ -3,11 +3,12 @@ export const SEARCH_FORMATS = ['TV', 'TV_SHORT', 'MOVIE', 'SPECIAL', 'OVA', 'ONA
 export const SEARCH_STATUSES = ['RELEASING', 'FINISHED', 'NOT_YET_RELEASED', 'CANCELLED', 'HIATUS'] as const;
 export const SEARCH_SEASONS = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
 export const SEARCH_SORTS = ['relevance', 'popular', 'score', 'newest', 'trending'] as const;
+export const MAL_RATINGS = ['r-plus', 'hx'] as const;
 export type SearchParams = Record<string, string | string[] | undefined>;
 export interface AnimeFilters {
   q: string; genres: (typeof SEARCH_GENRES[number])[]; format?: typeof SEARCH_FORMATS[number];
   status?: typeof SEARCH_STATUSES[number]; season?: typeof SEARCH_SEASONS[number];
-  malRating?: 'r-plus';
+  malRating?: typeof MAL_RATINGS[number];
   year?: number; minScore?: number; sort: typeof SEARCH_SORTS[number]; page: number;
 }
 const single = (value: string | string[] | undefined) => typeof value === 'string' ? value.trim() : '';
@@ -15,7 +16,7 @@ const member = <T extends string>(value: string, allowed: readonly T[]): T | und
 const integer = (value: string, min: number, max: number) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max ? Number(value) : undefined;
 export function parseAnimeFilters(params: SearchParams): AnimeFilters {
   const q = single(params.q).slice(0, 200);
-  return { ...(single(params.malRating) === 'r-plus' ? { malRating: 'r-plus' as const } : {}), q, genres: SEARCH_GENRES.filter(genre => (Array.isArray(params.genre) ? params.genre : [params.genre]).some(value => value?.trim() === genre)), format: member(single(params.format), SEARCH_FORMATS),
+  return { ...(member(single(params.malRating), MAL_RATINGS) ? { malRating: member(single(params.malRating), MAL_RATINGS) } : {}), q, genres: SEARCH_GENRES.filter(genre => (Array.isArray(params.genre) ? params.genre : [params.genre]).some(value => value?.trim() === genre)), format: member(single(params.format), SEARCH_FORMATS),
     status: member(single(params.status), SEARCH_STATUSES), season: member(single(params.season), SEARCH_SEASONS),
     year: integer(single(params.year), 1900, new Date().getFullYear() + 5), minScore: integer(single(params.minScore), 1, 10),
     sort: member(single(params.sort), SEARCH_SORTS) || (q ? 'relevance' : 'popular'), page: integer(single(params.page), 1, 500) || 1 };

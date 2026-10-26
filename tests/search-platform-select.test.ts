@@ -25,7 +25,7 @@ it('places the optional MAL checkbox below the field grid and preserves its sele
     React.createElement(StreamingCountryProvider, null,
       React.createElement(PlatformOptionsProvider, null, React.createElement(AnimeSearchFilters, { filters: parseAnimeFilters({ malRating: 'r-plus' }), locale: 'en' }))) }));
   expect(html).toContain('name="malRating"'); expect(html).toContain('value="r-plus"');
-  expect(html).toMatch(/type="checkbox"[^>]*name="malRating"[^>]*checked=""/);
+  expect(html).toMatch(/type="checkbox"[^>]*name="malRating"[^>]*checked=""/); expect(html).toContain('value="hx"');
   expect(html.indexOf('explore-classification')).toBeGreaterThan(html.indexOf('>Platform<'));
   expect(html).toContain('Only R+ · Mild Nudity');
 });
