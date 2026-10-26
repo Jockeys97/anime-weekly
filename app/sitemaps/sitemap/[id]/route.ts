@@ -28,6 +28,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     } });
   } catch (error) {
     console.error('[sitemap] Shard unavailable', { id, message: error instanceof Error ? error.message : 'Unknown error' });
+    // The discovery shard depends on the Blob-backed catalog. When that store
+    // is unavailable, answer with a valid empty urlset instead of a recurring
+    // 503 that Google keeps retrying. Short CDN TTL so real entries return
+    // soon after the catalog recovers.
+    if (id === 'discovery') return new Response(serializeSitemap([]), { headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=0, s-maxage=3600',
+    } });
     return new Response('Sitemap temporarily unavailable', { status: 503, headers: {
       'Cache-Control': 'no-store', 'Retry-After': '60',
     } });

@@ -134,17 +134,19 @@ it('does not turn an unavailable genre into a cached 404, and recovers without a
 
 const requestShard = (id = 'discovery.xml') => GET(new Request(`https://example.com/sitemaps/sitemap/${id}`), { params: Promise.resolve({ id }) });
 
-it.each(['catalog'])('returns uncached 503 XML route responses for a %s outage, then recovers', async source => {
+it.each(['catalog'])('serves a valid empty discovery sitemap (200) for a %s outage, then recovers', async source => {
   expect(sitemapDynamic).toBe('force-dynamic');
   const log = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
     if (source === 'catalog') vi.mocked(readSharedSimilarCatalog).mockRejectedValueOnce(new Error('Discovery catalog unavailable'));
     else vi.mocked(anilistFetch).mockResolvedValueOnce(new Response(null, { status: 503 }));
     const failed = await requestShard();
-    expect(failed.status).toBe(503);
-    expect(failed.headers.get('Cache-Control')).toBe('no-store');
-    expect(failed.headers.get('Retry-After')).toBe('60');
-    expect(await failed.text()).not.toContain('<urlset');
+    expect(failed.status).toBe(200);
+    expect(failed.headers.get('Content-Type')).toContain('application/xml');
+    expect(failed.headers.get('Cache-Control')).toBe('public, max-age=0, s-maxage=3600');
+    const empty = await failed.text();
+    expect(empty).toContain('<urlset');
+    expect(empty).not.toContain('<url>');
     const recovered = await requestShard();
     expect(recovered.status).toBe(200);
     expect(recovered.headers.get('Content-Type')).toContain('application/xml');
