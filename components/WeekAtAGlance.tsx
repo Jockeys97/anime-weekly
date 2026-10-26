@@ -193,7 +193,7 @@ export function WeekAtAGlance({ days, locale = 'it', anilistIds = {} }: { days: 
               </a>
               {/* Siblings of the poster link (links cannot nest); same destination as the detail page's platform links. */}
               {providers.length > 0 && <span className="week-glance-providers">{providers.map(provider => <a key={provider.provider_id} className="week-glance-provider"
-                href={provider.watch_url || providerWatchLink(first.anime.kind, first.anime.id, region, provider.provider_id)} target="_blank" rel="noopener noreferrer"
+                href={provider.watch_url || providerWatchLink(first.anime.kind, first.anime.id, region, provider.provider_id)} target="_blank" rel="nofollow noopener noreferrer"
                 aria-label={`${first.anime.name} · ${provider.provider_name} · ${d.regions[region]} · ${d.title.watch}`} title={provider.provider_name}>
                 <Image src={provider.logo_path ? `https://image.tmdb.org/t/p/w92${provider.logo_path}` : provider.logo_url!} alt="" width={22} height={22} loading="lazy" />
               </a>)}</span>}
