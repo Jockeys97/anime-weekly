@@ -57,6 +57,11 @@ function route(request: NextRequest) {
   const discovery = discoveryInternalPath(pathname);
   if (discovery) {
     const destination = request.nextUrl.clone();
+    // Redirect before rewriting to the page, where streaming may already begin.
+    if (discovery === '/best-this-season/hentai') {
+      destination.pathname = localePath('/search/hentai', locale);
+      return NextResponse.redirect(destination, 308);
+    }
     const canonical = localePath(discovery, locale);
     destination.pathname = pathname !== canonical ? canonical : `/${locale}${discovery}`;
     return pathname !== canonical ? NextResponse.redirect(destination, 308) : NextResponse.rewrite(destination);

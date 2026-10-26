@@ -7,6 +7,27 @@ import { config, proxy } from '../proxy';
 import { landingSlugs, localePath } from '../lib/locale-routing';
 import { locales } from '../lib/locales';
 
+it('redirects every seasonal hentai alias straight to its localized hub before page rendering', async () => {
+  const slugs = new Set(['best-this-season', ...Object.values(landingSlugs['best-this-season'])]);
+  for (const locale of locales) {
+    const target = localePath('/search/hentai', locale);
+    for (const prefix of locale === 'it' ? ['', '/it'] : [`/${locale}`]) {
+      for (const slug of slugs) {
+        const path = `${prefix}/${slug}/hentai`;
+        expect(unstable_doesMiddlewareMatch({ config, url: path }), path).toBe(true);
+        const response = await proxy(new NextRequest(`https://weeklyanime.com${path}?source=test`));
+        expect(response.status, path).toBe(308);
+        expect(response.headers.get('location'), path).toBe(`https://weeklyanime.com${target}?source=test`);
+        expect(response.headers.get('x-middleware-rewrite'), path).toBeNull();
+      }
+    }
+    const path = localePath('/best-this-season/action', locale);
+    const response = await proxy(new NextRequest(`https://weeklyanime.com${path}`));
+    expect(response.headers.get('x-middleware-rewrite')).toBe(`https://weeklyanime.com/${locale}/best-this-season/action`);
+    expect(response.headers.get('location')).toBeNull();
+  }
+});
+
 it('rewrites every canonical slug and permanently redirects every legacy or wrong-language slug in one hop', async () => {
   for (const [internal, translations] of Object.entries(landingSlugs)) {
     const slugs = new Set([internal, ...Object.values(translations)]);

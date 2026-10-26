@@ -281,10 +281,9 @@ it('308s a wrong-slug similar URL to the canonical slug of the same locale', asy
   expect(before).toBeGreaterThanOrEqual(0);
 });
 
-it.each(locales)('redirects the old adult genre route before reading mainstream lists (%s)', async locale => {
-  redirectSpy.mockImplementationOnce(() => { throw new Error('308'); });
-  await expect(genreMetadata({ params: Promise.resolve({ locale, genre: 'hentai' }) })).rejects.toThrow('308');
-  expect(redirectSpy).toHaveBeenCalledWith(localePath('/search/hentai', locale));
+it.each(locales)('keeps normal notFound behavior for missing genres in the page (%s)', async locale => {
+  await expect(genreMetadata({ params: Promise.resolve({ locale, genre: 'hentai' }) })).rejects.toThrow('404');
+  expect(redirectSpy).not.toHaveBeenCalled();
 });
 
 it('excludes the adult genre route from discovery sitemaps even with stale genre lists', async () => {
