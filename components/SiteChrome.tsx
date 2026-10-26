@@ -1,14 +1,14 @@
 'use client';
 import Link from '@/components/LocaleLink';
 import { HeaderNavigation } from '@/components/HeaderNavigation';
-import { SearchBox } from '@/components/SearchBox';
+import { HeaderSearchBox } from '@/components/HeaderSearchBox';
 import { LanguageLinks, LanguageSelector, useLocale } from '@/components/LanguageSelector';
 import { getDictionary } from '@/lib/i18n';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { supportUrl } from '@/lib/support';
 export function SiteHeader({ myAnimeEnabled = false }: { myAnimeEnabled?: boolean }) {
   const locale = useLocale(); const d = getDictionary(locale);
-  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">a<span>↗</span></span>{d.brand}<span className="brand-period">.</span></Link><div className="header-tools"><HeaderNavigation locale={locale} myAnimeEnabled={myAnimeEnabled} /><SearchBox locale={locale} /><LanguageSelector /></div></header>;
+  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">a<span>↗</span></span>{d.brand}<span className="brand-period">.</span></Link><div className="header-tools"><HeaderNavigation locale={locale} myAnimeEnabled={myAnimeEnabled} /><HeaderSearchBox locale={locale} /><LanguageSelector /></div></header>;
 }
 export function SiteFooter() {
   const d = getDictionary(useLocale());

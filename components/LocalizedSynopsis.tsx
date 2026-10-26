@@ -6,15 +6,16 @@ import { loadSynopsis, synopsisQuery, type SynopsisResult } from '@/lib/synopsis
 import type { Locale } from '@/lib/locales';
 import { observeNearViewport } from '@/lib/viewport-observer';
 
-export function LocalizedSynopsis({ original, titles, year, kind, locale, anilistId, initial, followLocale = false, retryMissing = false, className = 'synopsis catalog-synopsis' }: {
-  original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className?: string; initial?: SynopsisResult; followLocale?: boolean; retryMissing?: boolean;
+export function LocalizedSynopsis({ original, titles, year, kind, locale, anilistId, initial, followLocale = false, retryMissing = false, expandable = false, className = 'synopsis catalog-synopsis' }: {
+  expandable?: boolean; original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className?: string; initial?: SynopsisResult; followLocale?: boolean; retryMissing?: boolean;
 }) {
   const selectedLocale = useLocale();
   const activeLocale = followLocale ? selectedLocale : locale;
-  return <SynopsisContent key={activeLocale} original={original} titles={titles} year={year} kind={kind} locale={activeLocale} anilistId={anilistId} initial={initial?.language === activeLocale || activeLocale === locale ? initial : undefined} retryMissing={retryMissing} className={className} />;
+  return <SynopsisContent key={activeLocale} original={original} titles={titles} year={year} kind={kind} locale={activeLocale} anilistId={anilistId} initial={initial?.language === activeLocale || activeLocale === locale ? initial : undefined} retryMissing={retryMissing} expandable={expandable} className={className} />;
 }
 
-function SynopsisContent({ original, titles, year, kind, locale, anilistId, initial, retryMissing, className }: {
+function SynopsisContent({ original, titles, year, kind, locale, anilistId, initial, retryMissing, expandable = false, className }: {
+  expandable?: boolean;
   original: string; titles: string[]; anilistId: number; year?: number; kind: 'tv' | 'movie'; locale: Locale; className: string; initial?: SynopsisResult; retryMissing: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -40,9 +41,23 @@ function SynopsisContent({ original, titles, year, kind, locale, anilistId, init
     const deadline = setTimeout(() => { if (!cancelled) setChecked(true); }, 31000);
     return () => { cancelled = true; clearTimeout(timer); clearTimeout(deadline); stopObserving?.(); };
   }, [locale, query, initial, retryMissing]);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
   const pending = locale !== 'en' && Boolean(original) && !translation && !checked;
+  const text = pending ? d.language.loadingSynopsis : translation || original || d.state.noSynopsis;
+  useEffect(() => {
+    const el = textRef.current;
+    if (!expandable || !el || expanded) return;
+    const measure = () => setTruncated(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+    observer?.observe(el);
+    return () => observer?.disconnect();
+  }, [expandable, expanded, text]);
+  const toggle = expandable && (truncated || expanded) ? () => setExpanded(value => !value) : undefined;
   return <div ref={ref} className="localized-synopsis">
-    <p className={className} lang={pending || translation ? locale : original ? 'en' : locale} role={pending ? 'status' : undefined}>{pending ? d.language.loadingSynopsis : translation || original || d.state.noSynopsis}</p>
+    <p ref={textRef} className={`${className}${expandable ? ' synopsis-expandable' : ''}${expanded ? ' is-expanded' : ''}`} onClick={toggle} onKeyDown={toggle ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); } } : undefined} role={pending ? 'status' : toggle ? 'button' : undefined} tabIndex={toggle ? 0 : undefined} aria-expanded={toggle ? expanded : undefined} lang={pending || translation ? locale : original ? 'en' : locale}>{text}</p>
     {locale !== 'en' && <p className="synopsis-fallback">{translation && machine ? `${d.language.machineTranslation} · DeepL` : original && !translation && checked ? d.language.originalSynopsis : '\u00a0'}</p>}
   </div>;
 }

@@ -24,7 +24,7 @@ export function CatalogCard({ anime, locale = 'en', initialSummary }: { anime: A
       <WatchlistButton id={`anilist:${anime.id}`} />
       <span className="type-label">{format}{anime.startDate?.year ? ` · ${anime.startDate.year}` : ''}</span>
       <h3><Link href={animePath(anime.id, name)} prefetch={false}>{name}</Link></h3>
-      <LocalizedSynopsis anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />
+      <LocalizedSynopsis expandable anilistId={anime.id} key={locale} locale={locale} original={animeDescription(anime.description)} titles={[anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title))} year={anime.startDate?.year ?? undefined} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} />
       <Suspense fallback={<DubbingStatus malId={anime.idMal} locale={locale} />}><DubbingSummary malId={anime.idMal} locale={locale} /></Suspense>
       <CatalogCardExtras id={anime.id} malId={anime.idMal} name={name} score={anime.averageScore} locale={locale} initialSummary={initialSummary} />
       <Link href={animePath(anime.id, name)} prefetch={false} className="catalog-details">{d.catalog.details} →</Link>
