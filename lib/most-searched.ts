@@ -1,7 +1,4 @@
-// Editorial selection. Unknown IDs are deliberately omitted; no runtime lookup.
+// Editorial selection. AniList ID verified in tests/fixtures/season-families.json.
 export const mostSearched = [
-  { id: 213686, name: 'NTR Kishi' },
-  { id: 215989, name: 'Ochiru Part Tsuma' },
-  { id: 203367, name: 'Mou Ichido, Shitemitai.' },
-  { id: 214551, name: 'Oushun Jogakuen' },
+  { id: 161645, name: 'The Apothecary Diaries' },
 ] as const;

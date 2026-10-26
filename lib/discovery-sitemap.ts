@@ -36,7 +36,7 @@ export async function getDiscoverySitemap(now = new Date(), base = siteUrl()): P
       for (const locale of SITEMAP_ANIME_LOCALES) entries.push({ url: languages[locale], alternates: { languages } });
     }
   }
-  for (const list of genres.lists) if (listVisibility(list.items.length) === 'index') {
+  for (const list of genres.lists) if (list.genre !== 'Hentai' && listVisibility(list.items.length) === 'index') {
     const languages = languageAlternates(genrePath(list.genre), base);
     for (const locale of locales) entries.push({ url: languages[locale], alternates: { languages } });
   }

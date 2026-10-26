@@ -1,6 +1,7 @@
 import { softFailureMetadata } from '@/lib/soft-failure';
 import { connection } from 'next/server';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { localePath } from '@/lib/locale-routing';
 import { animeName } from '@/lib/anilist';
 import { animeSlug } from '@/lib/anime-url';
 import { getGenreLists } from '@/lib/discovery-data';
@@ -20,6 +21,7 @@ async function content(params: Props['params']) {
   await connection();
   const locale = await getRequestLocale(params);
   const { genre: slug } = await params;
+  if (slug === 'hentai') permanentRedirect(localePath('/search/hentai', locale));
   const data = await getGenreLists().catch(() => null);
   if (!data) return null;
   const list = data.lists.find(list => animeSlug(list.genre) === slug);

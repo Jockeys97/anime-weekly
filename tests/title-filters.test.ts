@@ -61,3 +61,7 @@ it('groups ad-supported Netflix and Prime offers without merging separately subs
   expect(filterTitles(offers, { ...filters, region: 'US' })).toEqual([]);
   expect(filterOptions(offers, 'US', 'netflix').platforms).toEqual([['netflix', 'Netflix'], ['prime-video', 'Prime Video']]);
 });
+
+it('omits Hentai from mainstream genre navigation', () => {
+  expect(filterOptions([{ key: 'anilist:1', genres: ['Action', 'Hentai'], providers: {} }], 'IT').genres).toEqual(['Action']);
+});

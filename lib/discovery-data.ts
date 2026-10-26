@@ -34,7 +34,7 @@ export async function getSimilarAnime(anime: AniListAnime, maxWaitMs = SIMILAR_P
 export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {
   const season = currentSeason();
   const [catalog, store, snapshot] = await Promise.all([providedCatalog ?? getDiscoveryCatalog(), withTimeout(readRatingsStore(), 1500).catch(() => ({ ratings: {}, sources: {} } as RatingsStore)), withTimeout(readWeeklyRatingsSnapshot(formatWeek(isoWeek(new Date()))), 1500).catch(() => ({ titles: {}, events: [] }))]);
-  const media = catalog.filter(anime => anime.seasonYear === season.year && anime.season?.toLowerCase() === season.season);
+  const media = catalog.filter(anime => !anime.isAdult && anime.seasonYear === season.year && anime.season?.toLowerCase() === season.season);
   const ratings: Record<number, Ratings> = {};
   const weekly = new Map(Object.values(snapshot.titles).map(r => [r.anilistId, r]));
   for (const anime of media) {
@@ -51,6 +51,6 @@ export const getGenreLists = cache(async (providedCatalog?: AniListAnime[]) => {
     }
     ratings[anime.id] = r;
   }
-  const genres = [...new Set(media.flatMap(anime => anime.genres))].sort();
+  const genres = [...new Set(media.flatMap(anime => anime.genres).filter(genre => genre !== 'Hentai'))].sort();
   return { season, media, lists: genres.map(genre => ({ genre, items: rankGenre(media, genre, ratings) })) };
 });

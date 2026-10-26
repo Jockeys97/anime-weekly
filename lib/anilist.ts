@@ -77,13 +77,13 @@ export async function getSeason(year: number, season: Season, page = 1, options:
   const data = await graphql<{ Page?: AniListPage }>(`query ($year: Int!, $season: MediaSeason!, $page: Int!) {
     Page(page: $page, perPage: 50) {
       pageInfo { currentPage hasNextPage }
-      media(type: ANIME, season: $season, seasonYear: $year, sort: POPULARITY_DESC,
+      media(type: ANIME, isAdult: false, season: $season, seasonYear: $year, sort: POPULARITY_DESC,
         format_in: [TV, TV_SHORT, MOVIE, ONA, OVA]) { ${fields} }
     }
   }`, { year, season: season.toUpperCase(), page }, options);
   if (!Array.isArray(data?.Page?.media)) return { ...emptyPage(page), unavailable: true };
   rememberCatalog(data.Page.media);
-  return { media: data.Page.media, pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
+  return { media: data.Page.media.filter(anime => !anime.isAdult), pageInfo: { currentPage: page, hasNextPage: data.Page.pageInfo?.hasNextPage === true } };
 }
 
 // Called only by the shared weekly catalog loader, through the same AniList
