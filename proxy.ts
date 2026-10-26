@@ -88,6 +88,6 @@ function route(request: NextRequest) {
 export const config = {
   matcher: [
     '/',
-    '/((?!_next(?:/|$)|api(?:/|$)|(?:en|it|es|fr|de|pt)/(?:_next|api)(?:/|$)|(?:.*?/)?(?:favicon(?:\\.[^/]+)?|robots\\.txt|sitemap(?:\\.xml)?)(?:/|$)|(?:.*?/)?sitemaps(?:/|$)|.*\\.[^/]+$)(?:(?:en|it|es|fr|de|pt|rankings|week|season|anime|piattaforma|best-this-season|migliori-della-stagione|mejores-de-la-temporada|meilleurs-de-la-saison|beste-der-saison|melhores-da-temporada)(?:/.*)?|search|my-anime|tier-list|this-week|questa-settimana|esta-semana|cette-semaine|diese-woche))',
+    '/((?!_next(?:/|$)|api(?:/|$)|(?:en|it|es|fr|de|pt)/(?:_next|api)(?:/|$)|(?:.*?/)?(?:favicon(?:\\.[^/]+)?|robots\\.txt|sitemap(?:\\.xml)?)(?:/|$)|(?:.*?/)?sitemaps(?:/|$)|.*\\.[^/]+$)(?:(?:en|it|es|fr|de|pt|rankings|week|season|anime|piattaforma|best-this-season|migliori-della-stagione|mejores-de-la-temporada|meilleurs-de-la-saison|beste-der-saison|melhores-da-temporada)(?:/.*)?|search(?:/.*)?|my-anime|tier-list|this-week|questa-settimana|esta-semana|cette-semaine|diese-woche))',
   ],
 };

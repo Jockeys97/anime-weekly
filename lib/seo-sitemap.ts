@@ -41,7 +41,7 @@ export function sitemapUrls(date = new Date(), base = siteUrl()): string[] {
 // Omitted (tests, offline) means none are listed: thin catalogs stay out.
 export function buildPagesSitemap(date = new Date(), base = siteUrl(), archivedWeeks: readonly SitemapWeek[] = [], indexedPlatforms: readonly string[] = []): MetadataRoute.Sitemap {
   const week = isoWeek(date);
-  const paths = ['/', '/season', '/piattaforma', '/this-week', '/best-this-season',
+  const paths = ['/', '/season', '/piattaforma', '/this-week', '/best-this-season', '/search/hentai', '/search/mild-nudity',
     ...sitemapSeasons(date).map(seasonPath), ...platformPaths().filter(path => indexedPlatforms.includes(path))];
   // No invented lastmod: these hubs have no reliable modification date.
   const entries: MetadataRoute.Sitemap = paths.map(path => ({

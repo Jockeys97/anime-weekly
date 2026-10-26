@@ -15,6 +15,7 @@ import { getAnimeWithSnapshot } from '@/lib/anilist-resilient';
 import { getAnimeDetailData } from '@/lib/anime-detail-data';
 import type { Locale } from '@/lib/i18n';
 import type { DetailAvailability as AnimeAvailability } from '@/lib/detail-availability';
+import { SearchPresetCta } from '@/components/SearchPresetCta';
 import type { Ratings } from '@/lib/ratings';
 import { getAnimeLocalizedTitles } from '@/lib/anime-localized-titles';
 import { pageMetadata, siteUrl } from '@/lib/seo';
@@ -98,7 +99,7 @@ export default async function AnimePage({ params }: Props) {
   const aliases = [anime.title.english, anime.title.romaji, anime.title.native].filter((title): title is string => Boolean(title));
   const structured = animeStructuredData(anime, name, animeDetailSeo(name, anime, localizedSynopsis(synopsis, locale), locale, availability.ratings).description, locale);
   return <><JsonLd data={structured} /><JsonLd data={animeBreadcrumbs(anime, name, locale)} />
-    <AnimeDetailView anime={animeDetailViewData(anime)} localizedNames={names} similar={similar} weekLinks={<><Suspense fallback={null}><AnimeCurrentRanking id={anime.id} locale={locale} /></Suspense><Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense></>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
+    <AnimeDetailView anime={animeDetailViewData(anime)} localizedNames={names} similar={similar} weekLinks={<><SearchPresetCta anime={anime} locale={locale} /><Suspense fallback={null}><AnimeCurrentRanking id={anime.id} locale={locale} /></Suspense><Suspense fallback={null}><AnimeWeekLinks id={anime.id} locale={locale} /></Suspense></>} intro={animeIntro(anime, { ...animeRatings, imdbRating: availability.ratings.imdbRating }, locale)}
       dubbing={<DubbingSummary malId={anime.idMal} locale={locale} followLocale />}
       synopsis={<LocalizedSynopsis followLocale initial={synopsis} retryMissing anilistId={anime.id} locale={locale} original={animeDescription(anime.description)} titles={aliases} year={year} kind={anime.format === 'MOVIE' ? 'movie' : 'tv'} className="synopsis detail-synopsis" />}
       imdb={<DetailImdbRating id={anime.id} availability={availability} name={name} locale={locale} />}
