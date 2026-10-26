@@ -119,8 +119,8 @@ describe('SEO sitemap', () => {
       'https://anime.example/sitemaps/sitemap/2026.xml',
     ]);
     vi.mocked(getSeoWeeks).mockResolvedValue([]);
-    // TMDB is unconfigured here, so no platform list qualifies: 17 hub paths.
-    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(17 * 6);
+    // TMDB is unconfigured here, so no platform list qualifies: 19 hub paths (incl. /search/hentai, /search/mild-nudity).
+    expect(await sitemap({ id: Promise.resolve('pages') })).toHaveLength(19 * 6);
     expect(getSeoWeeks).toHaveBeenCalledOnce();
     expect(getSeason).not.toHaveBeenCalled();
     expect(await sitemap({ id: Promise.resolve('2026') })).toEqual([]);

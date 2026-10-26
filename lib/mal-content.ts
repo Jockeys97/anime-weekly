@@ -24,3 +24,11 @@ export async function readMildNudityIds(): Promise<number[] | null> {
 export async function readHentaiIds(): Promise<number[] | null> {
   return HX_IDS ? [...HX_IDS] : null;
 }
+
+/** Which Search content landing an anime belongs to (Hx wins over R+). */
+export function malContentPreset(anime: { idMal?: number | null; isAdult?: boolean | null }): 'hentai' | 'mild-nudity' | undefined {
+  const id = anime.idMal ?? 0;
+  if (anime.isAdult === true || (id && HX_IDS?.includes(id))) return 'hentai';
+  if (id && IDS?.includes(id)) return 'mild-nudity';
+  return undefined;
+}

@@ -602,5 +602,13 @@
     "position": "{source}: n.º {rank} · {week}",
     "similarRule": "El orden prioriza las recomendaciones de AniList más votadas y las etiquetas compartidas, ponderadas por relevancia y rareza. Géneros, popularidad y puntuación tienen menos peso; cada franquicia aparece como máximo dos veces.",
     "genreRule": "Las puntuaciones de IMDb y MyAnimeList requieren al menos {count} votos por fuente; se promedian las puntuaciones válidas. Si ninguna cumple el requisito, se usa la puntuación media de AniList convertida a una escala de 10."
+  },
+  "searchPromo": {
+    "hentaiTitle": "Anime hentai: todos los títulos Hx en un filtro",
+    "hentaiDescription": "Todo el anime Hx (Rx - Hentai) de MAL en una lista en Weekly Anime: hentai en emisión, OVAs y nuevos episodios, con info de streaming. Adultos 18+.",
+    "mildTitle": "Anime Mild Nudity (R+): ecchi sin Hx completo",
+    "mildDescription": "Todo el anime con clasificación R+ - Mild Nudity en MyAnimeList, filtrado en Weekly Anime: fanservice y ecchi sin contenido Hx explícito.",
+    "seeHentai": "Ver todo el hentai",
+    "seeMild": "Ver todo el anime Mild Nudity (R+)"
   }
 }
