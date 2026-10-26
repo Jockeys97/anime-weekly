@@ -22,3 +22,18 @@ it('keeps at least four whole romaji words and strips trailing periods', () => {
 it('includes and deduplicates every published synonym', () => {
   expect(animeAlternateNames('Example', { english: 'Example', romaji: 'Romaji', native: '日本語' }, ['Alias', 'Alias', 'ＥＸＡＭＰＬＥ', '別名'])).toEqual(['Romaji', '日本語', 'Alias', '別名']);
 });
+it('labels adult titles as hentai and keeps the next episode date (es)', () => {
+  const { anime } = animeSeoRegressionExamples[0];
+  const airingAt = Date.UTC(2026, 10, 26, 15) / 1000;
+  const adult = { ...anime, format: 'OVA', isAdult: true, nextAiringEpisode: { episode: 2, airingAt, timeUntilAiring: 1 } };
+  const seo = animeDetailSeo('NTR Kishi', adult as never, '', 'es');
+  expect(seo.title).toMatch(/^NTR Kishi hentai OVA episodio 2: estreno 26 nov/);
+  expect(seo.title.length).toBeLessThanOrEqual(75);
+  expect(seo.description).toMatch(/^NTR Kishi: hentai OVA\. Episodio 2: estreno 26 nov 2026\./);
+  expect(animeDetailSeo('Example', { ...anime, format: 'OVA' }, '', 'es').title).not.toContain('hentai');
+});
+it('keeps the hentai label on long adult titles without a scheduled episode', () => {
+  const { anime } = animeSeoRegressionExamples[0];
+  const seo = animeDetailSeo('Seishidouin no Oshigoto The Animation', { ...anime, format: 'OVA', isAdult: true, nextAiringEpisode: null } as never, '', 'es');
+  expect(seo.title).toBe('Seishidouin no Oshigoto The Animation hentai OVA – dónde verlo');
+});
