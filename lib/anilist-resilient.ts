@@ -8,7 +8,13 @@ import type { Season } from '@/lib/season';
 // is already in it must not queue another live AniList lookup first.
 export async function getAnimeWithSnapshot(id: number) {
   const saved = await withTimeout(findSnapshotAnime(id), 3000).catch(() => null);
-  if (saved) return saved;
+  if (saved) {
+    if (typeof saved.isAdult === 'boolean') return saved;
+    // Older snapshots (still warm in cache) lack isAdult, which detail SEO
+    // needs. Prefer live details; on failure keep the saved soft fallback.
+    const live = await withTimeout(getAnime(id), 6000).catch(() => null);
+    return live ?? saved;
+  }
   // Historical titles still use live/cached details; a timeout is transient,
   // never a confirmed not-found and never cached as an empty detail page.
   return withTimeout(getAnime(id), 6000);
