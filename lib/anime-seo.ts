@@ -8,6 +8,7 @@ import { animeAlternateNames } from '@/lib/anime-titles';
 const formats: Record<string, string> = {
   TV: 'Serie TV', TV_SHORT: 'Serie TV', MOVIE: 'Film', OVA: 'OVA', ONA: 'ONA', SPECIAL: 'Special',
 };
+const capitalize = (text: string, locale: Locale) => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
 const compact = (text: string) => text.replace(/\s+/g, ' ').trim();
 
 function truncate(text: string, limit: number): string {
@@ -28,13 +29,15 @@ function truncateAnimeName(name: string, limit: number): string {
   return selected.join(' ') + '…';
 }
 
-function ctrTitle(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'> & { format?: string | null }, locale: Locale) {
+function ctrTitle(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'> & { format?: string | null }, locale: Locale, adult = false) {
   name = compact(name).replace(/\.+$/, '');
   const d = getDictionary(locale).seo;
   const next = nextAnimeEpisode(anime);
   const date = next && new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: locale === 'it' ? 'Europe/Rome' : 'UTC' }).format(next.date);
-  const suffix = next ? ` ${d.ctrEpisode} ${next.episode}: ${d.ctrRelease} ${date} – ${d.ctrWatch}` : ` – ${d.ctrWatchDate}`;
-  const format = anime.format ? ` ${anime.format === 'TV_SHORT' ? 'TV' : anime.format}` : '';
+  const suffix = next ? ` ${d.ctrEpisode} ${next.episode}: ${d.ctrRelease} ${date} – ${d.ctrWatch}` : ` – ${adult ? d.ctrWatch : d.ctrWatchDate}`;
+  const base = anime.format ? ` ${anime.format === 'TV_SHORT' ? 'TV' : anime.format}` : '';
+  // Adult (AniList isAdult) titles: searchers qualify with "hentai"; front-load it next to the name.
+  const format = adult ? ` hentai${base}` : base;
   const label = name.length + format.length + suffix.length <= 75 ? format : '';
   return truncateAnimeName(name, 75 - suffix.length - label.length) + label + suffix;
 }
@@ -43,7 +46,7 @@ function ctrTitle(name: string, anime: Pick<AniListAnime, 'nextAiringEpisode'> &
 // performs no I/O and never treats the AniList/MAL score as an IMDb rating.
 export function animeDetailSeo(
   name: string,
-  anime: Parameters<typeof formatAnimeSeo>[1] & Pick<AniListAnime, 'title' | 'relations' | 'synonyms'>,
+  anime: Parameters<typeof formatAnimeSeo>[1] & Pick<AniListAnime, 'title' | 'relations' | 'synonyms' | 'isAdult'>,
   synopsis: string,
   locale: Locale,
   ratings: Ratings = {},
@@ -52,11 +55,13 @@ export function animeDetailSeo(
   const aliases = animeAlternateNames(name, anime.title, anime.synonyms);
   const next = nextAnimeEpisode(anime);
   const d = getDictionary(locale).seo;
-  const episode = next ? `${d.ctrEpisode} ${next.episode}: ${d.ctrRelease} ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: locale === 'it' ? 'Europe/Rome' : 'UTC' }).format(next.date)}.` : '';
+  const adult = anime.isAdult === true;
+  const episode = next ? `${capitalize(d.ctrEpisode, locale)} ${next.episode}: ${d.ctrRelease} ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: locale === 'it' ? 'Europe/Rome' : 'UTC' }).format(next.date)}.` : '';
   const intro = [episode, animeIntro({ ...anime, nextAiringEpisode: null }, ratings, locale)].filter(Boolean).join(' ');
   const format = anime.format || '';
-  const description = [intro, format && `${format}.`, aliases.length && `${getDictionary(locale).seo.alsoKnownAs}: ${aliases.join(' · ')}.`, compact(synopsis), getDictionary(locale).seo.detailContext].filter(Boolean).join(' ');
-  return { title: ctrTitle(name, anime, locale), description: truncate(description, 160) };
+  const lead = adult ? `${d.adultLead.replace('{name}', name).replace('{format}', format || 'anime')}` : '';
+  const description = [lead, intro, !adult && format && `${format}.`, aliases.length && `${getDictionary(locale).seo.alsoKnownAs}: ${aliases.join(' · ')}.`, compact(synopsis), getDictionary(locale).seo.detailContext].filter(Boolean).join(' ');
+  return { title: ctrTitle(name, anime, locale, adult), description: truncate(description, 160) };
 }
 
 // Inputs come from the detail's existing server loaders. Never infer offers from
