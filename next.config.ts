@@ -3,9 +3,11 @@ const config: NextConfig = {
   output: 'standalone',
   // Public files are not fingerprinted: cache with a bounded TTL, not immutable.
   // Next already serves fingerprinted /_next/static assets as immutable.
-  async headers() { return ['/logos/:path*', '/icon.svg'].map(source => ({
+  async headers() { return [...['/logos/:path*', '/icon.svg'].map(source => ({
     source, headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
-  })); },
+  })),
+  // API endpoints (watch redirects, .ics downloads) are never pages: keep them out of the index.
+  { source: '/api/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]; },
   experimental: { globalNotFound: true },
   async redirects() { return [
   ...(process.env.VERCEL_ENV === 'production' ? ['anime-weekly\\.vercel\\.app', 'anime-weekly-[a-z0-9-]+\\.vercel\\.app'].map(host => ({

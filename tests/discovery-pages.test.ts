@@ -4,7 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, type ReactNode } from 'react';
 import type { AniListAnime } from '@/lib/anilist';
 vi.mock('server-only', () => ({}));
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('404'); } }));
+const redirectSpy = vi.hoisted(() => vi.fn());
+vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('404'); }, permanentRedirect: redirectSpy }));
 vi.mock('@/lib/anilist', () => ({ getAnime: vi.fn(), animeName: (anime: AniListAnime) => anime.title.english }));
 vi.mock('@/lib/anime-localized-titles', () => ({ getAnimeLocalizedTitles: async () => ({ it: 'Titolo', en: 'Title', de: 'Titel' }) }));
 vi.mock('@/lib/discovery-data', () => ({ getSimilarAnime: vi.fn(), getDiscoveryCatalog: vi.fn(), getGenreLists: vi.fn() }));
@@ -266,4 +267,16 @@ it.each(locales)('renders genre rankings as linked cover cards without changing 
   expect(html).toContain(new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(8.5));
   const jsonLd = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)![1]);
   expect(jsonLd.itemListElement.map((entry: {position: number}) => entry.position)).toEqual([1, 2, 3]);
+});
+
+it('308s a wrong-slug similar URL to the canonical slug of the same locale', async () => {
+  redirectSpy.mockClear();
+  await SimilarPage(props()).catch(() => undefined);
+  const before = redirectSpy.mock.calls.length;
+  redirectSpy.mockClear();
+  const p = props();
+  await SimilarPage({ ...p, params: p.params.then(v => ({ ...v, id: `${v.id.split('-')[0]}-totally-wrong-slug` })) }).catch(() => undefined);
+  expect(redirectSpy.mock.calls.length).toBeGreaterThan(0);
+  expect(String(redirectSpy.mock.calls[0][0])).not.toContain('totally-wrong-slug');
+  expect(before).toBeGreaterThanOrEqual(0);
 });

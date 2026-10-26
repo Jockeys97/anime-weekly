@@ -79,10 +79,12 @@ export default async function AnimePage({ params }: Props) {
   if (!anime) return <DetailTemporarilyUnavailable locale={locale} />;
   const namesPromise = getAnimeLocalizedTitles(anime.id, animeName(anime));
   // Numeric URLs need only the canonical title, not optional provider cards.
-  if (/^\d+$/.test((await params).id)) {
+  // Numeric or wrong-slug URLs 308 to the canonical slug of this locale, so
+  // Google never sees duplicate slug variants (GSC: duplicate w/o canonical).
+  {
     const names = await namesPromise;
     const path = animePath(anime.id, names[locale] || animeName(anime));
-    if (path !== `/anime/${anime.id}`) permanentRedirect(localePath(path, locale));
+    if (path !== `/anime/${safeDecode((await params).id)}`) permanentRedirect(localePath(path, locale));
   }
   // Resolve optional cards with the core data so streamed sections cannot push
   // the episode chart or streaming information down after the initial paint.
@@ -155,3 +157,7 @@ function DetailAvailability({ availability, name, locale, id }: { availability: 
   }} />;
 }
 
+
+function safeDecode(value: string): string {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
