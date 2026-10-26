@@ -1,4 +1,4 @@
-import { readMildNudityIds } from '@/lib/mal-content';
+import { readMildNudityIds, readHentaiIds } from '@/lib/mal-content';
 import 'server-only';
 import { cleanSynopsis, displayTitle } from '@/lib/title-text';
 import type { AnimeFilters } from '@/lib/anime-search';
@@ -132,10 +132,11 @@ export async function discoverAnime(filters: AnimeFilters): Promise<AniListPage 
   const sorts = { relevance: filters.q ? 'SEARCH_MATCH' : 'POPULARITY_DESC', popular: 'POPULARITY_DESC', score: 'SCORE_DESC', newest: 'START_DATE_DESC', trending: 'TRENDING_DESC' };
   const variables: Record<string, string | number | number[] | string[]> = { page: filters.page, sort: sorts[filters.sort] };
   const definitions = ['$page: Int!', '$sort: [MediaSort!]'];
-  const argumentsList = ['type: ANIME', 'isAdult: false', 'sort: $sort'];
+  // MAL Hx titles are adult on AniList; every other search stays isAdult: false.
+  const argumentsList = ['type: ANIME', `isAdult: ${filters.malRating === 'hx'}`, 'sort: $sort'];
   let verifiedMalIds: Set<number> | undefined;
-  if (filters.malRating === 'r-plus') {
-    const ids = await readMildNudityIds();
+  if (filters.malRating) {
+    const ids = filters.malRating === 'hx' ? await readHentaiIds() : await readMildNudityIds();
     if (!ids?.length) {
       return { ...emptyPage(filters.page), unavailable: true };
     }

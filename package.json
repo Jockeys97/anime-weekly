@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
-    "refresh:mal-r-plus": "node scripts/refresh-mal-r-plus.mjs"
+    "refresh:mal-r-plus": "node scripts/refresh-mal-r-plus.mjs",
+    "refresh:mal-hx": "node scripts/refresh-mal-hx.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

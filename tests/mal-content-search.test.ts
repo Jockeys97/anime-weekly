@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ unstable_cache: (fn: unknown) => fn }));
-vi.mock('@/lib/mal-content', () => ({ readMildNudityIds: vi.fn() }));
+vi.mock('@/lib/mal-content', () => ({ readMildNudityIds: vi.fn(), readHentaiIds: vi.fn() }));
 vi.mock('@/lib/rate-limited-fetch', () => ({ anilistFetch: vi.fn() }));
-import { readMildNudityIds } from '@/lib/mal-content';
+import { readHentaiIds, readMildNudityIds } from '@/lib/mal-content';
 import { anilistFetch } from '@/lib/rate-limited-fetch';
 import { discoverAnime } from '@/lib/anilist';
 import { parseAnimeFilters, searchHref } from '@/lib/anime-search';
@@ -38,4 +38,30 @@ it('rejects a response containing an unverified or different-season MAL identity
   vi.mocked(readMildNudityIds).mockResolvedValue([11]);
   vi.mocked(anilistFetch).mockResolvedValue(Response.json({ data: { Page: { media: [{ id: 1, idMal: 22 }], pageInfo: { hasNextPage: false } } } }));
   expect(await discoverAnime(parseAnimeFilters({ malRating: 'r-plus' }))).toMatchObject({ unavailable: true, media: [] });
+});
+
+it('parses the Hx filter and keeps it in pagination links', () => {
+  const filters = parseAnimeFilters({ malRating: 'hx', page: '2' });
+  expect(filters.malRating).toBe('hx'); expect(searchHref(filters, 3)).toContain('malRating=hx');
+  expect(parseAnimeFilters({ malRating: ['r-plus', 'hx'] }).malRating).toBeUndefined();
+});
+it('filters by the Hx MAL allowlist and switches AniList to adult media only', async () => {
+  vi.mocked(readHentaiIds).mockResolvedValue([188, 203]);
+  vi.mocked(anilistFetch).mockResolvedValue(Response.json({ data: { Page: { media: [{ id: 1, idMal: 188 }], pageInfo: { hasNextPage: false } } } }));
+  expect((await discoverAnime(parseAnimeFilters({ malRating: 'hx' }))).unavailable).toBeFalsy();
+  const body = JSON.parse(vi.mocked(anilistFetch).mock.calls[0][1]!.body as string);
+  expect(body.query).toContain('isAdult: true'); expect(body.query).toContain('idMal_in: $malIds');
+  expect(body.variables.malIds).toEqual([188, 203]); expect(readMildNudityIds).not.toHaveBeenCalled();
+});
+it('keeps R+ and ordinary searches non-adult', async () => {
+  vi.mocked(readMildNudityIds).mockResolvedValue([11]);
+  vi.mocked(anilistFetch).mockResolvedValue(Response.json({ data: { Page: { media: [], pageInfo: { hasNextPage: false } } } }));
+  await discoverAnime(parseAnimeFilters({ malRating: 'r-plus' })); await discoverAnime(parseAnimeFilters({}));
+  for (const call of vi.mocked(anilistFetch).mock.calls) expect(JSON.parse(call[1]!.body as string).query).toContain('isAdult: false');
+  expect(readHentaiIds).not.toHaveBeenCalled();
+});
+it('shows unavailable when the Hx index is missing', async () => {
+  vi.mocked(readHentaiIds).mockResolvedValue(null);
+  expect(await discoverAnime(parseAnimeFilters({ malRating: 'hx' }))).toMatchObject({ unavailable: true, media: [] });
+  expect(anilistFetch).not.toHaveBeenCalled();
 });

@@ -288,6 +288,8 @@
     "scoreHint": "Score filter uses the AniList average, converted to a 10-point scale.",
     "mildNudity": "Only R+ · Mild Nudity",
     "mildNudityHint": "Only exact-season MAL entries with a verified R+ classification.",
+    "hentai": "Only Hx · Hentai",
+    "hentaiHint": "Only MAL entries with a verified Hx (Rx - Hentai) classification. Adult 18+ content.",
     "discover": "Discover anime",
     "results": "results on this page",
     "loading": "Finding anime…",

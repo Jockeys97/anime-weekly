@@ -282,6 +282,8 @@
     "scoreHint": "Il filtro usa il voto medio AniList, convertito in una scala da 1 a 10.",
     "mildNudity": "Solo R+ · Mild Nudity",
     "mildNudityHint": "Mostra solo le schede MAL con classificazione R+ verificata, della stagione precisa.",
+    "hentai": "Solo Hx · Hentai",
+    "hentaiHint": "Mostra solo le schede MAL con classificazione Hx (Rx - Hentai) verificata. Contenuti per adulti 18+.",
     "discover": "Anime da scoprire",
     "results": "risultati in questa pagina",
     "loading": "Ricerca degli anime…",
