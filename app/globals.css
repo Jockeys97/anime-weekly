@@ -307,6 +307,8 @@
 /* Keep the three clamped lines and translation attribution through enrichment. */
 .catalog-card .catalog-synopsis { min-height: 3lh; }
 .catalog-card .synopsis-fallback { min-height: 3em; }
+.catalog-card .synopsis-expandable[role=button] { cursor: pointer; }
+.catalog-card .catalog-synopsis.is-expanded { display: block; -webkit-line-clamp: unset; overflow: visible; }
 /* Missing/retried scores and series notices need more than the value baseline. */
 .catalog-card .rating-tile, .anime-detail .rating-tile { min-height: 160px; }
 /* Recovery can add series notes and provider rows to the static detail section. */
@@ -451,6 +453,7 @@ html:has([data-tier-dragging="true"]) { scroll-behavior: auto; }
 
 .explore-classification { display: flex; align-items: center; gap: 9px; margin-top: 18px; font-size: 14px; cursor: pointer; }
 .anime-search-filters .explore-classification input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; flex: 0 0 18px; accent-color: var(--dark); }
+.anime-search-filters .explore-classification + .explore-fields { margin-top: 18px; }
 
 /* Multi-genre search: native disclosure, touch-sized choices, AND semantics. */
 .search-genres{min-width:0;font-size:14px;font-weight:600}

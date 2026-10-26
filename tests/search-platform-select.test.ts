@@ -20,13 +20,13 @@ it('puts the instant platform select in the search form without submitting it', 
   expect(platform).toContain('>Prime Video<');
 });
 
-it('places the optional MAL checkbox below the field grid and preserves its selected state', () => {
+it('places the optional MAL checkboxes above the field grid (before Genres) and preserves its selected state', () => {
   const html = renderToStaticMarkup(React.createElement(LocaleProvider, { locale: 'en', children:
     React.createElement(StreamingCountryProvider, null,
       React.createElement(PlatformOptionsProvider, null, React.createElement(AnimeSearchFilters, { filters: parseAnimeFilters({ malRating: 'r-plus' }), locale: 'en' }))) }));
   expect(html).toContain('name="malRating"'); expect(html).toContain('value="r-plus"');
   expect(html).toMatch(/type="checkbox"[^>]*name="malRating"[^>]*checked=""/); expect(html).toContain('value="hx"');
-  expect(html.indexOf('explore-classification')).toBeGreaterThan(html.indexOf('>Platform<'));
+  expect(html.indexOf('explore-classification')).toBeLessThan(html.indexOf('explore-fields'));
   expect(html).toContain('Only R+ · Mild Nudity');
 });
 
