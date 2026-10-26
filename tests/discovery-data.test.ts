@@ -56,3 +56,10 @@ it('falls back to the catalog score for cold, stale, low-vote and unrelated MAL 
     expect(items[0].sources).toEqual([{ name: 'AniList', score: 8.5, votes: 0, minimum: 0 }]);
   }
 });
+
+it('keeps adult titles and the Hentai genre out of mainstream seasonal discovery', async () => {
+  const data = await getGenreLists([{ ...anime, genres: ['Action', 'Hentai'] }, { ...anime, id: 2, isAdult: true, genres: ['Hentai', 'Action'] }]);
+  expect(data.media.map(item => item.id)).toEqual([1]);
+  expect(data.lists.map(list => list.genre)).toEqual(['Action']);
+  expect(data.lists[0].items.map(item => item.anime.id)).toEqual([1]);
+});

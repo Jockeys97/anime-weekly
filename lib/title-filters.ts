@@ -26,7 +26,7 @@ export function filterOptions(titles: readonly FilterTitle[], region: StreamingR
     if (previous) platforms.set(...previous);
   }
   return {
-    genres: [...new Set(titles.flatMap(title => title.genres ?? []))].sort(),
+    genres: [...new Set(titles.flatMap(title => title.genres ?? []))].filter(genre => genre !== 'Hentai').sort(),
     platforms: [...platforms.entries()].sort((a, b) => a[1].localeCompare(b[1])),
   };
 }

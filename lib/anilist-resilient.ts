@@ -25,13 +25,15 @@ export async function getSeasonWithSnapshot(year: number, season: Season, page =
   // failed. Reads never replace it with an empty or partial live response.
   const snapshot = await withTimeout(readAniListSnapshotSeason(year, season), 4000).catch(() => null);
   if (snapshot) {
+    const media = snapshot.media.filter(anime => !anime.isAdult);
     const offset = (page - 1) * 50;
     return {
-      media: snapshot.media.slice(offset, offset + 50),
-      pageInfo: { currentPage: page, hasNextPage: offset + 50 < snapshot.count },
+      media: media.slice(offset, offset + 50),
+      pageInfo: { currentPage: page, hasNextPage: offset + 50 < media.length },
       stale: true,
     };
   }
   return withTimeout(getSeason(year, season, page, { maxWaitMs: 6000 }), 6000)
+    .then(result => ({ ...result, media: result.media.filter(anime => !anime.isAdult) }))
     .catch(() => ({ media: [], pageInfo: { currentPage: page, hasNextPage: false }, unavailable: true }));
 }

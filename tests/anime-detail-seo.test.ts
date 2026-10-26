@@ -37,3 +37,13 @@ it('keeps the hentai label on long adult titles without a scheduled episode', ()
   const seo = animeDetailSeo('Seishidouin no Oshigoto The Animation', { ...anime, format: 'OVA', isAdult: true, nextAiringEpisode: null } as never, '', 'es');
   expect(seo.title).toBe('Seishidouin no Oshigoto The Animation hentai OVA – dónde verlo');
 });
+
+it.each(locales)('isolates adult detail SEO from mainstream detail metadata (%s)', locale => {
+  const { anime } = animeSeoRegressionExamples[0];
+  for (const isAdult of [false, undefined, true]) {
+    const seo = animeDetailSeo('Example', { ...anime, isAdult, format: 'OVA', nextAiringEpisode: null }, 'Synopsis.', locale);
+    for (const text of [seo.title, seo.description]) {
+      expect(/hentai/i.test(text)).toBe(isAdult === true);
+    }
+  }
+});

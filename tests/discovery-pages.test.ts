@@ -280,3 +280,15 @@ it('308s a wrong-slug similar URL to the canonical slug of the same locale', asy
   expect(String(redirectSpy.mock.calls[0][0])).not.toContain('totally-wrong-slug');
   expect(before).toBeGreaterThanOrEqual(0);
 });
+
+it.each(locales)('redirects the old adult genre route before reading mainstream lists (%s)', async locale => {
+  redirectSpy.mockImplementationOnce(() => { throw new Error('308'); });
+  await expect(genreMetadata({ params: Promise.resolve({ locale, genre: 'hentai' }) })).rejects.toThrow('308');
+  expect(redirectSpy).toHaveBeenCalledWith(localePath('/search/hentai', locale));
+});
+
+it('excludes the adult genre route from discovery sitemaps even with stale genre lists', async () => {
+  vi.mocked(getDiscoveryCatalog).mockResolvedValue([]);
+  vi.mocked(getGenreLists).mockResolvedValue({ season: { season: 'fall', year: 2026 }, media: [], lists: [{ genre: 'Hentai', items: Array.from({ length: 5 }, (_, i) => row(i + 1)) }] });
+  expect((await getDiscoverySitemap()).some(entry => entry.url.includes('/best-this-season/hentai'))).toBe(false);
+});

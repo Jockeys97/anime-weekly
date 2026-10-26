@@ -13,7 +13,7 @@ const formats = new Set(['TV', 'TV_SHORT', 'MOVIE', 'ONA', 'OVA']);
 function seasonItems(media: AniListAnime[], season: AnimeSeason): TierItem[] {
   const unique = new Map<number, AniListAnime>();
   for (const anime of media) {
-    if (anime.seasonYear !== season.year || anime.season?.toLowerCase() !== season.season || !formats.has(anime.format || '')) continue;
+    if (anime.isAdult || anime.seasonYear !== season.year || anime.season?.toLowerCase() !== season.season || !formats.has(anime.format || '')) continue;
     if (!unique.has(anime.id)) unique.set(anime.id, anime);
   }
   return [...unique.values()].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0) || a.id - b.id).slice(0, 200)

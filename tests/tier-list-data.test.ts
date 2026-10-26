@@ -12,7 +12,7 @@ const anime = (id: number, extra: Partial<AniListAnime> = {}) => ({ id, title: {
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(readSharedSimilarCatalog).mockResolvedValue([]); });
 afterEach(() => vi.useRealTimers());
 it('uses the daily cached season without upstream pagination and keeps the large export cover', async () => {
-  vi.mocked(readSharedSimilarCatalog).mockResolvedValue([anime(1), anime(3), anime(1), anime(2, { season: 'SUMMER' }), anime(4, { seasonYear: 2025 }), anime(5, { format: 'MUSIC' })]);
+  vi.mocked(readSharedSimilarCatalog).mockResolvedValue([anime(1), anime(3), anime(1), anime(2, { season: 'SUMMER' }), anime(4, { seasonYear: 2025 }), anime(5, { format: 'MUSIC' }), anime(6, { isAdult: true })]);
   const result = await getTierListData(season);
   expect(result.items.map(item => item.id)).toEqual([3, 1]);
   expect(result.items[0]).toMatchObject({ poster: 'https://s4.anilist.co/small.jpg', exportPoster: 'https://s4.anilist.co/large.jpg' });
@@ -20,7 +20,7 @@ it('uses the daily cached season without upstream pagination and keeps the large
   expect(getSeason).not.toHaveBeenCalled();
 });
 it('falls back to cached exact-season pagination when the shared catalog is absent', async () => {
-  vi.mocked(getSeason).mockResolvedValueOnce({ media: [anime(1)], pageInfo: { currentPage: 1, hasNextPage: true } })
+  vi.mocked(getSeason).mockResolvedValueOnce({ media: [anime(1), anime(99, { isAdult: true })], pageInfo: { currentPage: 1, hasNextPage: true } })
     .mockResolvedValueOnce({ media: [anime(2)], pageInfo: { currentPage: 2, hasNextPage: false } });
   const result = await getTierListData(season);
   expect(result.items.map(item => item.id)).toEqual([2, 1]);

@@ -30,7 +30,7 @@ export function episodeTitle(name: string, episode: number, locale: Locale): str
 export { rankSimilar } from '@/lib/discovery-similarity';
 export function rankGenre(catalog: readonly AniListAnime[], genre: string, ratings: Record<number, Ratings>) {
   return [...new Map(catalog.map(anime => [anime.id, anime])).values()].flatMap(anime => {
-    if (!anime.genres.includes(genre)) return [];
+    if (anime.isAdult || genre === 'Hentai' || !anime.genres.includes(genre)) return [];
     const r = ratings[anime.id] ?? {};
     const sources = [
       { name: 'IMDb', score: Number(r.imdbRating), votes: imdbVoteCount(r.imdbVotes), minimum: MIN_IMDB_VOTES },
