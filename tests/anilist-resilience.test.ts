@@ -140,3 +140,19 @@ it('bounds the shared AniList queue wait for live detail lookups', async () => {
   expect(queueWaits.at(-1)).toBe(DETAIL_QUEUE_WAIT_MS);
   expect(DETAIL_QUEUE_WAIT_MS).toBeLessThanOrEqual(6000);
 });
+
+it('falls through to live details when a saved title lacks isAdult (legacy snapshot)', async () => {
+  const { isAdult: _omit, ...legacy } = anime;
+  files.set('anilist/seasons/2026-fall.json', { ...snapshot, media: [legacy] });
+  const live = { ...anime, isAdult: true };
+  vi.mocked(fetch).mockResolvedValue(Response.json({ data: { Media: live } }));
+  expect(await getAnimeWithSnapshot(21)).toMatchObject({ id: 21, isAdult: true });
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('keeps the legacy saved title when the live fallthrough fails', async () => {
+  const { isAdult: _omit, ...legacy } = anime;
+  files.set('anilist/seasons/2026-fall.json', { ...snapshot, media: [legacy] });
+  vi.mocked(fetch).mockRejectedValue(new Error('offline'));
+  expect(await getAnimeWithSnapshot(21)).toEqual(legacy);
+});

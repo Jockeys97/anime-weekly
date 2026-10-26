@@ -41,6 +41,8 @@ function validAnime(value: unknown): value is AniListAnime {
   if (start !== null && !(record(start) && ['year', 'month', 'day'].every(key => numberOrNull(start[key])))) return false;
   if (value.studios !== null && !(record(value.studios) && Array.isArray(value.studios.nodes) && value.studios.nodes.every(node => record(node) && validId(node.id) && typeof node.name === 'string'))) return false;
   if (value.updatedAt !== undefined && !numberOrNull(value.updatedAt)) return false;
+  // Optional for snapshots written before isAdult was persisted.
+  if (value.isAdult !== undefined && typeof value.isAdult !== 'boolean') return false;
   if (value.trailer != null && !(record(value.trailer) && stringOrNull(value.trailer.id) && stringOrNull(value.trailer.site))) return false;
   if (value.nextAiringEpisode != null && !(record(value.nextAiringEpisode) && validId(value.nextAiringEpisode.episode) && typeof value.nextAiringEpisode.airingAt === 'number' && Number.isFinite(value.nextAiringEpisode.airingAt))) return false;
   if (value.stats != null && !(record(value.stats) && (value.stats.scoreDistribution === undefined || (Array.isArray(value.stats.scoreDistribution) && value.stats.scoreDistribution.every(item => record(item) && typeof item.amount === 'number' && Number.isFinite(item.amount)))))) return false;
@@ -60,6 +62,8 @@ function displayedFields(anime: AniListAnime): AniListAnime {
     episodes: anime.episodes, format: anime.format, status: anime.status, genres: [...anime.genres], averageScore: anime.averageScore,
     studios: anime.studios && { nodes: anime.studios.nodes.map(({ id, name }) => ({ id, name })) },
     season: anime.season, seasonYear: anime.seasonYear,
+    // Detail SEO (adult "hentai" titles) depends on it; keep only real booleans.
+    ...(typeof anime.isAdult === 'boolean' ? { isAdult: anime.isAdult } : {}),
     stats: anime.stats && { scoreDistribution: anime.stats.scoreDistribution?.map(({ amount }) => ({ amount })) },
     trailer: anime.trailer && { id: anime.trailer.id, site: anime.trailer.site },
     nextAiringEpisode: anime.nextAiringEpisode && { episode: anime.nextAiringEpisode.episode, airingAt: anime.nextAiringEpisode.airingAt },

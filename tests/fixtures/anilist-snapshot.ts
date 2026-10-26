@@ -5,7 +5,7 @@ export const anime: AniListAnime = {
   id: 21, idMal: 123, title: { english: 'Saved anime', romaji: 'Saved anime', native: null },
   coverImage: { large: 'https://s4.anilist.co/cover.jpg', extraLarge: null, color: null },
   bannerImage: null, description: 'Saved synopsis', startDate: { year: 2026, month: 10, day: 1 },
-  episodes: 12, format: 'TV', status: 'RELEASING', genres: ['Action'], averageScore: 81,
+  episodes: 12, isAdult: false, format: 'TV', status: 'RELEASING', genres: ['Action'], averageScore: 81,
   studios: { nodes: [{ id: 1, name: 'Studio' }] }, season: 'FALL', seasonYear: 2026,
   nextAiringEpisode: { episode: 3, airingAt: 1792886400 }, trailer: { id: 'official', site: 'youtube' },
   relations: { edges: [] }, stats: { scoreDistribution: [{ amount: 10 }] },

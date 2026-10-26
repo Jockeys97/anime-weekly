@@ -40,6 +40,7 @@ it('writes bounded fresh pages with only display fields, private deterministic k
   expect(getSeason).toHaveBeenNthCalledWith(3, 2026, 'summer', 1, expect.objectContaining({ fresh: true }));
   expect(files.get(currentKey)).toMatchObject({ version: 1, count: 2, savedAt: new Date().toISOString() });
   const saved = files.get(currentKey) as typeof snapshot;
+  expect(saved.media[0].isAdult).toBe(false);
   expect(saved.media[0]).not.toHaveProperty('secretExtra'); expect(saved.media[0].title).not.toHaveProperty('extra');
   for (const [key, , options] of vi.mocked(put).mock.calls) {
     expect([currentKey, previousKey, manifestKey]).toContain(key);
@@ -110,6 +111,7 @@ it.each([
   { ...snapshot, savedAt: 'invalid' }, { ...snapshot, media: [{ ...anime, genres: null }] },
   { ...snapshot, media: [{ ...anime, relations: { edges: [null] } }] },
   { ...snapshot, media: [{ ...anime, nextAiringEpisode: { episode: 1 } }] },
+  { ...snapshot, media: [{ ...anime, isAdult: 'yes' }] },
 ])('rejects malformed files without caching the miss: %j', async value => {
   files.set(currentKey, value);
   expect(await readAniListSnapshotSeason(2026, 'fall')).toBeNull();
@@ -145,4 +147,12 @@ it('does no storage/upstream work without a Blob token', async () => {
   expect(await snapshotHealth(new Date())).toMatchObject({ ok: false, stale: true, ageHours: null, savedAt: null, seasons: [] });
   expect(await refreshAniListSnapshot(new Date())).toMatchObject({ ok: false, written: 0 });
   expect(get).not.toHaveBeenCalled(); expect(put).not.toHaveBeenCalled(); expect(getSeason).not.toHaveBeenCalled();
+});
+
+it('keeps isAdult on read and tolerates legacy snapshots without it', async () => {
+  files.set(currentKey, { ...snapshot, media: [{ ...anime, isAdult: true }] });
+  expect((await readAniListSnapshotSeason(2026, 'fall'))?.media[0].isAdult).toBe(true);
+  const { isAdult: _omit, ...legacy } = anime;
+  files.set(previousKey, { ...snapshot, season: 'summer', media: [legacy] });
+  expect((await readAniListSnapshotSeason(2026, 'summer'))?.media[0]).not.toHaveProperty('isAdult');
 });
