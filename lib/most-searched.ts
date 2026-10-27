@@ -1,4 +1,4 @@
-// Editorial selection. IDs and English titles verified in tests/fixtures/season-families.json.
+// Editorial selection. IDs and English titles verified in tests/fixtures/{season-families,most-searched-extra}.json.
 export const mostSearched = [
   { id: 161645, name: 'The Apothecary Diaries' },
   { id: 185874, name: 'BLEACH: Thousand-Year Blood War - The Calamity' },
@@ -8,4 +8,6 @@ export const mostSearched = [
   { id: 16498, name: 'Attack on Titan' },
   { id: 21, name: 'ONE PIECE' },
   { id: 1735, name: 'Naruto: Shippuden' },
+  { id: 171018, name: 'DAN DA DAN' },
+  { id: 147103, name: 'My Happy Marriage' },
 ] as const;

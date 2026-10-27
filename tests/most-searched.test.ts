@@ -15,6 +15,8 @@ it('links only verified mainstream editorial IDs from home without runtime disco
     { id: 16498, name: 'Attack on Titan' },
     { id: 21, name: 'ONE PIECE' },
     { id: 1735, name: 'Naruto: Shippuden' },
+    { id: 171018, name: 'DAN DA DAN' },
+    { id: 147103, name: 'My Happy Marriage' },
   ]);
   expect(new Set(mostSearched.map(a => a.id)).size).toBe(mostSearched.length);
   expect(new Set(mostSearched.map(a => animePath(a.id, a.name))).size).toBe(mostSearched.length);
@@ -30,8 +32,10 @@ it('excludes adult and Hx IDs and verifies every English title against repositor
   const fixture = JSON.parse(readFileSync(new URL('./fixtures/season-families.json', import.meta.url), 'utf8')) as {
     media: { id: number; idMal?: number | null; title: { english: string }; isAdult?: boolean }[];
   };
+  const extra = JSON.parse(readFileSync(new URL('./fixtures/most-searched-extra.json', import.meta.url), 'utf8')) as typeof fixture.media;
+  const media = [...fixture.media, ...extra];
   for (const anime of mostSearched) {
-    const verified = fixture.media.find(entry => entry.id === anime.id);
+    const verified = media.find(entry => entry.id === anime.id);
     expect(verified, `Missing fixture for ${anime.id}`).toBeDefined();
     expect(verified?.title.english).toBe(anime.name);
     expect([false, undefined]).toContain(verified?.isAdult);
