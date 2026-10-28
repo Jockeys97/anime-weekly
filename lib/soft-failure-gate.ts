@@ -5,12 +5,9 @@ import { NextResponse } from 'next/server';
 // getCache falls back to an in-memory cache.
 import { getCache } from '@vercel/functions';
 
-// Real 503 for AniList soft failures. An ISR page cannot set its own status,
-// so the page records the transient failure here and proxy.ts (which runs
-// before the CDN/ISR cache) answers the same anime's detail, episode and
-// similar URLs with an uncached 503 + Retry-After while the mark lives.
-// The mark outlives the 60s soft ISR copy, so that copy is not served from
-// cache to crawlers while AniList is still failing.
+// Compatibility circuit-breaker for explicitly marked IDs. Render failures
+// must not set this gate: doing so would mask the previous good ISR page.
+// The proxy availability probe supplies first-request 503 responses.
 export const SOFT_FAILURE_GATE_TTL = 90;
 export const SOFT_FAILURE_RETRY_AFTER = 120;
 const GATE_READ_TIMEOUT_MS = 150;
@@ -39,10 +36,10 @@ export async function isAnimeUnavailable(id: number, timeoutMs = GATE_READ_TIMEO
   finally { if (timer) clearTimeout(timer); }
 }
 
-// No noindex: the 503 status plus Retry-After already means "retry later".
-export const UNAVAILABLE_HTML = '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="20"><title>503</title><p>Temporarily unavailable, retrying shortly…</p>';
+// Standalone document: no layout homepage metadata can be inherited.
+export const UNAVAILABLE_HTML = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="20"><title>Temporarily unavailable · Weekly Anime</title><meta property="og:title" content="Temporarily unavailable · Weekly Anime"></head><body><p>Temporarily unavailable, retrying shortly…</p></body></html>';
 export function animeUnavailableResponse(): NextResponse {
   return new NextResponse(UNAVAILABLE_HTML, { status: 503, headers: {
-    'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Retry-After': String(SOFT_FAILURE_RETRY_AFTER),
+    'X-Robots-Tag': 'noindex, follow', 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Retry-After': String(SOFT_FAILURE_RETRY_AFTER),
   } });
 }

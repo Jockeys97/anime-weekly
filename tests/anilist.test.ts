@@ -96,6 +96,20 @@ describe('AniList catalog (offline)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).query).toContain('trailer { id site }');
   });
+  it('falls back to expired catalog data during a transient detail failure', async () => {
+    const full = { ...anime, format: 'TV', relations: { edges: [] }, recommendations: { nodes: [] } };
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ data: { Page: { media: [full] } } }))
+      .mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { getSeason, getAnime } = await import('../lib/anilist');
+    await getSeason(2026, 'fall');
+    vi.setSystemTime(Date.now() + 3600001);
+    const pending = getAnime(21);
+    await vi.runAllTimersAsync();
+    expect(await pending).toEqual(full);
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ cache: 'no-store' });
+  });
   it('gets the requested anime by ID', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: { Media: anime } }));
     vi.stubGlobal('fetch', fetchMock);

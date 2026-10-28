@@ -1,4 +1,6 @@
-import { vi } from 'vitest';
+import { vi, beforeEach, afterEach } from 'vitest';
+beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
+afterEach(() => vi.unstubAllGlobals());
 vi.mock('@/lib/soft-failure-gate', async () => { const { NextResponse } = await import('next/server'); return { isAnimeUnavailable: vi.fn(async () => false), animeUnavailableResponse: () => new NextResponse('down', { status: 503, headers: { 'Retry-After': '120', 'Cache-Control': 'no-store' } }) }; });
 import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -118,4 +120,10 @@ describe('AniList soft-failure gate', () => {
     for (const path of ['/', '/season/2026/fall', '/anime/21', '/anime/cyberpunk', '/en/rankings/2026-43']) await proxy(new NextRequest(`https://weeklyanime.com${path}`));
     expect(isAnimeUnavailable).not.toHaveBeenCalled();
   });
+});
+
+it.each(['/anime/269-bleach', '/en/anime/269-bleach', '/anime/269-bleach/episodio-3', '/fr/anime/269-bleach/similaires'])('routes unmarked %s without an extra fetch', async path => {
+  const response = await proxy(new NextRequest(`https://weeklyanime.com${path}`));
+  expect(response.status).toBe(200);
+  expect(fetch).not.toHaveBeenCalled();
 });
