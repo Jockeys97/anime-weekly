@@ -9,10 +9,29 @@ const bots = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview/i;
 // (lib/soft-failure-gate). Only these URLs wait on the gate read; every other
 // path stays synchronous.
 const GATED_ANIME = /^\/anime\/([1-9]\d{0,9})-[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[^/]+)?\/?$/i;
+export const CACHE_PROBE_HEADER = 'x-aw-cache-probe';
+const CACHE_PROBE_TIMEOUT_MS = 4000;
 export function proxy(request: NextRequest): NextResponse | Promise<NextResponse> {
+  // The probe request itself must reach the page/CDN normally.
+  if (request.headers.get(CACHE_PROBE_HEADER)) return route(request);
   const gated = GATED_ANIME.exec(stripLocale(request.nextUrl.pathname));
   if (!gated) return route(request);
-  return isAnimeUnavailable(Number(gated[1])).then(down => down ? animeUnavailableResponse() : route(request));
+  return isAnimeUnavailable(Number(gated[1])).then(async down => {
+    if (!down) return route(request);
+    // AniList recently failed for this anime. Serve the last-good ISR copy if
+    // one exists; otherwise the render would 500, so answer 503 + Retry-After.
+    return await hasServablePage(request) ? route(request) : animeUnavailableResponse();
+  });
+}
+async function hasServablePage(request: NextRequest): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CACHE_PROBE_TIMEOUT_MS);
+  try {
+    const response = await fetch(request.nextUrl.href, { method: 'GET', redirect: 'manual', cache: 'no-store', signal: controller.signal, headers: { [CACHE_PROBE_HEADER]: '1', 'user-agent': 'weeklyanime-cache-probe' } });
+    await response.body?.cancel().catch(() => undefined);
+    return response.status < 500;
+  } catch { return false; }
+  finally { clearTimeout(timer); }
 }
 function route(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
