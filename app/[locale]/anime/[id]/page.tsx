@@ -44,8 +44,7 @@ export function generateStaticParams() { return []; }
 const loadAnime = cache(async (id: string) => {
   const numericId = parseAnimeId(id);
   if (numericId === null) notFound();
-  // A failure without a saved copy remains transient, never a cached 404 and
-  // never an HTTP 500 from error.tsx: render a short-lived soft page instead.
+  // Reject failed ISR regenerations so the last successful page stays cached.
   const anime = await softLookup(() => getAnimeWithSnapshot(numericId), { id: numericId });
   if (anime === undefined) return null;
   if (!anime) notFound();

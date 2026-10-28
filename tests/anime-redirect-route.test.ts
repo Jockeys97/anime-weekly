@@ -30,8 +30,8 @@ it.each(['Lookup timed out', 'AniList HTTP 429'])('answers %s with an uncached 5
   expect(response.status).toBe(503);
   expect(response.headers.get('cache-control')).toBe('no-store');
   expect(response.headers.get('retry-after')).toBe('120');
-  // The status alone signals "retry later"; a noindex could drop the real page.
-  expect(await response.text()).not.toContain('noindex');
+  // The temporary response must not enter the search index.
+  expect(await response.text()).toContain('noindex');
 });
 
 it('returns 404 only for a confirmed missing id', async () => {

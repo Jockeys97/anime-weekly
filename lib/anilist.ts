@@ -186,7 +186,9 @@ const getCachedAnime = unstable_cache(async (id: number): Promise<AniListAnime |
   }`;
   const response = await anilistFetch('https://graphql.anilist.co', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ query, variables: { id } }), next: { revalidate: ANILIST_REVALIDATE },
+    // unstable_cache below owns successful results. Raw HTTP 200 GraphQL
+    // errors must never be retained by the fetch cache.
+    body: JSON.stringify({ query, variables: { id } }), cache: 'no-store',
   // Leave the shared queue once a visitor would have given up. A queued lookup
   // that outlives its caller only delays later pages into the same timeout.
   }, DETAIL_QUEUE_WAIT_MS);
@@ -211,6 +213,9 @@ export async function getAnime(id: number): Promise<AniListAnime | null> {
   if (known && known.expires > Date.now()) return known.anime;
   try { return await getCachedAnime(id); }
   catch (error) {
+    // Expired catalog values remain useful during a transient outage.
+    const saved = catalogAnime.get(id);
+    if (saved) return saved.anime;
     console.error('[anilist] getAnime failed', { id, message: error instanceof Error ? error.message : 'Unknown error' });
     throw error;
   }
