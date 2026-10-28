@@ -228,12 +228,12 @@ it.each(['it', 'en', 'es', 'fr', 'de', 'pt'] as const)('loads %s synopsis and em
   expect(getSynopsis).toHaveBeenCalledWith(['Example anime'], 2026, locale, 'movie', 21);
 });
 
-it('noindexes es/fr/de/pt detail pages without a synopsis in their language, keeping it/en indexable', async () => {
+it('noindexes fr/de/pt detail pages without a synopsis in their language, keeping it/en/es indexable', async () => {
   vi.mocked(getAnime).mockResolvedValue({ id: 21, title: { english: 'Example anime', romaji: null, native: null }, description: 'Example synopsis', coverImage: null } as Awaited<ReturnType<typeof getAnime>>);
   for (const locale of ['it', 'en', 'es', 'fr', 'de', 'pt']) {
     const meta = await generateMetadata({ params: Promise.resolve({ id: '21-example-anime', locale }) });
-    expect({ locale, robots: meta.robots }).toEqual({ locale, robots: ['it', 'en'].includes(locale) ? undefined : { index: false, follow: true } });
+    expect({ locale, robots: meta.robots }).toEqual({ locale, robots: ['it', 'en', 'es'].includes(locale) ? undefined : { index: false, follow: true } });
   }
-  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'Una historia.', language: 'es', source: 'tmdb' });
-  expect((await generateMetadata({ params: Promise.resolve({ id: '21-example-anime', locale: 'es' }) })).robots).toBeUndefined();
+  vi.mocked(getSynopsis).mockResolvedValue({ synopsis: 'Una historia.', language: 'fr', source: 'tmdb' });
+  expect((await generateMetadata({ params: Promise.resolve({ id: '21-example-anime', locale: 'fr' }) })).robots).toBeUndefined();
 });

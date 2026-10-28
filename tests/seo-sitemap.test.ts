@@ -31,14 +31,15 @@ describe('SEO sitemap', () => {
     expect(urls.filter(url => /\/anime\//.test(url))).toEqual(['https://anime.example/anime/21', 'https://anime.example/anime/42']);
     expect(new Set(urls).size).toBe(urls.length);
   });
-  it('lists anime in it/en only, drops known-empty synopses, and uses only upstream anime modification dates', () => {
+  it('lists anime in it/en/es only, drops known-empty synopses, and uses only upstream anime modification dates', () => {
     const entries = buildAnimeSitemap([
       ...Array.from({ length: 80 }, (_, i) => ({ id: i + 1 })),
       { id: 1, updatedAt: 1720000000 }, { id: 1, updatedAt: 1730000000 },
       { id: 2, updatedAt: NaN }, { id: 3, updatedAt: -1 }, { id: 99, hasSynopsis: false },
     ]);
-    expect(entries).toHaveLength(80 * 2);
-    expect(entries.some(entry => /\/(es|fr|de|pt)\//.test(entry.url))).toBe(false);
+    expect(entries).toHaveLength(80 * 3);
+    expect(entries.some(entry => /\/es\//.test(entry.url))).toBe(true);
+    expect(entries.some(entry => /\/(fr|de|pt)\//.test(entry.url))).toBe(false);
     expect(entries.some(entry => entry.url.includes('/anime/99'))).toBe(false);
     expect(entries.every(entry => !('changeFrequency' in entry))).toBe(true);
     expect(entries.find(entry => entry.url.endsWith('/anime/1'))!.alternates?.languages).toHaveProperty('fr');
@@ -145,10 +146,11 @@ describe('SEO sitemap', () => {
       ['/anime/2024-year'], ['/anime/2025-year'], ['/anime/2026-year'], ['/anime/2026-year'],
     ]);
   });
-  it('treats es/fr/de/pt anime pages as indexable only with a synopsis in their own language', () => {
+  it('treats fr/de/pt anime pages as indexable only with a synopsis in their own language', () => {
     expect(animeLocaleIndexable('it', null)).toBe(true);
     expect(animeLocaleIndexable('en', null)).toBe(true);
-    for (const locale of ['es', 'fr', 'de', 'pt'] as const) {
+    expect(animeLocaleIndexable('es', null)).toBe(true);
+    for (const locale of ['fr', 'de', 'pt'] as const) {
       expect(animeLocaleIndexable(locale, null)).toBe(false);
       expect(animeLocaleIndexable(locale, 'it')).toBe(false);
       expect(animeLocaleIndexable(locale, locale)).toBe(true);

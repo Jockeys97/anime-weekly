@@ -14,10 +14,11 @@ export interface SitemapAnime { id: number; name?: string; hasSynopsis?: boolean
 
 // Indexation policy (P0, GSC "crawled - not indexed"): anime detail and
 // similar pages are listed only in the locales whose text is not a copy of
-// another locale: Italian (default) and English (the AniList original). The
+// another locale: Italian (default), English (the AniList original) and Spanish (main
+// organic traffic source; noindexing it on 25/10 collapsed clicks). The
 // other locales stay reachable through hreflang and render noindex,follow
 // unless they carry a synopsis in their own language (see animeLocaleIndexable).
-export const SITEMAP_ANIME_LOCALES = ['it', 'en'] as const satisfies readonly Locale[];
+export const SITEMAP_ANIME_LOCALES = ['it', 'en', 'es'] as const satisfies readonly Locale[];
 export const MIN_PLATFORM_TITLES = 5;
 
 export function animeLocaleIndexable(locale: Locale, synopsisLanguage: Locale | null | undefined): boolean {
