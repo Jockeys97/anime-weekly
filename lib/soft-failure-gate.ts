@@ -5,9 +5,9 @@ import { NextResponse } from 'next/server';
 // getCache falls back to an in-memory cache.
 import { getCache } from '@vercel/functions';
 
-// Compatibility circuit-breaker for explicitly marked IDs. Render failures
-// must not set this gate: doing so would mask the previous good ISR page.
-// The proxy availability probe supplies first-request 503 responses.
+// Short-lived mark set when a detail render fails on a transient AniList
+// error. It never answers a 503 by itself: proxy.ts probes the cached page
+// first and only returns 503 when no last-good copy can be served.
 export const SOFT_FAILURE_GATE_TTL = 90;
 export const SOFT_FAILURE_RETRY_AFTER = 120;
 const GATE_READ_TIMEOUT_MS = 150;

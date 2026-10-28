@@ -16,7 +16,8 @@ it('rejects transient renders without masking a previous successful ISR page', a
   expect(await softLookup(async () => null, { id: 78 })).toBeNull();
   expect(await isAnimeUnavailable(78)).toBe(false);
   await expect(softLookup(async () => { throw new Error('AniList HTTP 429'); }, { id: 77 })).rejects.toThrow('AniList HTTP 429');
-  expect(await isAnimeUnavailable(77)).toBe(false);
+  // Marked so the proxy can 503 a URL with no cached copy (it probes first).
+  expect(await isAnimeUnavailable(77)).toBe(true);
   vi.unstubAllGlobals();
 });
 it('fails open when the gate read is slow', async () => {

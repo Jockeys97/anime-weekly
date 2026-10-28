@@ -127,3 +127,36 @@ it.each(['/anime/269-bleach', '/en/anime/269-bleach', '/anime/269-bleach/episodi
   expect(response.status).toBe(200);
   expect(fetch).not.toHaveBeenCalled();
 });
+
+describe('transient AniList failure on detail URLs', () => {
+  const url = 'https://weeklyanime.com/anime/269-bleach';
+  it.each([500, 504])('answers an uncached 503 + Retry-After, never 500, when no cached copy exists (probe %s)', async status => {
+    vi.mocked(isAnimeUnavailable).mockResolvedValueOnce(true);
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('err', { status }));
+    const response = await proxy(new NextRequest(url));
+    expect(response.status).toBe(503);
+    expect(response.headers.get('retry-after')).toBe('120');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(vi.mocked(fetch).mock.calls[0][1]?.headers).toMatchObject({ 'x-aw-cache-probe': '1' });
+  });
+  it('answers 503 when the probe fails or times out', async () => {
+    vi.mocked(isAnimeUnavailable).mockResolvedValueOnce(true);
+    vi.mocked(fetch).mockRejectedValueOnce(new Error('aborted'));
+    expect((await proxy(new NextRequest(url))).status).toBe(503);
+  });
+  it('keeps serving the last-good ISR page when the cache still has it', async () => {
+    vi.mocked(isAnimeUnavailable).mockResolvedValueOnce(true);
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const response = await proxy(new NextRequest(url));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/it/anime/269-bleach');
+  });
+  it('never probes or gates when AniList is healthy, nor for the probe request itself', async () => {
+    await proxy(new NextRequest(url));
+    vi.mocked(isAnimeUnavailable).mockResolvedValue(true);
+    const probe = await proxy(new NextRequest(url, { headers: { 'x-aw-cache-probe': '1' } }));
+    expect(probe.headers.get('x-middleware-rewrite')).toBe('https://weeklyanime.com/it/anime/269-bleach');
+    expect(fetch).not.toHaveBeenCalled();
+    vi.mocked(isAnimeUnavailable).mockResolvedValue(false);
+  });
+});
