@@ -98,9 +98,9 @@ it.each(locales)('describes the wider similarity pool accurately in the page and
   expect(html).toContain('AniList');
   expect(html).not.toContain('2026');
 });
-it('lists similar lists in it/en, genres in six locales, never episodes, and excludes short lists', async () => {
+it('lists similar lists in six locales, genres in six locales, never episodes, and excludes short lists', async () => {
   const entries = await getDiscoverySitemap(new Date('2026-10-21T12:00:00Z'), new URL('https://example.com'));
-  expect(entries).toHaveLength(6 * 2 + 1 * 6); // six similar lists (it, en) + genre (all locales)
+  expect(entries).toHaveLength(6 * 6 + 1 * 6); // six similar lists (all locales) + genre (all locales)
   expect(new Set(entries.map(e => e.url)).size).toBe(entries.length);
   expect(entries.some(e => /episod|folge/.test(e.url))).toBe(false);
   expect(entries.every(e => !('changeFrequency' in e))).toBe(true);
@@ -127,7 +127,7 @@ it('propagates genre failures so a partial discovery sitemap cannot be cached', 
   const error = new Error('genre catalog unavailable');
   vi.mocked(getGenreLists).mockRejectedValueOnce(error);
   await expect(getDiscoverySitemap()).rejects.toBe(error);
-  expect(await getDiscoverySitemap()).toHaveLength(18);
+  expect(await getDiscoverySitemap()).toHaveLength(42);
 });
 
 it('omits optional detail blocks on upstream errors', async () => {

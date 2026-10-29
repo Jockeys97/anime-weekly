@@ -67,8 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const metadata = pageMetadata(seo.title, seo.description, animePath(anime.id, name), anime.coverImage?.extraLarge || anime.coverImage?.large, locale);
   metadata.title = { absolute: seo.title };
   metadata.alternates!.languages = animeLanguageAlternates(anime.id, animeName(anime), names, siteUrl());
-  // es/fr/de/pt pages without a synopsis in their language duplicate the
-  // English text: noindex,follow (it/en are always indexable and in the sitemap).
+  // All locales are indexable (see SITEMAP_ANIME_LOCALES); kept as a guard.
   if (!animeLocaleIndexable(locale, synopsis.language)) metadata.robots = { index: false, follow: true };
   return metadata;
 }
