@@ -12,13 +12,10 @@ export interface SitemapWeek extends ArchivedWeek { rankingCount?: number }
 
 export interface SitemapAnime { id: number; name?: string; hasSynopsis?: boolean; localizedNames?: Partial<Record<import('@/lib/locales').Locale, string>>; updatedAt?: number | null }
 
-// Indexation policy (P0, GSC "crawled - not indexed"): anime detail and
-// similar pages are listed only in the locales whose text is not a copy of
-// another locale: Italian (default), English (the AniList original) and Spanish (main
-// organic traffic source; noindexing it on 25/10 collapsed clicks). The
-// other locales stay reachable through hreflang and render noindex,follow
-// unless they carry a synopsis in their own language (see animeLocaleIndexable).
-export const SITEMAP_ANIME_LOCALES = ['it', 'en', 'es'] as const satisfies readonly Locale[];
+// Indexation policy: anime detail and similar pages are indexable and listed
+// in every locale. The 25/10 change that noindexed es/fr/de/pt pages without a
+// native synopsis wiped out organic traffic (mostly /es), so it was reverted.
+export const SITEMAP_ANIME_LOCALES = ['it', 'en', 'es', 'fr', 'de', 'pt'] as const satisfies readonly Locale[];
 export const MIN_PLATFORM_TITLES = 5;
 
 export function animeLocaleIndexable(locale: Locale, synopsisLanguage: Locale | null | undefined): boolean {

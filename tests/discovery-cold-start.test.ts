@@ -81,9 +81,9 @@ it('renders English and Spanish genre pages and links from best-this-season with
   expect(jikanFetch).not.toHaveBeenCalled();
 });
 
-it('lists it/en/es similar and all-locale genre URLs, never episodes, in the discovery shard with cold rating stores', async () => {
+it('lists all-locale similar and all-locale genre URLs, never episodes, in the discovery shard with cold rating stores', async () => {
   const entries = await sitemap({ id: Promise.resolve('discovery') });
-  expect(entries).toHaveLength(6 * 3 + 1 * 6);
+  expect(entries).toHaveLength(6 * 6 + 1 * 6);
   const paths = entries.map(entry => new URL(entry.url).pathname);
   expect(paths).toContain(localePath('/anime/1-anime-1/similar', 'en'));
   expect(paths).toContain(localePath('/anime/1-anime-1/similar', 'es'));
@@ -99,12 +99,12 @@ it('lists it/en/es similar and all-locale genre URLs, never episodes, in the dis
 it('rejects a catalog outage instead of returning a cacheable empty shard, and recovers on retry', async () => {
   vi.mocked(readSharedSimilarCatalog).mockRejectedValueOnce(new Error('Discovery catalog unavailable'));
   await expect(sitemap({ id: Promise.resolve('discovery') })).rejects.toThrow('Discovery catalog unavailable');
-  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(24);
+  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(42);
 });
 
 it('does not depend on the episode schedule: an AniList outage leaves the shard intact', async () => {
   vi.mocked(anilistFetch).mockResolvedValueOnce(new Response(null, { status: 503 }));
-  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(24);
+  expect(await sitemap({ id: Promise.resolve('discovery') })).toHaveLength(42);
 });
 
 it('renders a temporary landing state on catalog outage and restores genre links on the next request', async () => {
@@ -152,7 +152,7 @@ it.each(['catalog'])('serves a valid empty discovery sitemap (200) for a %s outa
     expect(recovered.headers.get('Content-Type')).toContain('application/xml');
     expect(recovered.headers.get('Cache-Control')).toContain('s-maxage=86400');
     const xml = await recovered.text();
-    expect(xml.match(/<url>/g)).toHaveLength(24);
+    expect(xml.match(/<url>/g)).toHaveLength(42);
     expect(xml).toContain('/en/best-this-season/action');
     expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
     expect(xml).toContain('hreflang="es"');
